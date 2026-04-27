@@ -1,0 +1,12 @@
+{
+  "name": "TradeLog Pro — 交易日誌",
+  "short_name": "TradeLog",
+  "description": "交易日誌與目標追蹤（本機儲存，可配雲端備份）",
+  "start_url": "./trading-journal.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#080a0f",
+  "theme_color": "#080a0f",
+  "lang": "zh-HK"
+}
