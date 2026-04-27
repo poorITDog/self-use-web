@@ -12,20 +12,20 @@
   <title>TradeLog Pro — 交易日誌 · 目標追蹤</title>
   <style>
     :root {
-      --bg: #080a0f;
-      --bg-elevated: #12161f;
-      --bg-card: #151b26;
-      --border: rgba(255, 255, 255, 0.07);
-      --text: #eef2f9;
-      --text-muted: #8b95a8;
-      --accent: #38bdf8;
-      --accent-2: #a78bfa;
-      --accent-soft: rgba(56, 189, 248, 0.18);
-      --profit: #4ade80;
-      --profit-bg: rgba(74, 222, 128, 0.12);
-      --loss: #fb7185;
-      --loss-bg: rgba(251, 113, 133, 0.12);
-      --warn: #fbbf24;
+      --bg: #06080d;
+      --bg-elevated: #0f141c;
+      --bg-card: #121a26;
+      --border: rgba(255, 255, 255, 0.14);
+      --text: #f1f5fd;
+      --text-muted: #aab8d4;
+      --accent: #5ccfff;
+      --accent-2: #c4b5fd;
+      --accent-soft: rgba(92, 207, 255, 0.22);
+      --profit: #5ee9a0;
+      --profit-bg: rgba(94, 233, 160, 0.16);
+      --loss: #ff8ba3;
+      --loss-bg: rgba(255, 139, 163, 0.16);
+      --warn: #fcd34d;
       --radius: 14px;
       --radius-sm: 9px;
       --font: ui-sans-serif, "PingFang HK", "Microsoft JhengHei", system-ui, sans-serif;
@@ -581,10 +581,11 @@
     }
 
     .field-hint {
-      font-size: 0.75rem;
-      font-weight: 500;
-      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #c5d0e8;
       margin-top: -2px;
+      line-height: 1.45;
     }
 
     .pnl-preview {
@@ -613,7 +614,7 @@
       gap: 6px;
       font-size: 0.8rem;
       font-weight: 600;
-      color: var(--text-muted);
+      color: #c8d4ea;
     }
 
     label.field span.key {
@@ -964,18 +965,296 @@
     }
 
     .heat-cell .d {
-      font-size: 0.7rem;
-      opacity: 0.85;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: rgba(255, 255, 255, 0.92);
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
     }
 
     .heat-cell .v {
-      font-size: 0.62rem;
+      font-size: 0.65rem;
+      font-weight: 800;
       margin-top: 2px;
       max-width: 100%;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       padding: 0 2px;
+      color: #fff;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+    }
+
+    .heat-cell.heat-zero .d {
+      color: var(--text-muted);
+      text-shadow: none;
+    }
+
+    .cal-work-card {
+      border-color: rgba(252, 211, 77, 0.28);
+      background: linear-gradient(165deg, rgba(252, 211, 77, 0.07), transparent 45%), var(--bg-card);
+    }
+
+    .work-cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      font-size: 0.68rem;
+      margin-top: 14px;
+    }
+
+    .work-cal-grid .dow {
+      text-align: center;
+      color: #dbe5f7;
+      font-weight: 800;
+      padding: 6px 0 8px;
+      font-size: 0.72rem;
+    }
+
+    .work-cal-cell {
+      min-height: 88px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.35);
+      padding: 6px 5px 5px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 3px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .work-cal-cell:hover {
+      border-color: rgba(252, 211, 77, 0.45);
+      box-shadow: 0 0 0 1px rgba(252, 211, 77, 0.12);
+    }
+
+    .work-cal-cell.muted {
+      opacity: 0.22;
+      pointer-events: none;
+    }
+
+    .work-cal-cell .wd {
+      font-size: 0.72rem;
+      font-weight: 900;
+      color: #f8fafc;
+      text-align: right;
+    }
+
+    .work-cal-cell .wd.today {
+      color: #fcd34d;
+    }
+
+    .work-cal-chip {
+      font-size: 0.58rem;
+      line-height: 1.25;
+      font-weight: 700;
+      padding: 2px 4px;
+      border-radius: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .work-cal-chip.hk {
+      background: rgba(252, 211, 77, 0.22);
+      color: #fffbeb;
+      border-color: rgba(252, 211, 77, 0.45);
+    }
+
+    .work-cal-chip.cust {
+      background: rgba(94, 234, 212, 0.16);
+      color: #ccfbf1;
+      border-color: rgba(45, 212, 191, 0.35);
+    }
+
+    .work-cal-upcoming {
+      margin-top: 4px;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.28);
+      font-size: 0.8rem;
+      color: #e8edf7;
+    }
+
+    .work-cal-upcoming strong {
+      color: #fcd34d;
+    }
+
+    .work-cal-list {
+      margin-top: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: rgba(0, 0, 0, 0.22);
+    }
+
+    .work-cal-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.78rem;
+      color: #e8edf7;
+    }
+
+    .work-cal-row:last-child {
+      border-bottom: none;
+    }
+
+    #panel-calendar.active {
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .daily-quote-block {
+      margin: 12px 0 0;
+      padding: 16px 18px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.35);
+      border-left: 4px solid var(--accent);
+      font-size: 1.02rem;
+      font-weight: 700;
+      line-height: 1.65;
+      color: var(--text);
+    }
+
+    .daily-quote-block cite {
+      display: block;
+      margin-top: 12px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      font-style: normal;
+      color: var(--text-muted);
+    }
+
+    .daily-effect-block {
+      border-left-color: #fcd34d;
+      font-weight: 600;
+      font-size: 0.92rem;
+    }
+
+    .daily-effect-block .fx-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: #fef3c7;
+      margin-bottom: 10px;
+    }
+
+    .daily-net-block {
+      border-left-color: #c4b5fd;
+      font-weight: 600;
+      font-size: 0.92rem;
+    }
+
+    .daily-effect-block .fx-cite,
+    .daily-quote-block .enc-cite-detail {
+      display: block;
+      margin-top: 12px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    .psych-catalog-row,
+    .psych-appear-row,
+    .psych-user-row,
+    .trade-idea-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.88rem;
+    }
+
+    .psych-catalog-row:last-child,
+    .psych-appear-row:last-child,
+    .psych-user-row:last-child,
+    .trade-idea-row:last-child {
+      border-bottom: none;
+    }
+
+    .psych-row-main {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .psych-row-main .sub {
+      display: block;
+      margin-top: 6px;
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .psych-flash-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9000;
+      background: rgba(6, 8, 13, 0.92);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .psych-flash-overlay[hidden] {
+      display: none !important;
+    }
+
+    .psych-flash-card {
+      width: 100%;
+      max-width: 520px;
+      min-height: 220px;
+      padding: 28px 24px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      box-shadow: var(--shadow);
+    }
+
+    .psych-flash-card .front {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #fef3c7;
+      line-height: 1.45;
+    }
+
+    .psych-flash-card .back {
+      margin-top: 16px;
+      font-size: 0.95rem;
+      line-height: 1.65;
+      color: var(--text);
+    }
+
+    .psych-flash-card .back .cite {
+      margin-top: 14px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .psych-flash-actions {
+      margin-top: 22px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .psych-flash-hint {
+      margin-top: 10px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
     }
 
     .analytics-table {
@@ -1170,10 +1449,85 @@
       opacity: 0.65;
     }
 
-    .life-step-row input[type="checkbox"] {
-      width: auto;
-      margin-top: 4px;
+    /* 統一勾選：日程「今日完成」、目標細步驟、表單選項 */
+    input[type="checkbox"].ux-chk {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      margin: 0;
+      flex-shrink: 0;
+      border-radius: 7px;
+      border: 2px solid rgba(255, 255, 255, 0.22);
+      background: rgba(15, 20, 28, 0.95);
       cursor: pointer;
+      position: relative;
+      transition: border-color 0.18s ease, box-shadow 0.22s ease, background 0.18s ease, transform 0.12s ease;
+    }
+
+    input[type="checkbox"].ux-chk:hover {
+      border-color: rgba(92, 207, 255, 0.55);
+      box-shadow: 0 0 0 3px rgba(92, 207, 255, 0.12);
+    }
+
+    input[type="checkbox"].ux-chk:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(192, 132, 252, 0.35);
+    }
+
+    input[type="checkbox"].ux-chk:checked {
+      background: linear-gradient(145deg, #38bdf8, #7c3aed);
+      border-color: transparent;
+      box-shadow: 0 2px 12px rgba(56, 189, 248, 0.35);
+    }
+
+    input[type="checkbox"].ux-chk:checked::after {
+      content: "";
+      position: absolute;
+      left: 7px;
+      top: 3px;
+      width: 5px;
+      height: 10px;
+      border: solid #fff;
+      border-width: 0 2.5px 2.5px 0;
+      transform: rotate(45deg);
+      box-sizing: border-box;
+    }
+
+    input[type="checkbox"].ux-chk:active {
+      transform: scale(0.94);
+    }
+
+    .ux-check-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      user-select: none;
+    }
+
+    .ux-check-row:hover {
+      color: var(--text);
+    }
+
+    .life-step-row input[type="checkbox"].ux-chk {
+      margin-top: 2px;
+    }
+
+    label.field-inline-chk {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 0.86rem;
+      color: var(--text-muted);
+    }
+
+    label.field-inline-chk input.ux-chk {
+      margin-top: 2px;
     }
 
     .life-log-item {
@@ -2000,6 +2354,9 @@
         <button type="button" data-tab="calendar" id="tab-calendar" aria-current="false" aria-controls="panel-calendar"><span class="ico">▦</span>日曆</button>
         <button type="button" data-tab="goals" id="tab-goals" aria-current="false" aria-controls="panel-goals"><span class="ico">◇</span>目標與進度</button>
         <button type="button" data-tab="reminders" id="tab-reminders" aria-current="false" aria-controls="panel-reminders"><span class="ico">!</span>待辦・提醒</button>
+        <button type="button" data-tab="daily" id="tab-daily" aria-current="false" aria-controls="panel-daily"><span class="ico">✎</span>每日心情</button>
+        <button type="button" data-tab="psych" id="tab-psych" aria-current="false" aria-controls="panel-psych"><span class="ico">✧</span>效應庫</button>
+        <button type="button" data-tab="tradeideas" id="tab-tradeideas" aria-current="false" aria-controls="panel-tradeideas"><span class="ico">◈</span>交易思路</button>
         <button type="button" data-tab="routine" id="tab-routine" aria-current="false" aria-controls="panel-routine"><span class="ico">▥</span>日程・錢包</button>
         <button type="button" data-tab="xau" id="tab-xau" aria-current="false" aria-controls="panel-xau"><span class="ico">◎</span>XAU 練習</button>
         <button type="button" data-tab="settings" id="tab-settings" aria-current="false" aria-controls="panel-settings"><span class="ico">⚙</span>設定</button>
@@ -2310,6 +2667,53 @@
         <div class="heatmap-grid" id="calendarHeat" aria-label="月曆熱力"></div>
       </div>
 
+      <div class="card cal-work-card">
+        <h2>生活／工作日曆 <span class="badge">假期 · 記念 · 自訂</span></h2>
+        <p class="lead">
+          同上面<strong>交易盈虧月曆</strong>完全分開。預設已入<strong>香港公眾假期（General Holidays）2025–2026</strong>；其他年份會顯示固定公眾日（元旦、勞動、回歸、國慶、聖誕等），其餘農曆假期請用「自訂」補。月份跟上面「←／→」同步。
+        </p>
+        <div class="heatmap-head">
+          <span class="field-hint" style="margin: 0">黃底＝香港假期 · 青底＝你自訂 · 今日日期金色</span>
+        </div>
+        <div class="work-cal-upcoming" id="workCalUpcoming" aria-live="polite"></div>
+        <div class="form-grid" style="margin-top: 14px">
+          <label class="field">
+            <span class="key">標題 <span aria-hidden="true">*</span></span>
+            <input type="text" id="workCalTitle" placeholder="例：阿媽生日、團年飯" maxlength="120" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span class="key">重複方式</span>
+            <select id="workCalRepeat" aria-describedby="workCalRepeatHint">
+              <option value="once">一次性（指定一日）</option>
+              <option value="yearly">每年一次（例：生日）</option>
+              <option value="monthly">每月一次（例：月尾報表）</option>
+            </select>
+            <span class="field-hint" id="workCalRepeatHint" style="margin-top: 6px; display: block">每年／每月用下面「月／日」；一次性用「發生日期」。</span>
+          </label>
+          <label class="field" id="workCalWrapOnce">
+            <span class="key">發生日期（一次性）</span>
+            <input type="date" id="workCalDateOnce" />
+          </label>
+          <label class="field" id="workCalWrapYmd" style="display: none">
+            <span class="key">每年幾月幾日</span>
+            <div style="display: flex; gap: 10px; align-items: center">
+              <input type="number" id="workCalMonth" min="1" max="12" step="1" placeholder="月" style="width: 5rem" />
+              <span style="opacity: 0.7">／</span>
+              <input type="number" id="workCalDay" min="1" max="31" step="1" placeholder="日" style="width: 5rem" />
+            </div>
+          </label>
+          <label class="field" id="workCalWrapDom" style="display: none">
+            <span class="key">每月幾號</span>
+            <input type="number" id="workCalDom" min="1" max="31" step="1" placeholder="1–31" style="width: 6rem" />
+          </label>
+        </div>
+        <div class="form-actions" style="border: none; padding-top: 0; margin-top: 4px">
+          <button type="button" class="btn btn-primary" id="btnWorkCalAdd">加入日曆</button>
+        </div>
+        <div class="work-cal-list" id="workCalEventList" aria-label="已加入事項"></div>
+        <div class="work-cal-grid" id="calendarWorkHeat" aria-label="生活工作日曆格"></div>
+      </div>
+
       <div class="card cal-life-card">
         <h2>生活週課表 <span class="badge">Routine</span></h2>
         <p class="lead">
@@ -2362,6 +2766,206 @@
         <button type="button" class="btn btn-primary" id="btnRemindToRoutine">去日程／錢包</button>
         <button type="button" class="btn btn-ghost" id="btnRemindToGoals">去目標</button>
         <button type="button" class="btn btn-ghost" id="btnRemindToCal">去日曆課表</button>
+        <button type="button" class="btn btn-ghost" id="btnRemindToDaily">去每日心情</button>
+      </div>
+    </section>
+
+    <section id="panel-daily" class="panel" role="tabpanel" hidden aria-labelledby="tab-daily">
+      <div class="card">
+        <h2>今日一句 · 加油 <span class="badge">每日更新</span></h2>
+        <p class="lead" id="dailyQuoteLead">按<strong>日期</strong>揀一句；同一日會固定同一句（過咗午夜零點先會換）。</p>
+        <blockquote id="dailyEncourageBlock" class="daily-quote-block" cite=""></blockquote>
+      </div>
+      <div class="card">
+        <h2>今日概念 · 效應與思考 <span class="badge">每日更新</span></h2>
+        <p class="lead">心理學／決策／博弈常見概念，用幾句中文幫你記住重點（內容唔係投資建議）。</p>
+        <blockquote id="dailyEffectBlock" class="daily-quote-block daily-effect-block"></blockquote>
+      </div>
+      <div class="card">
+        <h2>今日網絡一句 <span class="badge">API · 本機快取</span></h2>
+        <p class="lead" id="dailyNetworkLead">
+          每日<strong>自動</strong>向公開 API 擷取一句（多數中文來自一言）；同上面「今日一句／效應」<strong>分開顯示</strong>，唔會用晒你自訂池嘅「一日一格」。每曆日最多請求一次並寫入本機；<strong>唔上傳雲端備份</strong>（換機要重新擷取）。需網絡。
+        </p>
+        <blockquote id="dailyNetworkBlock" class="daily-quote-block daily-net-block"></blockquote>
+        <h3 class="section-title" style="margin-top: 22px">今日網絡心理學 · 效應摘要</h3>
+        <p class="lead" id="dailyNetworkWikiLead" style="font-size: 0.88rem">
+          按<strong>日期</strong>喺預設名單入面揀一條<strong>英文維基百科</strong>概念（行為經濟／認知偏誤等），擷取 REST <strong>摘要</strong>；唔係醫療建議、唔取代你內建「今日概念」。同樣<strong>本機按日快取</strong>、唔入雲端備份。
+        </p>
+        <blockquote id="dailyNetworkWikiFx" class="daily-quote-block daily-effect-block" style="border-left-color: #a78bfa"></blockquote>
+        <div class="form-actions" style="border: none; padding-top: 8px">
+          <button type="button" class="btn btn-ghost" id="btnDailyNetRefresh">重新擷取今日（一句 + 維基摘要）</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>擴充每日池 <span class="badge">金句 + 效應 · 雲端</span></h2>
+        <p class="lead">
+          直接加落<strong>輪播池</strong>（同內建一齊抽）；系統會<strong>避免同一日</strong>金句同效應<strong>顯示同一組字</strong>（標題／句子過份相似會自動換下一條效應）。新句會跟日曆、效應庫等一齊<strong>雲端合併同步</strong>；<strong>XAU 本地蠟燭時間框／TV 時間框</strong>仍然只留本機。
+        </p>
+        <div class="form-grid">
+          <label class="field" style="grid-column: 1 / -1">
+            <span class="key">自訂金句（顯示文字）</span>
+            <input type="text" id="dailyPoolEncQ" maxlength="400" placeholder="例：「專注過程，少諗結果。」" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span class="key">標籤／誰講（短）</span>
+            <input type="text" id="dailyPoolEncS" maxlength="200" placeholder="例：自己整理" autocomplete="off" />
+          </label>
+          <label class="field" style="grid-column: 1 / -1">
+            <span class="key">出處說明（可選）</span>
+            <input type="text" id="dailyPoolEncCite" maxlength="500" placeholder="例：本頁自寫；或作品／章節" autocomplete="off" />
+          </label>
+        </div>
+        <div class="form-actions" style="border: none; padding-top: 4px">
+          <button type="button" class="btn btn-primary" id="btnDailyPoolAddEnc">加入金句池</button>
+        </div>
+        <p class="section-title" style="margin-top: 18px">自訂效應入池</p>
+        <div class="form-grid">
+          <label class="field" style="grid-column: 1 / -1">
+            <span class="key">效應標題</span>
+            <input type="text" id="dailyPoolFxT" maxlength="200" placeholder="例：蔡加尼克效應" autocomplete="off" />
+          </label>
+          <label class="field" style="grid-column: 1 / -1">
+            <span class="key">解釋（幾句）</span>
+            <textarea id="dailyPoolFxB" rows="3" maxlength="4000" placeholder="用你嘅話寫重點…"></textarea>
+          </label>
+          <label class="field" style="grid-column: 1 / -1">
+            <span class="key">出處／引用</span>
+            <input type="text" id="dailyPoolFxC" maxlength="2000" placeholder="例：布魯瑪·蔡加尼克 1927；通識讀本" autocomplete="off" />
+          </label>
+        </div>
+        <div class="form-actions" style="border: none; padding-top: 4px">
+          <button type="button" class="btn btn-primary" id="btnDailyPoolAddFx">加入效應池</button>
+        </div>
+        <div id="dailyPoolCustomList" style="margin-top: 14px"></div>
+      </div>
+      <div class="card">
+        <h2>今日心情／日記 <span class="badge">本機 + 雲端</span></h2>
+        <p class="lead">簡單記低今日狀態同想法；會跟<strong>雲端合併同步</strong>（同一日兩部機以較新儲存為準）。</p>
+        <div class="form-grid">
+          <label class="field">
+            <span class="key">心情（1–5，可唔揀）</span>
+            <select id="dailyMood">
+              <option value="">— 唔記錄 —</option>
+              <option value="1">1 · 好差</option>
+              <option value="2">2 · 偏差</option>
+              <option value="3">3 · 普通</option>
+              <option value="4">4 · 唔錯</option>
+              <option value="5">5 · 好好</option>
+            </select>
+          </label>
+          <label class="field" style="grid-column: 1 / -1">
+            <span class="key">今日諗咩／做咗咩</span>
+            <textarea id="dailyThought" rows="6" maxlength="8000" placeholder="例如：今日守規矩冇報復性開倉、晚黑想早啲瞓…"></textarea>
+          </label>
+        </div>
+        <div class="form-actions" style="border: none; padding-top: 12px">
+          <button type="button" class="btn btn-primary" id="btnDailyJournalSave">儲存今日</button>
+          <button type="button" class="btn btn-ghost" id="btnDailyToPsych">去效應庫溫習</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-psych" class="panel" role="tabpanel" hidden aria-labelledby="tab-psych">
+      <div class="card">
+        <h2>心理學 · 效應圖鑑 <span class="badge">本機 + 雲端</span></h2>
+        <p class="lead">
+          呢度<strong>唔係</strong>「每日一句」金句庫，而係<strong>效應／定律條目</strong>：可以睇晒內建圖鑑、記低每日心情頁出現過嘅概念、自己讀完再加筆記，並用<strong>閃卡</strong>複習。每條內容下面都有<strong>出處／性質</strong>說明（通識整理／原著對白等）；學術定義請以教科書為準。
+        </p>
+      </div>
+      <div class="card">
+        <h2>「每日心情」曾出現嘅效應 <span class="badge">按日記錄</span></h2>
+        <p class="lead">每次開「每日心情」分頁會記低<strong>當日</strong>輪到嘅效應（同一日會更新為當日最新一次）。</p>
+        <div id="psychAppearList"></div>
+      </div>
+      <div class="card">
+        <h2>內建圖鑑 <span class="badge">可加入閃卡</span></h2>
+        <label class="field" style="margin-bottom: 10px">
+          <span class="key">搜尋</span>
+          <input type="search" id="psychCatalogFilter" placeholder="名稱或出處關鍵字…" maxlength="120" autocomplete="off" />
+        </label>
+        <div id="psychCatalogList"></div>
+      </div>
+      <div class="card">
+        <h2>我讀完自己加 <span class="badge">筆記</span></h2>
+        <p class="lead">標題＝閃卡正面；內容＝反面解釋；出處＝邊本書／邊個概念／邊句說話來源。</p>
+        <div class="form-grid">
+          <label class="field">
+            <span class="key">標題／效應名 <span aria-hidden="true">*</span></span>
+            <input type="text" id="psychUserTerm" maxlength="200" placeholder="例：稟賦效應" autocomplete="off" />
+          </label>
+          <label class="field" style="grid-column: 1 / -1">
+            <span class="key">內容／重點</span>
+            <textarea id="psychUserBody" rows="4" maxlength="8000" placeholder="用你自己嘅話寫重點…"></textarea>
+          </label>
+          <label class="field" style="grid-column: 1 / -1">
+            <span class="key">出處／引用</span>
+            <input type="text" id="psychUserCitation" maxlength="2000" placeholder="例：《思考，快與慢》Daniel Kahneman；或論文／課程名" autocomplete="off" />
+          </label>
+        </div>
+        <div class="form-actions" style="border: none; padding-top: 8px">
+          <button type="button" class="btn btn-primary" id="btnPsychUserAdd">新增筆記卡</button>
+        </div>
+        <div id="psychUserList"></div>
+      </div>
+      <div class="card">
+        <h2>閃卡牌組 <span class="badge">複習</span></h2>
+        <p class="lead" id="psychDeckSummary"></p>
+        <div class="form-actions" style="border: none; padding-top: 0">
+          <button type="button" class="btn btn-primary" id="btnPsychFlashStart">開始閃卡</button>
+          <button type="button" class="btn btn-ghost" id="btnPsychDeckShuffle">洗牌</button>
+          <button type="button" class="btn btn-ghost" id="btnPsychDeckClear">清空牌組</button>
+        </div>
+        <p class="field-hint" style="margin-top: 8px">快捷鍵：空白鍵翻面 · ← 上一張 · → 或 Enter 下一張 · Esc 關閉</p>
+      </div>
+      <div id="psychFlashOverlay" class="psych-flash-overlay" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="psychFlashTitle" tabindex="0">
+        <div class="psych-flash-card">
+          <div id="psychFlashTitle" class="front"></div>
+          <div id="psychFlashBack" class="back" hidden></div>
+          <div class="psych-flash-actions">
+            <button type="button" class="btn btn-primary" id="btnPsychFlashFlip">翻面／顯示答案</button>
+            <button type="button" class="btn btn-ghost" id="btnPsychFlashPrev">上一張</button>
+            <button type="button" class="btn btn-ghost" id="btnPsychFlashNext">下一張</button>
+            <button type="button" class="btn btn-ghost" id="btnPsychFlashClose">關閉</button>
+          </div>
+          <p class="psych-flash-hint" id="psychFlashMeta"></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-tradeideas" class="panel" role="tabpanel" hidden aria-labelledby="tab-tradeideas">
+      <div class="card">
+        <h2>交易思路 · 策略庫 <span class="badge">本機 + 雲端</span></h2>
+        <p class="lead">記低你嘅 setup、風控規則、市場觀察、想試嘅策略——同「記一單」Playbook 分開，專做<strong>文字庫</strong>溫習用。</p>
+      </div>
+      <div class="card">
+        <h2>新增一條 <span class="badge">Idea</span></h2>
+        <div class="form-grid">
+          <label class="field">
+            <span class="key">標題 <span aria-hidden="true">*</span></span>
+            <input type="text" id="tradeIdeaTitle" maxlength="200" placeholder="例：倫敦開盤假突破 filter" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span class="key">標籤（逗號分隔）</span>
+            <input type="text" id="tradeIdeaTags" maxlength="500" placeholder="例：XAU, 突破, 風控" autocomplete="off" />
+          </label>
+          <label class="field" style="grid-column: 1 / -1">
+            <span class="key">內容</span>
+            <textarea id="tradeIdeaContent" rows="8" maxlength="16000" placeholder="條件、進出場、失效點、倉位…"></textarea>
+          </label>
+        </div>
+        <div class="form-actions" style="border: none; padding-top: 8px">
+          <button type="button" class="btn btn-primary" id="btnTradeIdeaSave">儲存</button>
+          <button type="button" class="btn btn-ghost" id="btnTradeIdeaClearForm">清空表單</button>
+        </div>
+        <input type="hidden" id="tradeIdeaEditId" value="" />
+      </div>
+      <div class="card">
+        <h2>已儲存 <span class="badge">列表</span></h2>
+        <label class="field" style="margin-bottom: 10px">
+          <span class="key">搜尋</span>
+          <input type="search" id="tradeIdeaFilter" placeholder="標題、標籤、內容…" maxlength="120" autocomplete="off" />
+        </label>
+        <div id="tradeIdeaList"></div>
       </div>
     </section>
 
@@ -2634,7 +3238,7 @@
               <input type="text" id="walletEntryNote" placeholder="可選" maxlength="200" />
             </label>
             <label class="field" id="walletExcludeFromDailyWrap" style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px" hidden>
-              <input type="checkbox" id="walletEntryExcludeDaily" />
+              <input type="checkbox" id="walletEntryExcludeDaily" class="ux-chk" />
               <span class="key" style="margin: 0"><strong>唔計入每日開支上限</strong>（例如水費、電費等月費，或一大筆非日常使費）</span>
             </label>
           </div>
@@ -2740,7 +3344,7 @@
               <input type="text" id="dailyQuickNote" placeholder="例：午餐" maxlength="200" />
             </label>
             <label class="field" style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px">
-              <input type="checkbox" id="dailyQuickExcludeDaily" />
+              <input type="checkbox" id="dailyQuickExcludeDaily" class="ux-chk" />
               <span class="key" style="margin: 0">唔計入每日開支上限（月費等非日常）</span>
             </label>
           </div>
@@ -2767,7 +3371,7 @@
             <input type="number" id="settingsDefaultFees" step="any" placeholder="例 -5 或 0" />
           </label>
           <label class="field" style="display: flex; align-items: center; gap: 10px; margin-top: 22px">
-            <input type="checkbox" id="settingsTradeAutoTime" checked />
+            <input type="checkbox" id="settingsTradeAutoTime" class="ux-chk" checked />
             <span class="key" style="margin: 0">每次開「記一單」／儲存後重置時，自動填入<strong>此刻</strong>到開倉／平倉時間</span>
           </label>
         </div>
@@ -2790,7 +3394,7 @@
           建議用 <code>http://localhost</code> 開本頁再做雲端 fetch；<code>file://</code> 有機會被瀏覽器擋跨網域請求。
         </p>
         <label class="field" style="display: flex; align-items: flex-start; gap: 10px; margin-top: 14px">
-          <input type="checkbox" id="settingsCloudAutoPush" style="margin-top: 4px" />
+          <input type="checkbox" id="settingsCloudAutoPush" class="ux-chk" style="margin-top: 4px" />
           <span class="key" style="margin: 0"
             ><strong>改動後自動合併同步</strong>（儲存後約 5 秒：先拉雲端再合併再上傳；離線會略過。多部機輪流用「雲端合併同步」即可疊加紀錄）</span
           >
@@ -2801,7 +3405,7 @@
           <button type="button" class="btn btn-ghost" id="btnCloudSyncPull">從雲端覆蓋本機</button>
         </div>
         <p class="field-hint" style="margin-top: 12px">
-          <strong>合併同步（預設）：</strong>會先下載雲端，將<strong>交易、生活目標／日誌、錢包／時間表、XAU 模擬倉</strong>等一併按規則合併（交易／帶 <code>createdAt</code> 嘅紀錄：同 ID 保留較新；錢包預設／時間格：邊邊 <code>syncUpdatedAt</code> 新就邊邊主導預算欄；XAU 開倉狀態以較新 <code>openedAt</code> 為準）。XAU 圖表時間框只留本機、唔上雲。再寫回本機並<strong>上傳成個備份 JSON</strong>。「從雲端覆蓋本機」才會<strong>唔合併</strong>整份取代本機（舊備份冇嘅欄位會保留本機）。進階 <code>DELETE</code> 仍係刻意清空雲端專用。
+          <strong>合併同步（預設）：</strong>會先下載雲端，將<strong>交易、生活目標／日誌、錢包／時間表、工作日曆、每日心情日記、自訂每日金句／效應池、效應庫（閃卡／出現紀錄）、交易思路庫、XAU 模擬倉</strong>等一併按規則合併（交易／帶 <code>createdAt</code> 嘅紀錄：同 ID 保留較新；錢包預設／時間格：邊邊 <code>syncUpdatedAt</code> 新就邊邊主導預算欄；XAU 開倉狀態以較新 <code>openedAt</code> 為準）。<strong>XAU 本地蠟燭時間框／TradingView 時間框</strong>只留本機、唔寫入備份 JSON。再寫回本機並<strong>上傳成個備份</strong>。「從雲端覆蓋本機」才會<strong>唔合併</strong>整份取代本機（舊備份冇嘅欄位會保留本機）。進階 <code>DELETE</code> 仍係刻意清空雲端專用。
         </p>
         <details
           class="cloud-danger-zone"
@@ -3454,6 +4058,1971 @@
       var routineSubtab = "schedule";
       var schedSelectedDow = new Date().getDay();
 
+      var WORK_CAL_KEY = "tradeLogWorkCalendarV1";
+      var HK_GENERAL_HOLIDAY_BY_DATE = {
+        "2025-01-01": "元旦",
+        "2025-01-29": "農曆年初一",
+        "2025-01-30": "農曆年初二",
+        "2025-01-31": "農曆年初三",
+        "2025-04-04": "清明節",
+        "2025-04-18": "耶穌受難節",
+        "2025-04-19": "耶穌受難節翌日",
+        "2025-04-21": "復活節星期一",
+        "2025-05-01": "勞動節",
+        "2025-05-05": "佛誕",
+        "2025-05-31": "端午節",
+        "2025-07-01": "香港特區成立紀念日",
+        "2025-10-01": "國慶日",
+        "2025-10-07": "中秋節翌日",
+        "2025-10-29": "重陽節",
+        "2025-12-25": "聖誕節",
+        "2025-12-26": "聖誕節後首個假日",
+        "2026-01-01": "元旦",
+        "2026-02-17": "農曆年初一",
+        "2026-02-18": "農曆年初二",
+        "2026-02-19": "農曆年初三",
+        "2026-04-03": "耶穌受難節",
+        "2026-04-04": "耶穌受難節翌日",
+        "2026-04-06": "清明節翌日（替代假日）",
+        "2026-04-07": "復活節星期一翌日（替代）",
+        "2026-05-01": "勞動節",
+        "2026-05-25": "佛誕翌日（替代）",
+        "2026-06-19": "端午節",
+        "2026-07-01": "香港特區成立紀念日",
+        "2026-09-26": "中秋節翌日",
+        "2026-10-01": "國慶日",
+        "2026-10-19": "重陽節翌日（替代）",
+        "2026-12-25": "聖誕節",
+        "2026-12-26": "聖誕節後首個假日",
+      };
+      var HK_ANNUAL_FIXED_MD = [
+        { m: 1, d: 1, t: "元旦" },
+        { m: 5, d: 1, t: "勞動節" },
+        { m: 7, d: 1, t: "香港特區成立紀念日" },
+        { m: 10, d: 1, t: "國慶日" },
+        { m: 12, d: 25, t: "聖誕節" },
+      ];
+
+      function defaultWorkCal() {
+        return { version: 1, events: [], syncUpdatedAt: 0 };
+      }
+
+      function normalizeWorkCalEvent(e) {
+        e = e || {};
+        var rep = e.repeat;
+        if (["once", "yearly", "monthly"].indexOf(rep) === -1) rep = "once";
+        var out = {
+          id: e.id || lifeId("wc"),
+          title: (e.title || "").trim() || "未命名",
+          repeat: rep,
+          date: (e.date || "").trim(),
+          month: e.month != null ? parseInt(String(e.month), 10) : null,
+          day: e.day != null ? parseInt(String(e.day), 10) : null,
+          dom: e.dom != null ? parseInt(String(e.dom), 10) : null,
+          notes: (e.notes || "").trim(),
+          updatedAt: e.updatedAt != null ? Number(e.updatedAt) : Date.now(),
+        };
+        if (isNaN(out.month) || out.month < 1 || out.month > 12) out.month = null;
+        if (isNaN(out.day) || out.day < 1 || out.day > 31) out.day = null;
+        if (isNaN(out.dom) || out.dom < 1 || out.dom > 31) out.dom = null;
+        return out;
+      }
+
+      function normalizeWorkCal(d) {
+        d = d || {};
+        d.version = 1;
+        d.events = Array.isArray(d.events) ? d.events.map(normalizeWorkCalEvent) : [];
+        if (typeof d.syncUpdatedAt !== "number" || isNaN(d.syncUpdatedAt)) d.syncUpdatedAt = 0;
+        return d;
+      }
+
+      function loadWorkCal() {
+        try {
+          var raw = localStorage.getItem(WORK_CAL_KEY);
+          if (raw) {
+            var d = JSON.parse(raw);
+            if (d) return normalizeWorkCal(d);
+          }
+        } catch (e0) {}
+        return defaultWorkCal();
+      }
+
+      function persistWorkCalToStorage_() {
+        workCalState.version = 1;
+        if (typeof workCalState.syncUpdatedAt !== "number" || isNaN(workCalState.syncUpdatedAt)) workCalState.syncUpdatedAt = 0;
+        localStorage.setItem(WORK_CAL_KEY, JSON.stringify(workCalState));
+      }
+
+      function saveWorkCal() {
+        workCalState.syncUpdatedAt = Date.now();
+        persistWorkCalToStorage_();
+      }
+
+      var workCalState = loadWorkCal();
+
+      function workCalIso(y, m, d) {
+        return y + "-" + String(m).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+      }
+
+      function workCalBuiltinTitlesForDay(y, m, d) {
+        var iso = workCalIso(y, m, d);
+        var out = [];
+        var seen = {};
+        function push(t) {
+          if (!t || seen[t]) return;
+          seen[t] = 1;
+          out.push(t);
+        }
+        if (y === 2025 || y === 2026) {
+          var ex = HK_GENERAL_HOLIDAY_BY_DATE[iso];
+          if (ex) push(ex);
+          return out;
+        }
+        for (var i = 0; i < HK_ANNUAL_FIXED_MD.length; i++) {
+          var fx = HK_ANNUAL_FIXED_MD[i];
+          if (fx.m === m && fx.d === d) push(fx.t);
+        }
+        return out;
+      }
+
+      function workCalEventMatchesDay(ev, y, m, d) {
+        var iso = workCalIso(y, m, d);
+        if (ev.repeat === "once") return ev.date === iso;
+        if (ev.repeat === "yearly") return ev.month === m && ev.day === d;
+        if (ev.repeat === "monthly") {
+          if (ev.dom == null || isNaN(ev.dom)) return false;
+          var dim = new Date(y, m, 0).getDate();
+          var target = Math.min(ev.dom, dim);
+          return d === target;
+        }
+        return false;
+      }
+
+      function workCalTitlesForDay(y, m, d) {
+        var seen = {};
+        var list = [];
+        function push(t) {
+          if (!t || seen[t]) return;
+          seen[t] = 1;
+          list.push(t);
+        }
+        workCalBuiltinTitlesForDay(y, m, d).forEach(push);
+        (workCalState.events || []).forEach(function (ev) {
+          if (workCalEventMatchesDay(ev, y, m, d)) push(ev.title);
+        });
+        return list;
+      }
+
+      function renderWorkCalendarPanel() {
+        var y = calView.y;
+        var m = calView.m;
+        var grid = document.getElementById("calendarWorkHeat");
+        if (!grid) return;
+        var first = new Date(y, m - 1, 1);
+        var startWd = first.getDay();
+        var daysInMonth = new Date(y, m, 0).getDate();
+        var today = todayISO();
+        var html = "";
+        var dows = ["日", "一", "二", "三", "四", "五", "六"];
+        for (var h = 0; h < 7; h++) {
+          html += '<div class="dow">' + dows[h] + "</div>";
+        }
+        for (var p = 0; p < startWd; p++) {
+          html += '<div class="work-cal-cell muted"></div>';
+        }
+        for (var day = 1; day <= daysInMonth; day++) {
+          var iso = workCalIso(y, m, day);
+          var titles = workCalTitlesForDay(y, m, day);
+          var bnSet = workCalBuiltinTitlesForDay(y, m, day);
+          var chips = "";
+          var maxC = 3;
+          for (var ci = 0; ci < titles.length && ci < maxC; ci++) {
+            var t = titles[ci];
+            var hkN = bnSet.indexOf(t) !== -1;
+            var cust = !hkN;
+            chips +=
+              '<div class="work-cal-chip ' +
+              (cust ? "cust" : "hk") +
+              '" title="' +
+              escapeHtml(t) +
+              '">' +
+              escapeHtml(t.length > 10 ? t.slice(0, 10) + "…" : t) +
+              "</div>";
+          }
+          if (titles.length > maxC) {
+            chips += '<div class="work-cal-chip hk" title="' + escapeHtml(titles.join("、")) + '">+' + (titles.length - maxC) + "</div>";
+          }
+          var tdCls = iso === today ? " today" : "";
+          html +=
+            '<div class="work-cal-cell"><div class="wd' +
+            tdCls +
+            '">' +
+            day +
+            "</div>" +
+            chips +
+            "</div>";
+        }
+        var totalCells = startWd + daysInMonth;
+        var rem = totalCells % 7;
+        if (rem) {
+          for (var q = 0; q < 7 - rem; q++) {
+            html += '<div class="work-cal-cell muted"></div>';
+          }
+        }
+        grid.innerHTML = html;
+
+        var up = document.getElementById("workCalUpcoming");
+        if (up) {
+          var rows = [];
+          var now = new Date();
+          now.setHours(12, 0, 0, 0);
+          for (var off = 0; off < 56; off++) {
+            var dt = new Date(now);
+            dt.setDate(dt.getDate() + off);
+            var yy = dt.getFullYear();
+            var mm = dt.getMonth() + 1;
+            var dd = dt.getDate();
+            var iso2 = workCalIso(yy, mm, dd);
+            var tt = workCalTitlesForDay(yy, mm, dd);
+            if (tt.length) {
+              rows.push({ iso: iso2, titles: tt });
+            }
+            if (rows.length >= 14) break;
+          }
+          if (!rows.length) {
+            up.innerHTML = "<strong>未來兩個月</strong>：暫未有假期／自訂事項（或已過晒）。";
+          } else {
+            up.innerHTML =
+              "<strong>即將／本週</strong>：" +
+              rows
+                .map(function (r) {
+                  return "<div style=\"margin-top:6px\"><strong>" + escapeHtml(r.iso) + "</strong> · " + escapeHtml(r.titles.join("、")) + "</div>";
+                })
+                .join("");
+          }
+        }
+
+        var listEl = document.getElementById("workCalEventList");
+        if (listEl) {
+          var evs = workCalState.events || [];
+          if (!evs.length) {
+            listEl.innerHTML = '<div class="work-cal-row"><span class="field-hint" style="margin:0">未有自訂事項。用下面表單加入生日、一次性聚會、每月報表等。</span></div>';
+          } else {
+            listEl.innerHTML = evs
+              .map(function (ev) {
+                var lab = "";
+                if (ev.repeat === "once") lab = "一次性 · " + ev.date;
+                else if (ev.repeat === "yearly") lab = "每年 · " + ev.month + "/" + ev.day;
+                else lab = "每月 · " + ev.dom + " 號";
+                return (
+                  '<div class="work-cal-row"><span><strong>' +
+                  escapeHtml(ev.title) +
+                  "</strong><br/><span class=\"field-hint\" style=\"margin:0\">" +
+                  escapeHtml(lab) +
+                  "</span></span><button type=\"button\" class=\"btn btn-ghost btn-sm\" data-work-cal-del=\"" +
+                  escapeHtml(ev.id) +
+                  "\">刪除</button></div>"
+                );
+              })
+              .join("");
+          }
+        }
+      }
+
+      var DAILY_JOURNAL_KEY = "tradeLogDailyJournalV1";
+      var ENCOURAGE_POOL = [
+        {
+          q: "「現在放棄，比賽就結束了！」",
+          s: "《網球王子》· 越前龍馬",
+          cite: "出處：日本漫畫／動畫《網球王子》角色對白（大眾文化引用；本頁為粵語轉述）。",
+        },
+        {
+          q: "「還早呢，還早得很。」",
+          s: "《灌籃高手》· 三井壽",
+          cite: "出處：日本漫畫／動畫《灌籃高手》角色對白（大眾文化引用；本頁為粵語轉述）。",
+        },
+        {
+          q: "「能站起來的次數，比跌倒多一次就好。」",
+          s: "運動／競技類台詞（整理版）",
+          cite: "性質：競技勵志語常見說法之粵語整理版，非指定單一原著逐字引用。",
+        },
+        {
+          q: "「不要輸給昨天嘅自己。」",
+          s: "生活向金句（整理版）",
+          cite: "性質：自我比較／成長向常用語之粵語整理版；出處為通識整理而非學術定義。",
+        },
+        {
+          q: "「如果唔試，答案永遠係零。」",
+          s: "創作／練習向（整理版）",
+          cite: "性質：行動鼓勵語之整理版；非引用特定作者原句。",
+        },
+        {
+          q: "「就算慢，都要向前。」",
+          s: "自我鼓勵（整理版）",
+          cite: "性質：通用自我鼓勵語之粵語整理版。",
+        },
+        {
+          q: "「痛苦係成長嘅收據。」",
+          s: "心態向（整理版）",
+          cite: "性質：比喻式心態金句之整理版；非心理學定律。",
+        },
+        {
+          q: "「專注下一球。」",
+          s: "《排球少年》概念（整理版）",
+          cite: "出處概念：日本漫畫《排球少年》常見「下一分」專注意識；本頁為粵語化整理標籤。",
+        },
+        {
+          q: "「我已經決定咗，要行落去。」",
+          s: "少年漫常見決意（整理版）",
+          cite: "性質：敘事作品中常見決意句式之通識整理，非單一作品逐字引用。",
+        },
+        {
+          q: "「強大唔係唔會跌低，而係跌低會再起身。」",
+          s: "通用鼓勵（整理版）",
+          cite: "性質：韌力／復原力向通用語之粵語整理版。",
+        },
+        {
+          q: "「今日做少少，聽日會感謝自己。」",
+          s: "習慣養成（整理版）",
+          cite: "性質：微習慣／複利敘事之整理版；可對照行為科學通識讀本（非本句直接出處）。",
+        },
+        {
+          q: "「把恐懼變成燃料。」",
+          s: "競技心理（整理版）",
+          cite: "性質：競技表現心理口號式整理；非指定論文原句。",
+        },
+        {
+          q: "「對手愈強，先愈值得尊重自己。」",
+          s: "競爭心態（整理版）",
+          cite: "性質：競爭自我對照語之整理版。",
+        },
+        {
+          q: "「節奏亂咗，就深呼吸再校。」",
+          s: "交易／比賽通用（整理版）",
+          cite: "性質：本 app 編者就交易／比賽情境寫嘅通用提醒（整理版）。",
+        },
+        {
+          q: "「唔好喺情緒頂點做決定。」",
+          s: "情緒管理（整理版）",
+          cite: "性質：情緒調節通識建議；可對照決策心理學有關「熱狀態」文獻（本句為口語整理）。",
+        },
+        {
+          q: "「小步都算數。」",
+          s: "微習慣（整理版）",
+          cite: "性質：微習慣敘事之整理版；非引用特定商業書原句。",
+        },
+        {
+          q: "「你唔係一個人。」",
+          s: "社群支持（整理版）",
+          cite: "性質：支持性語句之粵語整理版。",
+        },
+        {
+          q: "「做完先評價。」",
+          s: "行動優先（整理版）",
+          cite: "性質：行動優先於自我批判之通識整理。",
+        },
+        {
+          q: "「把『我唔得』改成『我未得』。」",
+          s: "語言重塑（整理版）",
+          cite: "性質：認知重評／語言框架練習之口語整理；非單一治療流派逐字引用。",
+        },
+        {
+          q: "「今日嘅練習，係明日嘅自由。」",
+          s: "長期主義（整理版）",
+          cite: "性質：長期主義敘事之整理版。",
+        },
+      ];
+      var EFFECT_POOL = [
+        {
+          id: "fx_pareto",
+          t: "二八定律（帕累托法則）",
+          b: "好多情境入面，約 20% 嘅原因會造成約 80% 嘅結果。用喺時間管理：先處理最關鍵嘅少數任務，往往帶嚟最大回報；用喺風險：少數幾個大錯誤可以毀晒成績，所以要特別盯住。",
+          c: "概念來源：維爾弗雷多·帕累托（Vilfredo Pareto）約 1896 年對財富分配嘅觀察，後泛化成「重要少數」；本頁解釋為通識向粵語整理。",
+        },
+        {
+          id: "fx_matthew",
+          t: "馬太效應",
+          b: "「多嘅愈多，少嘅愈少」：資源、能力、注意力一旦傾斜，就容易自我加強。提醒自己要主動打破惡性循環（例如止損、休息、重置節奏），亦要警惕過度自信造成嘅單邊賭注。",
+          c: "命名來源：社會學家羅伯特·莫頓（Robert K. Merton, 1968）歸納《聖經·馬太福音》比喻；本頁為決策通識整理。",
+        },
+        {
+          id: "fx_barrel",
+          t: "木桶定律（短板效應）",
+          b: "一個系統嘅上限，好多時係由最弱嗰環決定。團隊、策略、風控都一樣：最薄弱嘅地方先係真正風險來源，補短板有時比再加長板更重要。",
+          c: "通識比喻（短板決定容量）；常見於管理學教材，非單一作者原句引用；本頁為粵語整理。",
+        },
+        {
+          id: "fx_murphy",
+          t: "墨菲定律",
+          b: "「有可能出錯嘅事，遲早會出錯。」唔係迷信，而係叫你預留緩衝：備援計劃、止損、檢查清單、唔好假設「應該唔會咁啱」。",
+          c: "工程／安全文化常見歸因於愛德華·墨菲（Edward A. Murphy）相關實驗室說法（版本眾多）；本頁用通行口語版。",
+        },
+        {
+          id: "fx_two_watches",
+          t: "手錶定律（決策一致性）",
+          b: "兩支錶反而睇唔準時間。決策時標準太多會內耗：揀清楚你真正跟邊條規則（交易計劃、風險上限），減少臨場改口同自相矛盾。",
+          c: "比喻來源常歸於薩謬爾·亨廷頓（Samuel P. Huntington）或類似管理寓言（說法不一）；本頁取「多重標準降低一致性」通識義。",
+        },
+        {
+          id: "fx_bridge",
+          t: "吊橋效應",
+          b: "生理激動（心跳快）容易被誤解為「特別感覺」。提醒自己：高壓、熬夜、大波動之後唔好衝動做重大決定，先降溫再諗。",
+          c: "經典實驗：Dutton & Aron (1974) 吊橋研究（生理激發歸因）；本頁為大眾化粵語整理，非論文逐字引用。",
+        },
+        {
+          id: "fx_anchor",
+          t: "錨定效應（Anchoring）",
+          b: "第一個數字／第一印象會牢牢「錨住」之後判斷。開價、盈虧顯示、社群討論都可能令你偏離客觀；要主動用第二套參考（例如計劃位、統計）校正。",
+          c: "決策心理學文獻常見主題；Tversky & Kahneman 等有關啟發式與判斷嘅研究脈絡；本頁為通識整理。",
+        },
+        {
+          id: "fx_loss_aversion",
+          t: "損失規避（Loss Aversion）",
+          b: "人對「損失」嘅痛通常大過同等「收益」嘅快。會令你唔止損、報復性加倉、或者過早落袋。用規則同事前承諾幫自己對抗天性。",
+          c: "前景理論（Prospect Theory）核心概念之一：Kahneman & Tversky (1979)；本頁解釋為粵語通識版。",
+        },
+        {
+          id: "fx_confirmation",
+          t: "確認偏誤（Confirmation Bias）",
+          b: "傾向只睇支持自己諗法嘅證據。交易上會變成「自我說服」。刻意搵反例：咩證據會令我認錯？點樣先至算 invalidation？",
+          c: "認知心理學／科學哲學常見概念（Peter Wason 等研究脈絡）；本頁為通識整理。",
+        },
+        {
+          id: "fx_diffusion",
+          t: "責任分散效應",
+          b: "人多時每個人都覺得「唔係我嘅責任」。自己帳戶永遠係你一個人負責：風險、紀錄、覆盤都要落到自己，唔好等「有人會提醒」。",
+          c: "社會心理學「旁觀者效應」相關：Darley & Latané (1968) 等；本頁標題用「責任分散」通稱。",
+        },
+        {
+          id: "fx_broken_window",
+          t: "破窗效應",
+          b: "小規則一旦破咗唔修補，大規則更容易跟住失守。第一次違反交易計劃就要當大事：補救、紀錄、調整，而唔係當「一次半次」。",
+          c: "犯罪學政策比喻：Wilson & Kelling (1982)「Broken Windows」；本頁借喻交易紀律。",
+        },
+        {
+          id: "fx_parkinson",
+          t: "帕金森定律",
+          b: "工作會膨脹去填滿可用時間。俾自己清晰時間盒（例如 25 分鐘覆盤、15 分鐘記帳），反而更高質完成。",
+          c: "來源：西里爾·諾斯科特·帕金森（C. Northcote Parkinson）《帕金森定律》（1955）諷刺文；本頁為應用向整理。",
+        },
+        {
+          id: "fx_peter",
+          t: "彼得原理（概念版）",
+          b: "人會升到自己「唔再擅長」嘅位置。提醒：擅長交易唔等於擅長槓桿、團隊管理、情緒勞動——要認清邊個戰場先係你嘅 edge。",
+          c: "來源：勞伦斯·彼得（Laurence J. Peter）《彼得原理》（1969）；本頁為概念化粵語整理。",
+        },
+        {
+          id: "fx_infinite_monkey",
+          t: "無限猴子定理（機率直覺）",
+          b: "只要試驗次數夠多，再低機率事件都可能出現。唔係叫你賭細機率，而係理解：長線上「黑天鵝」一定會撞到，所以要倉位同生存優先。",
+          c: "機率論／思想實驗（Emile Borel 等「無限猴子」相關）；本頁用嚟講尾部風險直覺。",
+        },
+        {
+          id: "fx_mig25",
+          t: "米格-25 效應（系統整合）",
+          b: "單件零件未必最頂級，但整體協同得好，戰力可以好誇張。映射到交易：流程、紀律、風控、復盤環環扣好，往往贏過「單一神指標」。",
+          c: "大眾管理寓言：蘇聯米格-25 戰機「整體優於零件」敘事（說法常見於通識讀物）；本頁為借喻整理。",
+        },
+        {
+          id: "fx_hunting",
+          t: "狩獵法則（壓制要害）",
+          b: "面對結構化對手／市場波動，要搵「關鍵位」同「節奏點」先施力。唔係盲目更兇，而係更準：邊度先係真正嘅 invalidation？",
+          c: "軍事／博弈通識比喻（「打要害」敘事）；非單一心理學實驗名詞；本頁為交易應用向標籤。",
+        },
+        {
+          id: "fx_dugan",
+          t: "杜根定律（自信與表現）",
+          b: "強者相信自己會贏；弱者未打先怯。自信要建基於準備同統計，唔係自我催眠。",
+          c: "競技口號常歸因美式教練杜根（Dougan／Dungan 等拼寫版本眾多）；本頁取通行勵志語版本，非嚴格學術條目。",
+        },
+        {
+          id: "fx_sunk",
+          t: "沉沒成本謬誤",
+          b: "「已經付出咗」唔應該成為繼續錯下去嘅理由。止損、離場、換策略，要睇未來期望值，唔好被過去綁架。",
+          c: "經濟學「沉沒成本」概念；行為決策中嘅謬誤為通識教材常見講法；本頁為粵語整理。",
+        },
+        {
+          id: "fx_framing",
+          t: "框架效應（Framing）",
+          b: "同一個事實用唔同說法會改變你嘅選擇。對自己誠實：把盈虧用「R 倍數／規則」去框，少用「今次好唔好彩」去框。",
+          c: "前景理論相關：Tversky & Kahneman (1981)「The Framing of Decisions」等；本頁為通識整理。",
+        },
+        {
+          id: "fx_availability",
+          t: "可得性偏誤（Availability）",
+          b: "越容易諗起嘅例子，越容易被高估機率。最近大赢大輸會特別影響你下一單；用日誌同數據拉回長期樣本。",
+          c: "啟發式與偏誤：Tversky & Kahneman「可得性啟發式」脈絡；本頁為通識整理。",
+        },
+        {
+          id: "fx_overconfidence",
+          t: "過度自信偏誤",
+          b: "連勝之後特別危險。用「最大回撤上限」「單日虧損上限」等硬規則，保護自己唔因情緒而放大倉位。",
+          c: "行為金融常見主題（例如 Odean 等交易行為研究脈絡）；本頁為風險提醒式整理。",
+        },
+      ];
+
+      function hashDayString(s) {
+        var h = 2166136261 >>> 0;
+        for (var i = 0; i < s.length; i++) {
+          h ^= s.charCodeAt(i);
+          h = Math.imul(h, 16777619) >>> 0;
+        }
+        return h >>> 0;
+      }
+
+      var DAILY_POOLS_KEY = "tradeLogDailyPoolsV1";
+
+      function normalizeDailyCustomEnc(e) {
+        e = e || {};
+        var id0 = e.id != null && String(e.id).trim() ? String(e.id).trim() : lifeId("dce");
+        return {
+          id: id0,
+          q: String(e.q || "").trim().slice(0, 400),
+          s: String(e.s || "").trim().slice(0, 200),
+          cite: String(e.cite || "").trim().slice(0, 500),
+          updatedAt: Number(e.updatedAt) || Date.now(),
+        };
+      }
+
+      function normalizeDailyCustomFx(e) {
+        e = e || {};
+        var id1 = e.id != null && String(e.id).trim() ? String(e.id).trim() : lifeId("dcf");
+        return {
+          id: id1,
+          t: String(e.t || "").trim().slice(0, 200),
+          b: String(e.b || "").trim().slice(0, 4000),
+          c: String(e.c || "").trim().slice(0, 2000),
+          updatedAt: Number(e.updatedAt) || Date.now(),
+        };
+      }
+
+      function normalizeDailyPools(d) {
+        d = d || {};
+        d.version = 1;
+        d.customEncourage = Array.isArray(d.customEncourage) ? d.customEncourage.map(normalizeDailyCustomEnc).filter(function (x) {
+          return x.q;
+        }) : [];
+        d.customEffects = Array.isArray(d.customEffects) ? d.customEffects.map(normalizeDailyCustomFx).filter(function (x) {
+          return x.t;
+        }) : [];
+        if (typeof d.syncUpdatedAt !== "number" || isNaN(d.syncUpdatedAt)) d.syncUpdatedAt = 0;
+        return d;
+      }
+
+      function loadDailyPools() {
+        try {
+          var raw = localStorage.getItem(DAILY_POOLS_KEY);
+          if (raw) {
+            var d = JSON.parse(raw);
+            if (d) return normalizeDailyPools(d);
+          }
+        } catch (eDp) {}
+        return { version: 1, customEncourage: [], customEffects: [], syncUpdatedAt: 0 };
+      }
+
+      function persistDailyPoolsToStorage_() {
+        dailyPoolsState.version = 1;
+        if (typeof dailyPoolsState.syncUpdatedAt !== "number" || isNaN(dailyPoolsState.syncUpdatedAt)) dailyPoolsState.syncUpdatedAt = 0;
+        localStorage.setItem(DAILY_POOLS_KEY, JSON.stringify(dailyPoolsState));
+      }
+
+      function saveDailyPoolsState_() {
+        dailyPoolsState.syncUpdatedAt = Date.now();
+        persistDailyPoolsToStorage_();
+        scheduleDebouncedCloudAutoPush_();
+      }
+
+      var dailyPoolsState = loadDailyPools();
+
+      function getMergedEncouragePool_() {
+        return ENCOURAGE_POOL.concat(dailyPoolsState.customEncourage || []);
+      }
+
+      function getMergedEffectPool_() {
+        return EFFECT_POOL.concat(dailyPoolsState.customEffects || []);
+      }
+
+      function normDailyPickText_(s) {
+        return String(s || "")
+          .trim()
+          .replace(/\s+/g, "")
+          .toLowerCase();
+      }
+
+      function dailyEncFxDisplayDup_(enc, fx) {
+        if (!enc || !fx) return false;
+        var a = normDailyPickText_(enc.q);
+        var b = normDailyPickText_(fx.t);
+        if (!a || !b) return false;
+        if (a === b) return true;
+        if (a.length >= 8 && b.length >= 8 && (a.indexOf(b) !== -1 || b.indexOf(a) !== -1)) return true;
+        var qb = normDailyPickText_(fx.b || "");
+        if (qb && (a === qb || (a.length >= 8 && qb.length >= 8 && (a.indexOf(qb) !== -1 || qb.indexOf(a) !== -1)))) return true;
+        return false;
+      }
+
+      function pickDailyMoodPair_(iso) {
+        var E = getMergedEncouragePool_();
+        var F = getMergedEffectPool_();
+        if (!E.length || !F.length) return { enc: E[0] || { q: "", s: "" }, fx: F[0] || { t: "", b: "" } };
+        var enc = E[hashDayString(iso) % E.length];
+        var start = hashDayString(iso + "|fxv2") % F.length;
+        var fx = F[start];
+        var tries = 0;
+        while (F.length > 1 && dailyEncFxDisplayDup_(enc, fx) && tries < F.length) {
+          start = (start + 1) % F.length;
+          fx = F[start];
+          tries++;
+        }
+        return { enc: enc, fx: fx };
+      }
+
+      function dailyPoolEncLineExists_(q) {
+        var k = normDailyPickText_(q);
+        if (!k) return false;
+        var all = getMergedEncouragePool_();
+        for (var i = 0; i < all.length; i++) {
+          if (normDailyPickText_(all[i].q) === k) return true;
+        }
+        return false;
+      }
+
+      function dailyPoolFxTitleExists_(t) {
+        var k = normDailyPickText_(t);
+        if (!k) return false;
+        var all = getMergedEffectPool_();
+        for (var i = 0; i < all.length; i++) {
+          if (normDailyPickText_(all[i].t) === k) return true;
+        }
+        return false;
+      }
+
+      var DAILY_NET_HITOKOTO_KEY = "tradeLogDailyNetHitokotoV1";
+      var DAILY_NET_WIKI_PSY_KEY = "tradeLogDailyNetWikiPsyV1";
+      var _dailyNetQuoteBusy = null;
+      var _dailyNetWikiBusy = null;
+
+      var WIKI_PSY_TITLES_EN = [
+        "Loss_aversion",
+        "Anchoring_(cognitive_bias)",
+        "Confirmation_bias",
+        "Cognitive_dissonance",
+        "Availability_heuristic",
+        "Framing_effect_(psychology)",
+        "Sunk_cost",
+        "Dunning\u2013Kruger_effect",
+        "Planning_fallacy",
+        "Fundamental_attribution_error",
+        "Hawthorne_effect",
+        "Placebo",
+        "Mere_exposure_effect",
+        "Peak\u2013end_rule",
+        "Barnum_effect",
+        "Bandwagon_effect",
+        "Analysis_paralysis",
+        "Overconfidence_effect",
+        "Disposition_effect",
+        "Endowment_effect",
+        "Ambiguity_effect",
+        "Attentional_bias",
+        "Optimism_bias",
+        "Negativity_bias",
+        "Hyperbolic_discounting",
+      ];
+
+      function normalizeDailyNetRec(x) {
+        x = x || {};
+        return {
+          date: String(x.date || "").trim(),
+          hitokoto: String(x.hitokoto || "").trim().slice(0, 500),
+          from: String(x.from || "").trim().slice(0, 200),
+          from_who: String(x.from_who || "").trim().slice(0, 200),
+          creator: String(x.creator || "").trim().slice(0, 120),
+          type: String(x.type || "").trim().slice(0, 40),
+          uuid: String(x.uuid || "").trim().slice(0, 80),
+          source: String(x.source || "").trim().slice(0, 40),
+          fetchedAt: Number(x.fetchedAt) || 0,
+        };
+      }
+
+      function loadDailyNetCache() {
+        try {
+          var raw = localStorage.getItem(DAILY_NET_HITOKOTO_KEY);
+          if (raw) {
+            var d = JSON.parse(raw);
+            if (d && d.date && d.hitokoto) return normalizeDailyNetRec(d);
+          }
+        } catch (eN) {}
+        return null;
+      }
+
+      function saveDailyNetCache(rec) {
+        rec = normalizeDailyNetRec(rec);
+        if (!rec.date || !rec.hitokoto) return;
+        localStorage.setItem(DAILY_NET_HITOKOTO_KEY, JSON.stringify(rec));
+      }
+
+      function applyDailyNetworkToDom_(rec, mode) {
+        var el = document.getElementById("dailyNetworkBlock");
+        if (!el) return;
+        if (mode === "loading") {
+          el.innerHTML = '<span class="field-hint">連線緊（一言 / 備援英文句）…\u003c/span>';
+          return;
+        }
+        if (mode === "fail") {
+          el.innerHTML =
+            '<span class="field-hint">暫時拎唔到網絡句子（離線、服務繁忙、或網絡被擋）。遲啲再開本頁，或撳<strong>重新擷取今日</strong>。\u003c/span>';
+          return;
+        }
+        if (!rec || !rec.hitokoto) {
+          el.innerHTML = '<span class="field-hint">未有資料。\u003c/span>';
+          return;
+        }
+        var who = (rec.from_who && String(rec.from_who).trim()) || "";
+        var from = (rec.from && String(rec.from).trim()) || "";
+        var citeMain = who || from || "（佚名）";
+        var citeExtra = "";
+        if (who && from && who !== from) {
+          citeExtra = "<br/><span class=\"enc-cite-detail\">作品／出處：《" + escapeHtml(from) + "》\u003c/span>";
+        } else if (from && !who) {
+          citeExtra = "<br/><span class=\"enc-cite-detail\">出處：《" + escapeHtml(from) + "》\u003c/span>";
+        }
+        var src =
+          rec.source === "quotable"
+            ? "備援：Quotable（api.quotable.io）"
+            : "第一來源：一言（v1.hitokoto.cn）";
+        el.innerHTML =
+          escapeHtml(rec.hitokoto) +
+          "<cite>— " +
+          escapeHtml(citeMain) +
+          citeExtra +
+          "<br/><span class=\"enc-cite-detail\">" +
+          escapeHtml(src) +
+          " · 擷取日 " +
+          escapeHtml(rec.date) +
+          "\u003c/span>\u003c/cite>";
+      }
+
+      function stripWikiExtract_(htmlOrText) {
+        var s = String(htmlOrText || "");
+        s = s.replace(/<[^>]+>/g, " ");
+        s = s.replace(/\s+/g, " ").trim();
+        return s.slice(0, 1800);
+      }
+
+      function normalizeDailyWikiRec(x) {
+        x = x || {};
+        return {
+          date: String(x.date || "").trim(),
+          wikiTitle: String(x.wikiTitle || "").trim().slice(0, 220),
+          displayTitle: String(x.displayTitle || "").trim().slice(0, 260),
+          extract: String(x.extract || "").trim().slice(0, 1800),
+          pageUrl: String(x.pageUrl || "").trim().slice(0, 500),
+          fetchedAt: Number(x.fetchedAt) || 0,
+        };
+      }
+
+      function loadDailyWikiCache() {
+        try {
+          var raw = localStorage.getItem(DAILY_NET_WIKI_PSY_KEY);
+          if (raw) {
+            var d = JSON.parse(raw);
+            if (d && d.date && d.extract) return normalizeDailyWikiRec(d);
+          }
+        } catch (eWk) {}
+        return null;
+      }
+
+      function saveDailyWikiCache(rec) {
+        rec = normalizeDailyWikiRec(rec);
+        if (!rec.date || !rec.extract) return;
+        localStorage.setItem(DAILY_NET_WIKI_PSY_KEY, JSON.stringify(rec));
+      }
+
+      function applyDailyWikiPsychToDom_(rec, mode) {
+        var el = document.getElementById("dailyNetworkWikiFx");
+        if (!el) return;
+        if (mode === "loading") {
+          el.innerHTML = '<span class="field-hint">連線緊維基百科摘要…\u003c/span>';
+          return;
+        }
+        if (mode === "fail") {
+          el.innerHTML =
+            '<span class="field-hint">暫時拎唔到維基摘要（網絡、404、或服務限制）。可撳<strong>重新擷取今日</strong>再試。\u003c/span>';
+          return;
+        }
+        if (!rec || !rec.extract) {
+          el.innerHTML = '<span class="field-hint">未有摘要。\u003c/span>';
+          return;
+        }
+        var title = rec.displayTitle || rec.wikiTitle.replace(/_/g, " ");
+        var link =
+          rec.pageUrl ?
+            '<p class="fx-cite"><a href="' +
+            escapeHtml(rec.pageUrl) +
+            '" target="_blank" rel="noopener noreferrer">Wikipedia 條目（瀏覽器開全文）\u003c/a> · CC BY-SA · 擷取日 ' +
+            escapeHtml(rec.date) +
+            "\u003c/p>" :
+            '<p class="fx-cite">擷取日 ' + escapeHtml(rec.date) + "\u003c/p>";
+        el.innerHTML =
+          '<div class="fx-title">' +
+          escapeHtml(title) +
+          ' <span style="font-size:0.72rem;font-weight:600;color:var(--text-muted)">（英文維基概念）</span>\u003c/div>' +
+          escapeHtml(rec.extract).replace(/\n/g, "<br/>") +
+          '<p class="fx-cite">來源：MediaWiki REST <code>page/summary</code>（en.wikipedia.org）— 通識參考，唔係醫學或投資建議。\u003c/p>' +
+          link;
+      }
+
+      function pickWikiPsyTitleForDay_(iso) {
+        var n = WIKI_PSY_TITLES_EN.length;
+        if (!n) return "Loss_aversion";
+        return WIKI_PSY_TITLES_EN[hashDayString(iso + "|wikipsyv1") % n];
+      }
+
+      function fetchDailyWikiPsych_(iso, force) {
+        if (force) {
+          _dailyNetWikiBusy = null;
+        } else if (_dailyNetWikiBusy === iso) {
+          return Promise.resolve();
+        }
+        if (!force) {
+          var w0 = loadDailyWikiCache();
+          if (w0 && w0.date === iso && w0.extract) {
+            applyDailyWikiPsychToDom_(w0, null);
+            return Promise.resolve();
+          }
+        }
+        _dailyNetWikiBusy = iso;
+        applyDailyWikiPsychToDom_(null, "loading");
+        var settleW = function () {
+          if (_dailyNetWikiBusy === iso) _dailyNetWikiBusy = null;
+        };
+        var slug = pickWikiPsyTitleForDay_(iso);
+        var url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(slug);
+        return fetch(url, { mode: "cors", cache: "no-store" })
+          .then(function (r) {
+            if (r.status === 404) throw new Error("wiki_404");
+            if (!r.ok) throw new Error("wiki_http");
+            return r.json();
+          })
+          .then(function (j) {
+            var ext = stripWikiExtract_(j.extract || "");
+            if (!ext) throw new Error("wiki_empty");
+            var pageUrl = (j.content_urls && j.content_urls.desktop && j.content_urls.desktop.page) || "";
+            var rec = normalizeDailyWikiRec({
+              date: iso,
+              wikiTitle: slug,
+              displayTitle: String(j.title || slug).replace(/_/g, " "),
+              extract: ext,
+              pageUrl: pageUrl,
+              fetchedAt: Date.now(),
+            });
+            saveDailyWikiCache(rec);
+            applyDailyWikiPsychToDom_(rec, null);
+          })
+          .catch(function () {
+            applyDailyWikiPsychToDom_(null, "fail");
+          })
+          .then(settleW, settleW);
+      }
+
+      function fetchDailyNetworkQuote_(iso, force) {
+        if (force) {
+          _dailyNetQuoteBusy = null;
+        } else if (_dailyNetQuoteBusy === iso) {
+          return Promise.resolve();
+        }
+        if (!force) {
+          var cached = loadDailyNetCache();
+          if (cached && cached.date === iso && cached.hitokoto) {
+            applyDailyNetworkToDom_(cached, null);
+            return Promise.resolve();
+          }
+        }
+        _dailyNetQuoteBusy = iso;
+        applyDailyNetworkToDom_(null, "loading");
+        var settle = function () {
+          if (_dailyNetQuoteBusy === iso) _dailyNetQuoteBusy = null;
+        };
+        var hitUrl = "https://v1.hitokoto.cn/?encode=json&min_length=6&max_length=200";
+        return fetch(hitUrl, { mode: "cors", cache: "no-store" })
+          .then(function (r) {
+            if (!r.ok) throw new Error("hk_http");
+            return r.json();
+          })
+          .then(function (j) {
+            var text = String(j.hitokoto || "").trim();
+            if (!text) throw new Error("hk_empty");
+            var rec = normalizeDailyNetRec({
+              date: iso,
+              hitokoto: text,
+              from: j.from,
+              from_who: j.from_who,
+              creator: j.creator,
+              type: j.type,
+              uuid: j.uuid,
+              source: "hitokoto",
+              fetchedAt: Date.now(),
+            });
+            saveDailyNetCache(rec);
+            applyDailyNetworkToDom_(rec, null);
+          })
+          .catch(function () {
+            return fetch("https://api.quotable.io/random?maxLength=220", { mode: "cors", cache: "no-store" })
+              .then(function (r2) {
+                if (!r2.ok) throw new Error("q_http");
+                return r2.json();
+              })
+              .then(function (q) {
+                var t2 = String(q.content || "").trim();
+                if (!t2) throw new Error("q_empty");
+                var rec2 = normalizeDailyNetRec({
+                  date: iso,
+                  hitokoto: t2,
+                  from: q.author || "Quotable",
+                  from_who: "",
+                  creator: "quotable.io",
+                  type: "en",
+                  uuid: q._id || "",
+                  source: "quotable",
+                  fetchedAt: Date.now(),
+                });
+                saveDailyNetCache(rec2);
+                applyDailyNetworkToDom_(rec2, null);
+              });
+          })
+          .catch(function () {
+            applyDailyNetworkToDom_(null, "fail");
+          })
+          .then(settle, settle);
+      }
+
+      function scheduleDailyNetworkFetch_(iso) {
+        try {
+          if (typeof requestAnimationFrame !== "undefined") {
+            requestAnimationFrame(function () {
+              fetchDailyNetworkQuote_(iso, false);
+              fetchDailyWikiPsych_(iso, false);
+            });
+          } else {
+            setTimeout(function () {
+              fetchDailyNetworkQuote_(iso, false);
+              fetchDailyWikiPsych_(iso, false);
+            }, 0);
+          }
+        } catch (eSch) {
+          fetchDailyNetworkQuote_(iso, false);
+          fetchDailyWikiPsych_(iso, false);
+        }
+      }
+
+      var PSYCH_BANK_KEY = "tradeLogPsychBankV1";
+      var TRADE_IDEAS_KEY = "tradeLogTradeIdeasV1";
+
+      function normalizePsychUserNote(e) {
+        e = e || {};
+        return {
+          id: e.id || lifeId("pn"),
+          term: String(e.term || "").trim().slice(0, 200),
+          body: String(e.body || "").trim().slice(0, 8000),
+          citation: String(e.citation || "").trim().slice(0, 2000),
+          updatedAt: Number(e.updatedAt) || Date.now(),
+        };
+      }
+
+      function normalizePsychBank(p) {
+        p = p || {};
+        p.version = 1;
+        p.appearances = Array.isArray(p.appearances) ? p.appearances : [];
+        p.appearances = p.appearances
+          .map(function (a) {
+            return {
+              date: String(a.date || "").trim(),
+              effectId: String(a.effectId || "").trim(),
+              at: Number(a.at) || 0,
+            };
+          })
+          .filter(function (a) {
+            return a.date && a.effectId;
+          });
+        p.userNotes = Array.isArray(p.userNotes) ? p.userNotes.map(normalizePsychUserNote) : [];
+        p.deckIds = Array.isArray(p.deckIds) ? p.deckIds.map(String).filter(Boolean) : [];
+        if (typeof p.syncUpdatedAt !== "number" || isNaN(p.syncUpdatedAt)) p.syncUpdatedAt = 0;
+        return p;
+      }
+
+      function loadPsychBank() {
+        try {
+          var raw = localStorage.getItem(PSYCH_BANK_KEY);
+          if (raw) {
+            var d = JSON.parse(raw);
+            if (d) return normalizePsychBank(d);
+          }
+        } catch (ePsy) {}
+        return { version: 1, appearances: [], userNotes: [], deckIds: [], syncUpdatedAt: 0 };
+      }
+
+      function persistPsychBankToStorage_() {
+        psychBankState.version = 1;
+        if (typeof psychBankState.syncUpdatedAt !== "number" || isNaN(psychBankState.syncUpdatedAt)) psychBankState.syncUpdatedAt = 0;
+        localStorage.setItem(PSYCH_BANK_KEY, JSON.stringify(psychBankState));
+      }
+
+      function savePsychBankState_() {
+        psychBankState.syncUpdatedAt = Date.now();
+        persistPsychBankToStorage_();
+        scheduleDebouncedCloudAutoPush_();
+      }
+
+      var psychBankState = loadPsychBank();
+
+      function getBuiltinEffectById_(id) {
+        if (!id) return null;
+        for (var i = 0; i < EFFECT_POOL.length; i++) {
+          if (EFFECT_POOL[i].id === id) return EFFECT_POOL[i];
+        }
+        var ce = dailyPoolsState.customEffects || [];
+        for (var j = 0; j < ce.length; j++) {
+          if (ce[j].id === id) {
+            return { id: ce[j].id, t: ce[j].t, b: ce[j].b, c: ce[j].c };
+          }
+        }
+        return null;
+      }
+
+      function getPsychUserNoteById_(nid) {
+        var list = psychBankState.userNotes || [];
+        for (var i = 0; i < list.length; i++) {
+          if (list[i].id === nid) return list[i];
+        }
+        return null;
+      }
+
+      function getPsychCardPayload_(refId) {
+        var u = getPsychUserNoteById_(refId);
+        if (u) {
+          return { kind: "user", term: u.term, body: u.body, citation: u.citation || "（自訂筆記）" };
+        }
+        var b = getBuiltinEffectById_(refId);
+        if (b) {
+          return { kind: "builtin", term: b.t, body: b.b, citation: b.c || "" };
+        }
+        return { kind: "missing", term: "（已刪除或找不到）", body: "", citation: refId };
+      }
+
+      function logPsychAppearance_(iso, effectId) {
+        if (!iso || !effectId) return;
+        psychBankState.appearances = psychBankState.appearances || [];
+        for (var j = 0; j < psychBankState.appearances.length; j++) {
+          if (psychBankState.appearances[j].date === iso && psychBankState.appearances[j].effectId === effectId) {
+            return;
+          }
+        }
+        var nv = { date: iso, effectId: effectId, at: Date.now() };
+        var replaced = false;
+        for (var k = 0; k < psychBankState.appearances.length; k++) {
+          if (psychBankState.appearances[k].date === iso) {
+            psychBankState.appearances[k] = nv;
+            replaced = true;
+            break;
+          }
+        }
+        if (!replaced) psychBankState.appearances.push(nv);
+        savePsychBankState_();
+      }
+
+      function normalizeTradeIdea(x) {
+        x = x || {};
+        return {
+          id: x.id || lifeId("ti"),
+          title: String(x.title || "").trim().slice(0, 200),
+          content: String(x.content || "").trim().slice(0, 16000),
+          tags: String(x.tags || "").trim().slice(0, 500),
+          updatedAt: Number(x.updatedAt) || Date.now(),
+        };
+      }
+
+      function normalizeTradeIdeasState(t) {
+        t = t || {};
+        t.version = 1;
+        t.ideas = Array.isArray(t.ideas) ? t.ideas.map(normalizeTradeIdea) : [];
+        if (typeof t.syncUpdatedAt !== "number" || isNaN(t.syncUpdatedAt)) t.syncUpdatedAt = 0;
+        return t;
+      }
+
+      function loadTradeIdeas() {
+        try {
+          var raw = localStorage.getItem(TRADE_IDEAS_KEY);
+          if (raw) {
+            var d = JSON.parse(raw);
+            if (d) return normalizeTradeIdeasState(d);
+          }
+        } catch (eTi) {}
+        return { version: 1, ideas: [], syncUpdatedAt: 0 };
+      }
+
+      function persistTradeIdeasToStorage_() {
+        tradeIdeasState.version = 1;
+        if (typeof tradeIdeasState.syncUpdatedAt !== "number" || isNaN(tradeIdeasState.syncUpdatedAt)) tradeIdeasState.syncUpdatedAt = 0;
+        localStorage.setItem(TRADE_IDEAS_KEY, JSON.stringify(tradeIdeasState));
+      }
+
+      function saveTradeIdeasState_() {
+        tradeIdeasState.syncUpdatedAt = Date.now();
+        persistTradeIdeasToStorage_();
+        scheduleDebouncedCloudAutoPush_();
+      }
+
+      var tradeIdeasState = loadTradeIdeas();
+
+      var _psychFlash = { order: [], idx: 0, revealed: false };
+
+      function psychDeckHasId_(id) {
+        return (psychBankState.deckIds || []).indexOf(id) !== -1;
+      }
+
+      function psychToggleDeck_(id, on) {
+        psychBankState.deckIds = psychBankState.deckIds || [];
+        var ix = psychBankState.deckIds.indexOf(id);
+        if (on && ix === -1) psychBankState.deckIds.push(id);
+        if (!on && ix !== -1) psychBankState.deckIds.splice(ix, 1);
+        savePsychBankState_();
+      }
+
+      function mergePsychBankForSync(lo, cl) {
+        lo = normalizePsychBank(lo || {});
+        cl = normalizePsychBank(cl || {});
+        var byDate = {};
+        function addApp(a) {
+          if (!a.date) return;
+          var ex = byDate[a.date];
+          if (!ex || (Number(a.at) || 0) >= (Number(ex.at) || 0)) byDate[a.date] = a;
+        }
+        (lo.appearances || []).forEach(addApp);
+        (cl.appearances || []).forEach(addApp);
+        var keys = Object.keys(byDate).sort();
+        var mergedApps = keys.map(function (k) {
+          return byDate[k];
+        });
+        var noteMap = {};
+        function addNote(n) {
+          n = normalizePsychUserNote(n);
+          var ex = noteMap[n.id];
+          if (!ex || (Number(n.updatedAt) || 0) >= (Number(ex.updatedAt) || 0)) noteMap[n.id] = n;
+        }
+        (lo.userNotes || []).forEach(addNote);
+        (cl.userNotes || []).forEach(addNote);
+        var deck = [];
+        var seenD = {};
+        function pushDeckId(id) {
+          if (!id || seenD[id]) return;
+          seenD[id] = 1;
+          deck.push(id);
+        }
+        (lo.deckIds || []).forEach(pushDeckId);
+        (cl.deckIds || []).forEach(pushDeckId);
+        return normalizePsychBank({
+          version: 1,
+          appearances: mergedApps,
+          userNotes: Object.keys(noteMap).map(function (k) {
+            return noteMap[k];
+          }),
+          deckIds: deck,
+          syncUpdatedAt: Math.max(Number(lo.syncUpdatedAt) || 0, Number(cl.syncUpdatedAt) || 0),
+        });
+      }
+
+      function mergeTradeIdeasForSync(lo, cl) {
+        lo = normalizeTradeIdeasState(lo || {});
+        cl = normalizeTradeIdeasState(cl || {});
+        var map = {};
+        function add(x) {
+          x = normalizeTradeIdea(x);
+          var ex = map[x.id];
+          if (!ex) {
+            map[x.id] = x;
+            return;
+          }
+          var ua = Number(ex.updatedAt) || 0;
+          var ub = Number(x.updatedAt) || 0;
+          map[x.id] = ub >= ua ? x : ex;
+        }
+        (lo.ideas || []).forEach(add);
+        (cl.ideas || []).forEach(add);
+        return normalizeTradeIdeasState({
+          version: 1,
+          ideas: Object.keys(map).map(function (k) {
+            return map[k];
+          }),
+          syncUpdatedAt: Math.max(Number(lo.syncUpdatedAt) || 0, Number(cl.syncUpdatedAt) || 0),
+        });
+      }
+
+      function mergeDailyPoolsForSync(lo, cl) {
+        lo = normalizeDailyPools(lo || {});
+        cl = normalizeDailyPools(cl || {});
+        var mapE = {};
+        function addE(x) {
+          x = normalizeDailyCustomEnc(x);
+          if (!x.q) return;
+          var ex = mapE[x.id];
+          if (!ex || (Number(x.updatedAt) || 0) >= (Number(ex.updatedAt) || 0)) mapE[x.id] = x;
+        }
+        (lo.customEncourage || []).forEach(addE);
+        (cl.customEncourage || []).forEach(addE);
+        var mapF = {};
+        function addF(x) {
+          x = normalizeDailyCustomFx(x);
+          if (!x.t) return;
+          var ex = mapF[x.id];
+          if (!ex || (Number(x.updatedAt) || 0) >= (Number(ex.updatedAt) || 0)) mapF[x.id] = x;
+        }
+        (lo.customEffects || []).forEach(addF);
+        (cl.customEffects || []).forEach(addF);
+        return normalizeDailyPools({
+          version: 1,
+          customEncourage: Object.keys(mapE).map(function (k) {
+            return mapE[k];
+          }),
+          customEffects: Object.keys(mapF).map(function (k) {
+            return mapF[k];
+          }),
+          syncUpdatedAt: Math.max(Number(lo.syncUpdatedAt) || 0, Number(cl.syncUpdatedAt) || 0),
+        });
+      }
+
+      function renderPsychAppearList_() {
+        var host = document.getElementById("psychAppearList");
+        if (!host) return;
+        var apps = (psychBankState.appearances || []).slice().sort(function (a, b) {
+          return String(b.date).localeCompare(String(a.date));
+        });
+        if (!apps.length) {
+          host.innerHTML = '<p class="field-hint">暫未有記錄；去「每日心情」開一次就會記低當日效應。</p>';
+          return;
+        }
+        host.innerHTML = apps
+          .map(function (a) {
+            var b = getBuiltinEffectById_(a.effectId);
+            var u = getPsychUserNoteById_(a.effectId);
+            var title = b ? b.t : u ? u.term : a.effectId;
+            var sub = b ? b.c : u ? u.citation : "";
+            return (
+              '<div class="psych-appear-row"><div class="psych-row-main"><strong>' +
+              escapeHtml(a.date) +
+              "</strong> · " +
+              escapeHtml(title) +
+              (sub ? '<span class="sub">' + escapeHtml(sub) + "\u003c/span>" : "") +
+              '</div><button type="button" class="btn btn-ghost btn-sm" data-psych-deck-add="' +
+              escapeHtml(a.effectId) +
+              '">加入閃卡\u003c/button></div>'
+            );
+          })
+          .join("");
+      }
+
+      function renderPsychCatalog_() {
+        var host = document.getElementById("psychCatalogList");
+        var filEl = document.getElementById("psychCatalogFilter");
+        if (!host) return;
+        var q = filEl ? String(filEl.value || "").trim().toLowerCase() : "";
+        var rows = getMergedEffectPool_().filter(function (fx) {
+          if (!q) return true;
+          var blob = (fx.t + " " + (fx.c || "") + " " + fx.b).toLowerCase();
+          return blob.indexOf(q) !== -1;
+        });
+        if (!rows.length) {
+          host.innerHTML = '<p class="field-hint">無符合搜尋。</p>';
+          return;
+        }
+        host.innerHTML = rows
+          .map(function (fx) {
+            var on = psychDeckHasId_(fx.id);
+            return (
+              '<div class="psych-catalog-row"><div class="psych-row-main"><strong>' +
+              escapeHtml(fx.t) +
+              '</strong><span class="sub">' +
+              escapeHtml(fx.c || "") +
+              "</span></div><div><button type=\"button\" class=\"btn btn-ghost btn-sm\" data-psych-deck-toggle=\"" +
+              escapeHtml(fx.id) +
+              "\">" +
+              (on ? "移出牌組" : "加入閃卡") +
+              "\u003c/button></div></div>"
+            );
+          })
+          .join("");
+      }
+
+      function renderPsychUserList_() {
+        var host = document.getElementById("psychUserList");
+        if (!host) return;
+        var list = psychBankState.userNotes || [];
+        if (!list.length) {
+          host.innerHTML = '<p class="field-hint">未有加筆記。</p>';
+          return;
+        }
+        list.sort(function (a, b) {
+          return (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0);
+        });
+        host.innerHTML = list
+          .map(function (u) {
+            var on = psychDeckHasId_(u.id);
+            return (
+              '<div class="psych-user-row"><div class="psych-row-main"><strong>' +
+              escapeHtml(u.term) +
+              '</strong><span class="sub">' +
+              escapeHtml(u.citation) +
+              "</span></div><div style=\"display:flex;gap:6px;flex-wrap:wrap\"><button type=\"button\" class=\"btn btn-ghost btn-sm\" data-psych-user-edit=\"" +
+              escapeHtml(u.id) +
+              "\">編輯\u003c/button><button type=\"button\" class=\"btn btn-ghost btn-sm\" data-psych-user-del=\"" +
+              escapeHtml(u.id) +
+              "\">刪除\u003c/button><button type=\"button\" class=\"btn btn-ghost btn-sm\" data-psych-deck-toggle=\"" +
+              escapeHtml(u.id) +
+              "\">" +
+              (on ? "移出牌組" : "加入閃卡") +
+              "\u003c/button></div></div>"
+            );
+          })
+          .join("");
+      }
+
+      function updatePsychDeckSummary_() {
+        var el = document.getElementById("psychDeckSummary");
+        if (!el) return;
+        var n = (psychBankState.deckIds || []).length;
+        el.textContent = "牌組共有 " + n + " 張（內建效應同自訂筆記都可混合）。";
+      }
+
+      function renderPsychPanel() {
+        renderPsychAppearList_();
+        renderPsychCatalog_();
+        renderPsychUserList_();
+        updatePsychDeckSummary_();
+      }
+
+      function psychShuffleDeckOrder_() {
+        var arr = (psychBankState.deckIds || []).slice();
+        for (var i = arr.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var t = arr[i];
+          arr[i] = arr[j];
+          arr[j] = t;
+        }
+        return arr;
+      }
+
+      function psychFlashShowCard_() {
+        var ids = _psychFlash.order;
+        var idx = _psychFlash.idx;
+        var id = ids[idx];
+        var card = getPsychCardPayload_(id);
+        var front = document.getElementById("psychFlashTitle");
+        var back = document.getElementById("psychFlashBack");
+        var meta = document.getElementById("psychFlashMeta");
+        if (front) front.textContent = card.term || "（空）";
+        if (back) {
+          back.innerHTML =
+            escapeHtml(card.body || "").replace(/\n/g, "<br/>") +
+            (card.citation ? '<p class="cite">' + escapeHtml(card.citation) + "\u003c/p>" : "");
+        }
+        if (back) back.hidden = !_psychFlash.revealed;
+        if (meta) meta.textContent = "第 " + (idx + 1) + " / " + ids.length + " 張";
+      }
+
+      function psychFlashOpen_() {
+        var ids = psychShuffleDeckOrder_();
+        if (!ids.length) {
+          toast("牌組係空嘅：請先「加入閃卡」");
+          return;
+        }
+        _psychFlash.order = ids;
+        _psychFlash.idx = 0;
+        _psychFlash.revealed = false;
+        var ov = document.getElementById("psychFlashOverlay");
+        if (ov) {
+          ov.hidden = false;
+          ov.setAttribute("aria-hidden", "false");
+          requestAnimationFrame(function () {
+            try {
+              ov.focus({ preventScroll: true });
+            } catch (eF) {}
+          });
+        }
+        psychFlashShowCard_();
+      }
+
+      function psychFlashClose_() {
+        var ov = document.getElementById("psychFlashOverlay");
+        if (ov) {
+          ov.hidden = true;
+          ov.setAttribute("aria-hidden", "true");
+        }
+      }
+
+      function psychFlashFlip_() {
+        _psychFlash.revealed = !_psychFlash.revealed;
+        psychFlashShowCard_();
+      }
+
+      function psychFlashNext_() {
+        if (_psychFlash.idx < _psychFlash.order.length - 1) {
+          _psychFlash.idx++;
+          _psychFlash.revealed = false;
+          psychFlashShowCard_();
+        } else toast("已經係最後一張");
+      }
+
+      function psychFlashPrev_() {
+        if (_psychFlash.idx > 0) {
+          _psychFlash.idx--;
+          _psychFlash.revealed = false;
+          psychFlashShowCard_();
+        }
+      }
+
+      (function wirePsychAndTradeIdeasUi() {
+        var btnDailyToPsych = document.getElementById("btnDailyToPsych");
+        if (btnDailyToPsych)
+          btnDailyToPsych.addEventListener("click", function () {
+            setTab("psych", { focusTitle: true });
+          });
+        var pf = document.getElementById("psychCatalogFilter");
+        if (pf) pf.addEventListener("input", renderPsychCatalog_);
+        var hostAppear = document.getElementById("psychAppearList");
+        if (hostAppear)
+          hostAppear.addEventListener("click", function (ev) {
+            var t = ev.target;
+            if (t && t.getAttribute && t.getAttribute("data-psych-deck-add")) {
+              psychToggleDeck_(t.getAttribute("data-psych-deck-add"), true);
+              renderPsychPanel();
+              toast("已加入閃卡牌組");
+            }
+          });
+        var hostCat = document.getElementById("psychCatalogList");
+        if (hostCat)
+          hostCat.addEventListener("click", function (ev) {
+            var t = ev.target;
+            if (t && t.getAttribute && t.getAttribute("data-psych-deck-toggle")) {
+              var id = t.getAttribute("data-psych-deck-toggle");
+              psychToggleDeck_(id, !psychDeckHasId_(id));
+              renderPsychCatalog_();
+              renderPsychUserList_();
+              updatePsychDeckSummary_();
+            }
+          });
+        var hostUser = document.getElementById("psychUserList");
+        if (hostUser)
+          hostUser.addEventListener("click", function (ev) {
+            var t = ev.target;
+            if (!t || !t.getAttribute) return;
+            var del = t.getAttribute("data-psych-user-del");
+            if (del) {
+              psychBankState.userNotes = (psychBankState.userNotes || []).filter(function (u) {
+                return u.id !== del;
+              });
+              psychBankState.deckIds = (psychBankState.deckIds || []).filter(function (x) {
+                return x !== del;
+              });
+              savePsychBankState_();
+              renderPsychPanel();
+              return;
+            }
+            var ed = t.getAttribute("data-psych-user-edit");
+            if (ed) {
+              var u = getPsychUserNoteById_(ed);
+              if (u) {
+                document.getElementById("psychUserTerm").value = u.term;
+                document.getElementById("psychUserBody").value = u.body;
+                document.getElementById("psychUserCitation").value = u.citation;
+                document.getElementById("psychUserTerm").setAttribute("data-editing-id", ed);
+                toast("已載入編輯：改完再撳「新增筆記卡」會更新");
+              }
+            }
+            if (t.getAttribute("data-psych-deck-toggle")) {
+              var id2 = t.getAttribute("data-psych-deck-toggle");
+              psychToggleDeck_(id2, !psychDeckHasId_(id2));
+              renderPsychUserList_();
+              renderPsychCatalog_();
+              updatePsychDeckSummary_();
+            }
+          });
+        var btnAdd = document.getElementById("btnPsychUserAdd");
+        if (btnAdd)
+          btnAdd.addEventListener("click", function () {
+            var termEl = document.getElementById("psychUserTerm");
+            var bodyEl = document.getElementById("psychUserBody");
+            var citEl = document.getElementById("psychUserCitation");
+            var term = termEl ? String(termEl.value || "").trim() : "";
+            if (!term) {
+              toast("請填標題");
+              return;
+            }
+            var editId = termEl && termEl.getAttribute("data-editing-id");
+            var body = bodyEl ? String(bodyEl.value || "").trim() : "";
+            var cit = citEl ? String(citEl.value || "").trim() : "";
+            if (editId) {
+              var prev = getPsychUserNoteById_(editId);
+              if (prev) {
+                prev.term = term;
+                prev.body = body;
+                prev.citation = cit;
+                prev.updatedAt = Date.now();
+                savePsychBankState_();
+                termEl.removeAttribute("data-editing-id");
+                termEl.value = "";
+                if (bodyEl) bodyEl.value = "";
+                if (citEl) citEl.value = "";
+                renderPsychPanel();
+                toast("已更新筆記");
+                return;
+              }
+            }
+            psychBankState.userNotes = psychBankState.userNotes || [];
+            psychBankState.userNotes.push(
+              normalizePsychUserNote({ term: term, body: body, citation: cit, updatedAt: Date.now() })
+            );
+            savePsychBankState_();
+            if (termEl) termEl.value = "";
+            if (bodyEl) bodyEl.value = "";
+            if (citEl) citEl.value = "";
+            renderPsychPanel();
+            toast("已新增筆記");
+          });
+        var btnFlash = document.getElementById("btnPsychFlashStart");
+        if (btnFlash) btnFlash.addEventListener("click", psychFlashOpen_);
+        var btnShuf = document.getElementById("btnPsychDeckShuffle");
+        if (btnShuf)
+          btnShuf.addEventListener("click", function () {
+            psychBankState.deckIds = psychShuffleDeckOrder_();
+            savePsychBankState_();
+            renderPsychPanel();
+            toast("已洗牌（牌組順序已更新）");
+          });
+        var btnClr = document.getElementById("btnPsychDeckClear");
+        if (btnClr)
+          btnClr.addEventListener("click", function () {
+            psychBankState.deckIds = [];
+            savePsychBankState_();
+            renderPsychPanel();
+            toast("已清空牌組");
+          });
+        var bf = document.getElementById("btnPsychFlashFlip");
+        if (bf) bf.addEventListener("click", psychFlashFlip_);
+        var bn = document.getElementById("btnPsychFlashNext");
+        if (bn) bn.addEventListener("click", psychFlashNext_);
+        var bp = document.getElementById("btnPsychFlashPrev");
+        if (bp) bp.addEventListener("click", psychFlashPrev_);
+        var bc = document.getElementById("btnPsychFlashClose");
+        if (bc) bc.addEventListener("click", psychFlashClose_);
+        var ov = document.getElementById("psychFlashOverlay");
+        if (ov)
+          ov.addEventListener("keydown", function (ev) {
+            if (ev.key === "Escape") psychFlashClose_();
+            if (ev.key === " " || ev.key === "Spacebar") {
+              ev.preventDefault();
+              psychFlashFlip_();
+            }
+            if (ev.key === "ArrowRight" || ev.key === "Enter") {
+              ev.preventDefault();
+              psychFlashNext_();
+            }
+            if (ev.key === "ArrowLeft") {
+              ev.preventDefault();
+              psychFlashPrev_();
+            }
+          });
+        var tif = document.getElementById("tradeIdeaFilter");
+        if (tif) tif.addEventListener("input", renderTradeIdeasPanel);
+        var btnTiSave = document.getElementById("btnTradeIdeaSave");
+        if (btnTiSave)
+          btnTiSave.addEventListener("click", function () {
+            var titleEl = document.getElementById("tradeIdeaTitle");
+            var tagEl = document.getElementById("tradeIdeaTags");
+            var conEl = document.getElementById("tradeIdeaContent");
+            var hid = document.getElementById("tradeIdeaEditId");
+            var title = titleEl ? String(titleEl.value || "").trim() : "";
+            if (!title) {
+              toast("請填標題");
+              return;
+            }
+            var tags = tagEl ? String(tagEl.value || "").trim() : "";
+            var content = conEl ? String(conEl.value || "").trim() : "";
+            var eid = hid && hid.value ? String(hid.value) : "";
+            tradeIdeasState.ideas = tradeIdeasState.ideas || [];
+            if (eid) {
+              var found = false;
+              for (var ti = 0; ti < tradeIdeasState.ideas.length; ti++) {
+                if (tradeIdeasState.ideas[ti].id === eid) {
+                  tradeIdeasState.ideas[ti].title = title;
+                  tradeIdeasState.ideas[ti].tags = tags;
+                  tradeIdeasState.ideas[ti].content = content;
+                  tradeIdeasState.ideas[ti].updatedAt = Date.now();
+                  found = true;
+                  break;
+                }
+              }
+              if (!found) toast("找不到要更新嘅項目");
+            } else {
+              tradeIdeasState.ideas.push(normalizeTradeIdea({ title: title, tags: tags, content: content }));
+            }
+            saveTradeIdeasState_();
+            if (hid) hid.value = "";
+            if (titleEl) titleEl.value = "";
+            if (tagEl) tagEl.value = "";
+            if (conEl) conEl.value = "";
+            renderTradeIdeasPanel();
+            toast(eid ? "已更新" : "已儲存");
+          });
+        var btnTiClr = document.getElementById("btnTradeIdeaClearForm");
+        if (btnTiClr)
+          btnTiClr.addEventListener("click", function () {
+            document.getElementById("tradeIdeaEditId").value = "";
+            document.getElementById("tradeIdeaTitle").value = "";
+            document.getElementById("tradeIdeaTags").value = "";
+            document.getElementById("tradeIdeaContent").value = "";
+          });
+        var hostTi = document.getElementById("tradeIdeaList");
+        if (hostTi)
+          hostTi.addEventListener("click", function (ev) {
+            var t = ev.target;
+            if (!t || !t.getAttribute) return;
+            var eid = t.getAttribute("data-trade-idea-edit");
+            if (eid) {
+              for (var i2 = 0; i2 < tradeIdeasState.ideas.length; i2++) {
+                if (tradeIdeasState.ideas[i2].id === eid) {
+                  var it = tradeIdeasState.ideas[i2];
+                  document.getElementById("tradeIdeaTitle").value = it.title;
+                  document.getElementById("tradeIdeaTags").value = it.tags || "";
+                  document.getElementById("tradeIdeaContent").value = it.content || "";
+                  document.getElementById("tradeIdeaEditId").value = it.id;
+                  toast("已載入編輯");
+                  break;
+                }
+              }
+            }
+            var did = t.getAttribute("data-trade-idea-del");
+            if (did) {
+              tradeIdeasState.ideas = (tradeIdeasState.ideas || []).filter(function (x) {
+                return x.id !== did;
+              });
+              saveTradeIdeasState_();
+              renderTradeIdeasPanel();
+              toast("已刪除");
+            }
+          });
+      })();
+
+      function renderTradeIdeasPanel() {
+        var host = document.getElementById("tradeIdeaList");
+        var fil = document.getElementById("tradeIdeaFilter");
+        if (!host) return;
+        var q = fil ? String(fil.value || "").trim().toLowerCase() : "";
+        var ideas = (tradeIdeasState.ideas || []).slice().sort(function (a, b) {
+          return (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0);
+        });
+        if (q) {
+          ideas = ideas.filter(function (it) {
+            var blob = (it.title + " " + (it.tags || "") + " " + (it.content || "")).toLowerCase();
+            return blob.indexOf(q) !== -1;
+          });
+        }
+        if (!ideas.length) {
+          host.innerHTML = '<p class="field-hint">未有儲存，或者無符合搜尋。</p>';
+          return;
+        }
+        host.innerHTML = ideas
+          .map(function (it) {
+            return (
+              '<div class="trade-idea-row"><div class="psych-row-main"><strong>' +
+              escapeHtml(it.title) +
+              "</strong>" +
+              (it.tags ? '<span class="sub">標籤：' + escapeHtml(it.tags) + "\u003c/span>" : "") +
+              '<span class="sub">' +
+              escapeHtml((it.content || "").replace(/\s+/g, " ").slice(0, 220)) +
+              (it.content && it.content.length > 220 ? "…" : "") +
+              "</span></div><div style=\"display:flex;gap:6px;flex-wrap:wrap\"><button type=\"button\" class=\"btn btn-ghost btn-sm\" data-trade-idea-edit=\"" +
+              escapeHtml(it.id) +
+              "\">編輯\u003c/button><button type=\"button\" class=\"btn btn-ghost btn-sm\" data-trade-idea-del=\"" +
+              escapeHtml(it.id) +
+              "\">刪除\u003c/button></div></div>"
+            );
+          })
+          .join("");
+      }
+
+      function normalizeDailyJournalEntry(e) {
+        e = e || {};
+        var mood = e.mood;
+        if (mood === "" || mood == null) mood = null;
+        else {
+          mood = parseInt(String(mood), 10);
+          if (isNaN(mood) || mood < 1 || mood > 5) mood = null;
+        }
+        return {
+          id: e.id || lifeId("dj"),
+          date: (e.date || "").trim() || todayISO(),
+          mood: mood,
+          thought: (e.thought || "").trim().slice(0, 8000),
+          updatedAt: e.updatedAt != null ? Number(e.updatedAt) : Date.now(),
+        };
+      }
+
+      function normalizeDailyJournal(d) {
+        d = d || {};
+        d.version = 1;
+        d.entries = Array.isArray(d.entries) ? d.entries.map(normalizeDailyJournalEntry) : [];
+        if (typeof d.syncUpdatedAt !== "number" || isNaN(d.syncUpdatedAt)) d.syncUpdatedAt = 0;
+        return d;
+      }
+
+      function loadDailyJournal() {
+        try {
+          var raw = localStorage.getItem(DAILY_JOURNAL_KEY);
+          if (raw) {
+            var d = JSON.parse(raw);
+            if (d) return normalizeDailyJournal(d);
+          }
+        } catch (e1) {}
+        return { version: 1, entries: [], syncUpdatedAt: 0 };
+      }
+
+      function persistDailyJournalToStorage_() {
+        dailyJournalState.version = 1;
+        if (typeof dailyJournalState.syncUpdatedAt !== "number" || isNaN(dailyJournalState.syncUpdatedAt)) dailyJournalState.syncUpdatedAt = 0;
+        localStorage.setItem(DAILY_JOURNAL_KEY, JSON.stringify(dailyJournalState));
+      }
+
+      function saveDailyJournalState_() {
+        dailyJournalState.syncUpdatedAt = Date.now();
+        persistDailyJournalToStorage_();
+      }
+
+      var dailyJournalState = loadDailyJournal();
+
+      function getDailyJournalEntryForDate(iso) {
+        var list = dailyJournalState.entries || [];
+        for (var i = 0; i < list.length; i++) {
+          if (list[i].date === iso) return list[i];
+        }
+        return null;
+      }
+
+      function renderDailyPoolCustomList_() {
+        var host = document.getElementById("dailyPoolCustomList");
+        if (!host) return;
+        var encs = dailyPoolsState.customEncourage || [];
+        var fxs = dailyPoolsState.customEffects || [];
+        if (!encs.length && !fxs.length) {
+          host.innerHTML = '<p class="field-hint">尚未自訂；加入後會出現喺呢度，亦會參與每日輪播。</p>';
+          return;
+        }
+        var parts = [];
+        if (encs.length) {
+          parts.push("<strong>自訂金句</strong>");
+          encs.forEach(function (e) {
+            parts.push(
+              '<div class="psych-catalog-row" style="padding:8px 0"><div class="psych-row-main"><span class="sub">' +
+                escapeHtml(e.q) +
+                '</span><span class="sub">— ' +
+                escapeHtml(e.s) +
+                "</span></div><button type=\"button\" class=\"btn btn-ghost btn-sm\" data-daily-pool-del-enc=\"" +
+                escapeHtml(e.id) +
+                "\">刪除\u003c/button></div>"
+            );
+          });
+        }
+        if (fxs.length) {
+          parts.push("<strong style=\"display:block;margin-top:10px\">自訂效應</strong>");
+          fxs.forEach(function (f) {
+            parts.push(
+              '<div class="psych-catalog-row" style="padding:8px 0"><div class="psych-row-main"><strong>' +
+                escapeHtml(f.t) +
+                '</strong><span class="sub">' +
+                escapeHtml((f.b || "").slice(0, 120)) +
+                (f.b && f.b.length > 120 ? "…" : "") +
+                "</span></div><button type=\"button\" class=\"btn btn-ghost btn-sm\" data-daily-pool-del-fx=\"" +
+                escapeHtml(f.id) +
+                "\">刪除\u003c/button></div>"
+            );
+          });
+        }
+        host.innerHTML = parts.join("");
+      }
+
+      function renderDailyPanel() {
+        var iso = todayISO();
+        var pair = pickDailyMoodPair_(iso);
+        var enc = pair.enc;
+        var fx = pair.fx;
+        if (fx && fx.id) logPsychAppearance_(iso, fx.id);
+        var eq = document.getElementById("dailyEncourageBlock");
+        if (eq) {
+          var citeEnc =
+            "<cite>— " +
+            escapeHtml(enc.s) +
+            (enc.cite ? "<br/><span class=\"enc-cite-detail\">" + escapeHtml(enc.cite) + "\u003c/span>" : "") +
+            "\u003c/cite>";
+          eq.innerHTML = escapeHtml(enc.q) + citeEnc;
+        }
+        var ef = document.getElementById("dailyEffectBlock");
+        if (ef) {
+          var citeFx = fx.c ? '<p class="fx-cite">' + escapeHtml(fx.c) + "\u003c/p>" : "";
+          ef.innerHTML =
+            '<div class="fx-title">' + escapeHtml(fx.t) + "\u003c/div>" + escapeHtml(fx.b).replace(/\n/g, "<br/>") + citeFx;
+        }
+        var lead = document.getElementById("dailyQuoteLead");
+        if (lead) {
+          lead.innerHTML =
+            "今日係 <strong>" +
+            escapeHtml(iso) +
+            "\u003c/strong>；過咗午夜會換新一句同新概念。金句同效應會<strong>盡量唔用同一組顯示字</strong>（你自訂入池嘅亦會計在內）。";
+        }
+        renderDailyPoolCustomList_();
+        scheduleDailyNetworkFetch_(iso);
+        var ex = getDailyJournalEntryForDate(iso);
+        var moodEl = document.getElementById("dailyMood");
+        var thEl = document.getElementById("dailyThought");
+        if (moodEl) moodEl.value = ex && ex.mood != null ? String(ex.mood) : "";
+        if (thEl) thEl.value = ex ? ex.thought : "";
+      }
+
+      function saveDailyJournalEntry_() {
+        var iso = todayISO();
+        var moodEl = document.getElementById("dailyMood");
+        var thEl = document.getElementById("dailyThought");
+        var mood = moodEl && moodEl.value ? parseInt(moodEl.value, 10) : null;
+        if (mood != null && (isNaN(mood) || mood < 1 || mood > 5)) mood = null;
+        var thought = thEl ? String(thEl.value || "").trim() : "";
+        var prev = getDailyJournalEntryForDate(iso);
+        var entry = normalizeDailyJournalEntry({
+          id: prev && prev.id ? prev.id : undefined,
+          date: iso,
+          mood: mood,
+          thought: thought,
+          updatedAt: Date.now(),
+        });
+        dailyJournalState.entries = dailyJournalState.entries || [];
+        var idx = -1;
+        for (var i = 0; i < dailyJournalState.entries.length; i++) {
+          if (dailyJournalState.entries[i].date === iso) {
+            idx = i;
+            break;
+          }
+        }
+        if (idx === -1) dailyJournalState.entries.push(entry);
+        else dailyJournalState.entries[idx] = entry;
+        saveDailyJournalState_();
+        toast("已儲存今日日記");
+      }
+
+      (function wireDailyJournalUi() {
+        var btn = document.getElementById("btnDailyJournalSave");
+        if (btn) btn.addEventListener("click", saveDailyJournalEntry_);
+        var bEnc = document.getElementById("btnDailyPoolAddEnc");
+        if (bEnc)
+          bEnc.addEventListener("click", function () {
+            var q = document.getElementById("dailyPoolEncQ");
+            var s = document.getElementById("dailyPoolEncS");
+            var c = document.getElementById("dailyPoolEncCite");
+            var qt = q ? String(q.value || "").trim() : "";
+            if (!qt) {
+              toast("請填金句內容");
+              return;
+            }
+            if (dailyPoolEncLineExists_(qt)) {
+              toast("池內已有相同（或極相似）金句");
+              return;
+            }
+            dailyPoolsState.customEncourage = dailyPoolsState.customEncourage || [];
+            dailyPoolsState.customEncourage.push(
+              normalizeDailyCustomEnc({
+                q: qt,
+                s: s ? String(s.value || "").trim() || "自訂" : "自訂",
+                cite: c ? String(c.value || "").trim() : "",
+                updatedAt: Date.now(),
+              })
+            );
+            saveDailyPoolsState_();
+            if (q) q.value = "";
+            if (s) s.value = "";
+            if (c) c.value = "";
+            renderDailyPoolCustomList_();
+            renderDailyPanel();
+            toast("已加入金句池（會同步雲端）");
+          });
+        var bFx = document.getElementById("btnDailyPoolAddFx");
+        if (bFx)
+          bFx.addEventListener("click", function () {
+            var tEl = document.getElementById("dailyPoolFxT");
+            var bEl = document.getElementById("dailyPoolFxB");
+            var cEl = document.getElementById("dailyPoolFxC");
+            var tt = tEl ? String(tEl.value || "").trim() : "";
+            if (!tt) {
+              toast("請填效應標題");
+              return;
+            }
+            if (dailyPoolFxTitleExists_(tt)) {
+              toast("池內已有相同標題嘅效應");
+              return;
+            }
+            dailyPoolsState.customEffects = dailyPoolsState.customEffects || [];
+            dailyPoolsState.customEffects.push(
+              normalizeDailyCustomFx({
+                t: tt,
+                b: bEl ? String(bEl.value || "").trim() : "",
+                c: cEl ? String(cEl.value || "").trim() : "",
+                updatedAt: Date.now(),
+              })
+            );
+            saveDailyPoolsState_();
+            if (tEl) tEl.value = "";
+            if (bEl) bEl.value = "";
+            if (cEl) cEl.value = "";
+            renderDailyPoolCustomList_();
+            renderDailyPanel();
+            toast("已加入效應池（會同步雲端）");
+          });
+        var bNet = document.getElementById("btnDailyNetRefresh");
+        if (bNet)
+          bNet.addEventListener("click", function () {
+            var dIso = todayISO();
+            try {
+              localStorage.removeItem(DAILY_NET_HITOKOTO_KEY);
+              localStorage.removeItem(DAILY_NET_WIKI_PSY_KEY);
+            } catch (eRm) {}
+            Promise.all([fetchDailyNetworkQuote_(dIso, true), fetchDailyWikiPsych_(dIso, true)]).finally(function () {
+              toast("已嘗試重新擷取（一句 + 維基摘要，請睇下面結果）");
+            });
+          });
+        var poolList = document.getElementById("dailyPoolCustomList");
+        if (poolList)
+          poolList.addEventListener("click", function (ev) {
+            var t = ev.target;
+            if (!t || !t.getAttribute) return;
+            var de = t.getAttribute("data-daily-pool-del-enc");
+            if (de) {
+              dailyPoolsState.customEncourage = (dailyPoolsState.customEncourage || []).filter(function (x) {
+                return x.id !== de;
+              });
+              saveDailyPoolsState_();
+              renderDailyPoolCustomList_();
+              renderDailyPanel();
+              toast("已刪除金句");
+              return;
+            }
+            var df = t.getAttribute("data-daily-pool-del-fx");
+            if (df) {
+              dailyPoolsState.customEffects = (dailyPoolsState.customEffects || []).filter(function (x) {
+                return x.id !== df;
+              });
+              saveDailyPoolsState_();
+              renderDailyPoolCustomList_();
+              renderDailyPanel();
+              toast("已刪除效應");
+            }
+          });
+      })();
+
       function schedBlockAppliesOnDate(b, dt) {
         if (!dt || !(dt instanceof Date)) return false;
         var r = b.repeat || "none";
@@ -3494,7 +6063,10 @@
         new: { title: "記一單", sub: "Playbook · R · 止損 · 情緒 · 截圖" },
         list: { title: "全部交易", sub: "點一筆可詳情／編輯" },
         analytics: { title: "分析", sub: "策略標籤 · 商品表現" },
-        calendar: { title: "日曆", sub: "每日淨額熱力" },
+        calendar: { title: "日曆", sub: "交易盈虧 · 生活假期 · 週課表（直向分開）" },
+        daily: { title: "每日心情", sub: "今日一句 · 效應概念 · 心情日記" },
+        psych: { title: "效應庫", sub: "心理學圖鑑 · 出處 · 閃卡複習" },
+        tradeideas: { title: "交易思路", sub: "策略與 idea 筆記庫" },
         goals: { title: "目標與進度", sub: "大目標 · 細步驟 · 心得 · 連住交易日誌" },
         routine: { title: "日程・錢包", sub: "每週時間表 · 今日打剔 · 收支與預算" },
         reminders: { title: "待辦・提醒", sub: "日程 · 目標步驟 · 錢包警號" },
@@ -3545,7 +6117,7 @@
       }
 
       function setTab(id, opts) {
-        var ids = ["dash", "new", "list", "analytics", "calendar", "goals", "reminders", "routine", "xau", "settings"];
+        var ids = ["dash", "new", "list", "analytics", "calendar", "goals", "reminders", "daily", "psych", "tradeideas", "routine", "xau", "settings"];
         ids.forEach(function (t) {
           var btn = document.getElementById("tab-" + t);
           var panel = document.getElementById("panel-" + t);
@@ -3567,6 +6139,9 @@
         if (id === "new") rehydrateTradeTemplateSelect();
         if (id === "goals") renderLifePanel();
         if (id === "reminders") renderRemindersPanel();
+        if (id === "daily") renderDailyPanel();
+        if (id === "psych") renderPsychPanel();
+        if (id === "tradeideas") renderTradeIdeasPanel();
         if (id === "routine") renderRoutinePanel();
         if (id === "xau") initXauPanel();
         if (opts && opts.focusTitle) {
@@ -5614,11 +8189,11 @@
               gtag +
               "</p></div><div>" +
               (isToday
-                ? '<label class="field-hint" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" data-sched-done="' +
+                ? '<label class="ux-check-row"><input type="checkbox" class="ux-chk" data-sched-done="' +
                   escapeHtml(b.id) +
                   '" ' +
                   (done ? "checked" : "") +
-                  " />今日完成</label>"
+                  ' aria-label="今日完成" /><span>今日完成</span></label>'
                 : '<span class="field-hint">非今日</span>') +
               '<br/><button type="button" class="btn btn-ghost" style="margin-top:6px;padding:4px 8px;font-size:0.72rem" data-sched-del="' +
               escapeHtml(b.id) +
@@ -6009,7 +8584,7 @@
                 (s.done ? " done" : "") +
                 '" data-step-id="' +
                 escapeHtml(s.id) +
-                '"><input type="checkbox" data-life-toggle-step="' +
+                '"><input type="checkbox" class="ux-chk" data-life-toggle-step="' +
                 escapeHtml(s.id) +
                 '" ' +
                 (s.done ? "checked" : "") +
@@ -6076,13 +8651,13 @@
       }
 
       function heatColor(net) {
-        if (!net) return "rgba(30, 41, 59, 0.4)";
+        if (!net) return "rgba(30, 41, 59, 0.55)";
         if (net > 0) {
-          var a = Math.min(0.85, 0.2 + (net / 800) * 0.65);
-          return "rgba(74, 222, 128, " + a + ")";
+          var a = Math.min(0.92, 0.28 + (net / 800) * 0.64);
+          return "rgba(94, 233, 160, " + a + ")";
         }
-        var b = Math.min(0.85, 0.2 + (Math.abs(net) / 800) * 0.65);
-        return "rgba(251, 113, 133, " + b + ")";
+        var b = Math.min(0.92, 0.28 + (Math.abs(net) / 800) * 0.64);
+        return "rgba(255, 139, 163, " + b + ")";
       }
 
       function renderAnalytics() {
@@ -6197,8 +8772,11 @@
         for (var d = 1; d <= daysInMonth; d++) {
           var net = daily[d] || 0;
           var bg = heatColor(net);
+          var zc = net === 0 ? " heat-zero" : "";
           html +=
-            '<div class="heat-cell" style="background:' +
+            '<div class="heat-cell' +
+            zc +
+            '" style="background:' +
             bg +
             '" title="' +
             d +
@@ -6218,6 +8796,7 @@
           }
         grid.innerHTML = html;
         renderRoutineWeekTimetable();
+        renderWorkCalendarPanel();
       }
 
       function getWeekStartSunday(weekOffset) {
@@ -6560,6 +9139,12 @@
       document.getElementById("btnRemindToCal").addEventListener("click", function () {
         setTab("calendar");
       });
+      var btnRemindDaily = document.getElementById("btnRemindToDaily");
+      if (btnRemindDaily) {
+        btnRemindDaily.addEventListener("click", function () {
+          setTab("daily");
+        });
+      }
 
       document.getElementById("panel-reminders").addEventListener("click", function (e) {
         if (e.target.closest("[data-remind-open-routine]")) {
@@ -6591,6 +9176,82 @@
         }
         renderCalendar();
       });
+
+      (function wireWorkCalendarUi() {
+        var repEl = document.getElementById("workCalRepeat");
+        var wOnce = document.getElementById("workCalWrapOnce");
+        var wYmd = document.getElementById("workCalWrapYmd");
+        var wDom = document.getElementById("workCalWrapDom");
+        var dOnce = document.getElementById("workCalDateOnce");
+        function syncWorkCalRepeatUi() {
+          if (!repEl || !wOnce || !wYmd || !wDom) return;
+          var r = repEl.value;
+          wOnce.style.display = r === "once" ? "" : "none";
+          wYmd.style.display = r === "yearly" ? "" : "none";
+          wDom.style.display = r === "monthly" ? "" : "none";
+        }
+        if (repEl) {
+          repEl.addEventListener("change", syncWorkCalRepeatUi);
+          syncWorkCalRepeatUi();
+        }
+        if (dOnce && !dOnce.value) dOnce.value = todayISO();
+        var btnAdd = document.getElementById("btnWorkCalAdd");
+        if (btnAdd) {
+          btnAdd.addEventListener("click", function () {
+            var title = (document.getElementById("workCalTitle") || {}).value || "";
+            title = String(title).trim();
+            if (!title) {
+              toast("請填標題");
+              return;
+            }
+            var rep = (repEl && repEl.value) || "once";
+            var ev = normalizeWorkCalEvent({ title: title, repeat: rep, updatedAt: Date.now() });
+            if (rep === "once") {
+              ev.date = (dOnce && dOnce.value) || todayISO();
+              if (!ev.date) {
+                toast("請揀一次性日期");
+                return;
+              }
+            } else if (rep === "yearly") {
+              var mo = parseInt(String((document.getElementById("workCalMonth") || {}).value || ""), 10);
+              var dy = parseInt(String((document.getElementById("workCalDay") || {}).value || ""), 10);
+              if (isNaN(mo) || isNaN(dy) || mo < 1 || mo > 12 || dy < 1 || dy > 31) {
+                toast("每年重複請填有效月／日");
+                return;
+              }
+              ev.month = mo;
+              ev.day = dy;
+            } else {
+              var dom = parseInt(String((document.getElementById("workCalDom") || {}).value || ""), 10);
+              if (isNaN(dom) || dom < 1 || dom > 31) {
+                toast("每月重複請填 1–31 號");
+                return;
+              }
+              ev.dom = dom;
+            }
+            workCalState.events = workCalState.events || [];
+            workCalState.events.push(ev);
+            saveWorkCal();
+            document.getElementById("workCalTitle").value = "";
+            renderWorkCalendarPanel();
+            toast("已加入");
+          });
+        }
+        var listHost = document.getElementById("workCalEventList");
+        if (listHost) {
+          listHost.addEventListener("click", function (e) {
+            var b = e.target.closest("[data-work-cal-del]");
+            if (!b) return;
+            var id = b.getAttribute("data-work-cal-del");
+            workCalState.events = (workCalState.events || []).filter(function (x) {
+              return x.id !== id;
+            });
+            saveWorkCal();
+            renderWorkCalendarPanel();
+            toast("已刪除");
+          });
+        }
+      })();
 
       function fillSettingsForm() {
         state.settings = normalizeSettings(state.settings || {});
@@ -6649,6 +9310,18 @@
         try {
           renderRoutineWeekTimetable();
         } catch (eT) {}
+        try {
+          renderWorkCalendarPanel();
+        } catch (eC) {}
+        try {
+          renderDailyPanel();
+        } catch (eD) {}
+        try {
+          renderPsychPanel();
+        } catch (ePs) {}
+        try {
+          renderTradeIdeasPanel();
+        } catch (eTi) {}
         var pl = document.getElementById("panel-list");
         if (pl && pl.classList.contains("active")) renderList();
         var pa = document.getElementById("panel-analytics");
@@ -6677,6 +9350,26 @@
         if (parsed.xauPaper && typeof parsed.xauPaper === "object") {
           xauPaper.open = parsed.xauPaper.open || null;
           saveXauPaper();
+        }
+        if (parsed.workCalendar && typeof parsed.workCalendar === "object") {
+          workCalState = normalizeWorkCal(parsed.workCalendar);
+          persistWorkCalToStorage_();
+        }
+        if (parsed.dailyJournal && typeof parsed.dailyJournal === "object") {
+          dailyJournalState = normalizeDailyJournal(parsed.dailyJournal);
+          persistDailyJournalToStorage_();
+        }
+        if (parsed.psychBank && typeof parsed.psychBank === "object") {
+          psychBankState = normalizePsychBank(parsed.psychBank);
+          persistPsychBankToStorage_();
+        }
+        if (parsed.tradeIdeas && typeof parsed.tradeIdeas === "object") {
+          tradeIdeasState = normalizeTradeIdeasState(parsed.tradeIdeas);
+          persistTradeIdeasToStorage_();
+        }
+        if (parsed.dailyPools && typeof parsed.dailyPools === "object") {
+          dailyPoolsState = normalizeDailyPools(parsed.dailyPools);
+          persistDailyPoolsToStorage_();
         }
         refreshAllPanelsAfterFullDataApply_();
         toast("已從雲端載入");
@@ -6907,6 +9600,61 @@
         return normalizeRoutineWallet(merged);
       }
 
+      function mergeWorkCalendarForSync(lo, cl) {
+        lo = normalizeWorkCal(lo || {});
+        cl = normalizeWorkCal(cl || {});
+        var map = {};
+        function add(ev) {
+          ev = normalizeWorkCalEvent(ev);
+          if (!ev.id) return;
+          var ex = map[ev.id];
+          if (!ex) {
+            map[ev.id] = ev;
+            return;
+          }
+          var ua = Number(ex.updatedAt) || 0;
+          var ub = Number(ev.updatedAt) || 0;
+          map[ev.id] = ub >= ua ? ev : ex;
+        }
+        (lo.events || []).forEach(add);
+        (cl.events || []).forEach(add);
+        return normalizeWorkCal({
+          version: 1,
+          events: Object.keys(map).map(function (k) {
+            return map[k];
+          }),
+          syncUpdatedAt: Math.max(Number(lo.syncUpdatedAt) || 0, Number(cl.syncUpdatedAt) || 0),
+        });
+      }
+
+      function mergeDailyJournalForSync(lo, cl) {
+        lo = normalizeDailyJournal(lo || {});
+        cl = normalizeDailyJournal(cl || {});
+        var byDate = {};
+        function add(e) {
+          e = normalizeDailyJournalEntry(e);
+          if (!e.date) return;
+          var ex = byDate[e.date];
+          if (!ex) {
+            byDate[e.date] = e;
+            return;
+          }
+          var ua = Number(ex.updatedAt) || 0;
+          var ub = Number(e.updatedAt) || 0;
+          byDate[e.date] = ub >= ua ? e : ex;
+        }
+        (lo.entries || []).forEach(add);
+        (cl.entries || []).forEach(add);
+        var keys = Object.keys(byDate).sort();
+        return normalizeDailyJournal({
+          version: 1,
+          entries: keys.map(function (k) {
+            return byDate[k];
+          }),
+          syncUpdatedAt: Math.max(Number(lo.syncUpdatedAt) || 0, Number(cl.syncUpdatedAt) || 0),
+        });
+      }
+
       function mergeXauPaperForSync(localPaperObj, cloudPaperObj) {
         localPaperObj = localPaperObj && typeof localPaperObj === "object" ? localPaperObj : { open: null };
         cloudPaperObj = cloudPaperObj && typeof cloudPaperObj === "object" ? cloudPaperObj : { open: null };
@@ -6922,16 +9670,21 @@
 
       function buildFullAppCloudPayload() {
         return {
-          version: 2,
+          version: 3,
           trades: state.trades,
           settings: normalizeSettings(state.settings || {}),
           life: getLifePayloadForSync_(),
           routineWallet: normalizeRoutineWallet(JSON.parse(JSON.stringify(routineState))),
+          workCalendar: normalizeWorkCal(JSON.parse(JSON.stringify(workCalState))),
+          dailyJournal: normalizeDailyJournal(JSON.parse(JSON.stringify(dailyJournalState))),
           xauPaper: { open: xauPaper.open || null },
+          psychBank: normalizePsychBank(JSON.parse(JSON.stringify(psychBankState))),
+          tradeIdeas: normalizeTradeIdeasState(JSON.parse(JSON.stringify(tradeIdeasState))),
+          dailyPools: normalizeDailyPools(JSON.parse(JSON.stringify(dailyPoolsState))),
         };
       }
 
-      function applyMergedFullAppToUi_(mergedTrades, mergedSettings, mergedLife, mergedRoutine, mergedXau, toastMsg) {
+      function applyMergedFullAppToUi_(mergedTrades, mergedSettings, mergedLife, mergedRoutine, mergedXau, mergedWorkCal, mergedDailyJournal, toastMsg, dataExtra) {
         state.trades = mergedTrades;
         state.settings = mergedSettings;
         state.version = 2;
@@ -6946,6 +9699,26 @@
         persistRoutineWalletToStorage_();
         xauPaper.open = mergedXau && mergedXau.open ? mergedXau.open : null;
         saveXauPaper();
+        if (mergedWorkCal && typeof mergedWorkCal === "object") {
+          workCalState = normalizeWorkCal(mergedWorkCal);
+          persistWorkCalToStorage_();
+        }
+        if (mergedDailyJournal && typeof mergedDailyJournal === "object") {
+          dailyJournalState = normalizeDailyJournal(mergedDailyJournal);
+          persistDailyJournalToStorage_();
+        }
+        if (dataExtra && dataExtra.psychBank && typeof dataExtra.psychBank === "object") {
+          psychBankState = normalizePsychBank(dataExtra.psychBank);
+          persistPsychBankToStorage_();
+        }
+        if (dataExtra && dataExtra.tradeIdeas && typeof dataExtra.tradeIdeas === "object") {
+          tradeIdeasState = normalizeTradeIdeasState(dataExtra.tradeIdeas);
+          persistTradeIdeasToStorage_();
+        }
+        if (dataExtra && dataExtra.dailyPools && typeof dataExtra.dailyPools === "object") {
+          dailyPoolsState = normalizeDailyPools(dataExtra.dailyPools);
+          persistDailyPoolsToStorage_();
+        }
         refreshAllPanelsAfterFullDataApply_();
         if (toastMsg) toast(toastMsg);
       }
@@ -6984,9 +9757,18 @@
             var mergedLife = mergeLifePayloadForSync(getLifePayloadForSync_(), cloud.life || null);
             var mergedRoutine = mergeRoutineWalletForSync(routineState, cloud.routineWallet || null);
             var mergedXau = mergeXauPaperForSync(xauPaper, cloud.xauPaper || { open: null });
+            var mergedWorkCal = mergeWorkCalendarForSync(workCalState, cloud.workCalendar || null);
+            var mergedDailyJournal = mergeDailyJournalForSync(dailyJournalState, cloud.dailyJournal || null);
+            var mergedPsychBank = mergePsychBankForSync(psychBankState, cloud.psychBank || null);
+            var mergedTradeIdeas = mergeTradeIdeasForSync(tradeIdeasState, cloud.tradeIdeas || null);
+            var mergedDailyPools = mergeDailyPoolsForSync(dailyPoolsState, cloud.dailyPools || null);
             var nBefore = (state.trades && state.trades.length) || 0;
             var nCloud = (cloud.trades && cloud.trades.length) || 0;
-            applyMergedFullAppToUi_(mergedTrades, mergedSettings, mergedLife, mergedRoutine, mergedXau, null);
+            applyMergedFullAppToUi_(mergedTrades, mergedSettings, mergedLife, mergedRoutine, mergedXau, mergedWorkCal, mergedDailyJournal, null, {
+              psychBank: mergedPsychBank,
+              tradeIdeas: mergedTradeIdeas,
+              dailyPools: mergedDailyPools,
+            });
             var nAfter = state.trades.length;
             var body = JSON.stringify(buildFullAppCloudPayload());
             return postJournalBodyToCloud_(body, true).then(function () {
@@ -6998,7 +9780,7 @@
                     nCloud +
                     " → 合併後 " +
                     nAfter +
-                    " 筆；生活／錢包／XAU 模擬已一併合併上傳（同 ID 以較新為準）"
+                    " 筆；生活／錢包／XAU／效應庫／交易思路已一併合併上傳（同 ID 以較新為準）"
                 );
               }
             });
