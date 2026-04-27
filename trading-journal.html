@@ -2801,7 +2801,7 @@
           <button type="button" class="btn btn-ghost" id="btnCloudSyncPull">從雲端覆蓋本機</button>
         </div>
         <p class="field-hint" style="margin-top: 12px">
-          <strong>合併同步（預設）：</strong>會先下載雲端，將<strong>交易按 ID 合併</strong>（本機 5 筆 + 雲端 10 筆唔重複＝最多 15 筆；同一 ID 則保留較新 <code>createdAt</code>），再寫回本機並<strong>上傳合併後嘅完整備份</strong>。「從雲端覆蓋本機」才會<strong>唔合併</strong>整份取代本機。進階 <code>DELETE</code> 仍係刻意清空雲端專用。
+          <strong>合併同步（預設）：</strong>會先下載雲端，將<strong>交易、生活目標／日誌、錢包／時間表、XAU 模擬倉</strong>等一併按規則合併（交易／帶 <code>createdAt</code> 嘅紀錄：同 ID 保留較新；錢包預設／時間格：邊邊 <code>syncUpdatedAt</code> 新就邊邊主導預算欄；XAU 開倉狀態以較新 <code>openedAt</code> 為準）。XAU 圖表時間框只留本機、唔上雲。再寫回本機並<strong>上傳成個備份 JSON</strong>。「從雲端覆蓋本機」才會<strong>唔合併</strong>整份取代本機（舊備份冇嘅欄位會保留本機）。進階 <code>DELETE</code> 仍係刻意清空雲端專用。
         </p>
         <details
           class="cloud-danger-zone"
@@ -3243,7 +3243,7 @@
       }
 
       function defaultLifeData() {
-        return { version: 1, goals: [], logs: [] };
+        return { version: 1, goals: [], logs: [], syncUpdatedAt: 0 };
       }
 
       function normalizeLifeGoal(g) {
@@ -3315,6 +3315,7 @@
                 return !g.archived;
               }).map(normalizeLifeGoal);
               d.logs = d.logs.map(normalizeLifeLog);
+              d.syncUpdatedAt = typeof d.syncUpdatedAt === "number" && !isNaN(d.syncUpdatedAt) ? d.syncUpdatedAt : 0;
               return d;
             }
           }
@@ -3322,9 +3323,15 @@
         return defaultLifeData();
       }
 
-      function saveLife(data) {
+      function persistLifeToStorage_(data) {
         data.version = 1;
+        if (typeof data.syncUpdatedAt !== "number" || isNaN(data.syncUpdatedAt)) data.syncUpdatedAt = 0;
         localStorage.setItem(LIFE_STORAGE, JSON.stringify(data));
+      }
+
+      function saveLife(data) {
+        data.syncUpdatedAt = Date.now();
+        persistLifeToStorage_(data);
       }
 
       var lifeState = loadLife();
@@ -3394,6 +3401,7 @@
                 category: (e.category || "其他").trim(),
                 note: (e.note || "").trim(),
                 excludeFromDailyCap: !!(e.type === "expense" && e.excludeFromDailyCap),
+                createdAt: e.createdAt != null ? Number(e.createdAt) : Date.now(),
               };
             })
           : [];
@@ -3416,6 +3424,7 @@
               };
             })
           : [];
+        if (typeof d.syncUpdatedAt !== "number" || isNaN(d.syncUpdatedAt)) d.syncUpdatedAt = 0;
         return d;
       }
 
@@ -3430,8 +3439,15 @@
         return defaultRoutineWallet();
       }
 
-      function saveRoutineWallet() {
+      function persistRoutineWalletToStorage_() {
+        routineState.version = 1;
+        if (typeof routineState.syncUpdatedAt !== "number" || isNaN(routineState.syncUpdatedAt)) routineState.syncUpdatedAt = 0;
         localStorage.setItem(ROUTINE_WALLET_KEY, JSON.stringify(routineState));
+      }
+
+      function saveRoutineWallet() {
+        routineState.syncUpdatedAt = Date.now();
+        persistRoutineWalletToStorage_();
       }
 
       var routineState = loadRoutineWallet();
@@ -3704,6 +3720,7 @@
           category: cat || "其他支出",
           note: note,
           excludeFromDailyCap: !!(qEx && qEx.checked),
+          createdAt: Date.now(),
         });
         saveRoutineWallet();
         document.getElementById("dailyQuickAmt").value = "";
@@ -3863,6 +3880,7 @@
           category: cat || "其他",
           note: note,
           excludeFromDailyCap: exDaily,
+          createdAt: Date.now(),
         });
         saveRoutineWallet();
         document.getElementById("walletEntryAmt").value = "";
@@ -6613,6 +6631,31 @@
         return base + sep + "token=" + encodeURIComponent(tok);
       }
 
+      function refreshAllPanelsAfterFullDataApply_() {
+        buildChips();
+        fillSettingsForm();
+        renderDash();
+        renderDashLifeSummary();
+        try {
+          renderWalletPanel();
+          bumpDailySpendIfVisible();
+        } catch (eW) {}
+        try {
+          renderRoutinePanel();
+        } catch (eR) {}
+        try {
+          renderLifePanel();
+        } catch (eL) {}
+        try {
+          renderRoutineWeekTimetable();
+        } catch (eT) {}
+        var pl = document.getElementById("panel-list");
+        if (pl && pl.classList.contains("active")) renderList();
+        var pa = document.getElementById("panel-analytics");
+        if (pa && pa.classList.contains("active")) renderAnalytics();
+        if (typeof updateXauPaperUi === "function") updateXauPaperUi();
+      }
+
       function applyCloudJournalPayload(parsed) {
         if (!parsed || typeof parsed !== "object") throw new Error("empty_json");
         if (!Array.isArray(parsed.trades)) throw new Error("no_trades_array");
@@ -6620,14 +6663,22 @@
         state.settings = normalizeSettings(parsed.settings || {});
         state.version = 2;
         save(state);
-        buildChips();
-        fillSettingsForm();
-        renderDash();
-        renderDashLifeSummary();
-        var pl = document.getElementById("panel-list");
-        if (pl && pl.classList.contains("active")) renderList();
-        var pa = document.getElementById("panel-analytics");
-        if (pa && pa.classList.contains("active")) renderAnalytics();
+        if (parsed.life && Array.isArray(parsed.life.goals) && Array.isArray(parsed.life.logs)) {
+          lifeState.goals = parsed.life.goals.map(normalizeLifeGoal);
+          lifeState.logs = parsed.life.logs.map(normalizeLifeLog);
+          lifeState.syncUpdatedAt = Number(parsed.life.syncUpdatedAt) || 0;
+          lifeState.version = 1;
+          persistLifeToStorage_(lifeState);
+        }
+        if (parsed.routineWallet && typeof parsed.routineWallet === "object") {
+          routineState = normalizeRoutineWallet(parsed.routineWallet);
+          persistRoutineWalletToStorage_();
+        }
+        if (parsed.xauPaper && typeof parsed.xauPaper === "object") {
+          xauPaper.open = parsed.xauPaper.open || null;
+          saveXauPaper();
+        }
+        refreshAllPanelsAfterFullDataApply_();
         toast("已從雲端載入");
       }
 
@@ -6712,19 +6763,190 @@
         return normalizeSettings(out);
       }
 
-      function applyMergedJournalToUi_(mergedTrades, mergedSettings, toastMsg) {
+      function mergeEntityByIdNewerCreated(localArr, cloudArr, normalizeFn) {
+        var map = {};
+        function consider(x) {
+          var n = normalizeFn(x);
+          if (!n || !n.id) return;
+          var ex = map[n.id];
+          if (!ex) {
+            map[n.id] = n;
+            return;
+          }
+          var ca = Number(ex.createdAt) || 0;
+          var cb = Number(n.createdAt) || 0;
+          map[n.id] = cb > ca ? n : ex;
+        }
+        (localArr || []).forEach(consider);
+        (cloudArr || []).forEach(consider);
+        return Object.keys(map).map(function (k) {
+          return map[k];
+        });
+      }
+
+      function mergeScheduleDoneObjects(a, b) {
+        a = a && typeof a === "object" ? a : {};
+        b = b && typeof b === "object" ? b : {};
+        var dates = {};
+        Object.keys(a).forEach(function (iso) {
+          dates[iso] = 1;
+        });
+        Object.keys(b).forEach(function (iso) {
+          dates[iso] = 1;
+        });
+        var out = {};
+        Object.keys(dates).forEach(function (iso) {
+          var ia = a[iso] || {};
+          var ib = b[iso] || {};
+          var ids = {};
+          Object.keys(ia).forEach(function (bid) {
+            ids[bid] = 1;
+          });
+          Object.keys(ib).forEach(function (bid) {
+            ids[bid] = 1;
+          });
+          var inner = {};
+          Object.keys(ids).forEach(function (bid) {
+            inner[bid] = !!(ia[bid] || ib[bid]);
+          });
+          if (Object.keys(inner).length) out[iso] = inner;
+        });
+        return out;
+      }
+
+      function mergeDoneLogSentObjects(a, b) {
+        a = a && typeof a === "object" ? a : {};
+        b = b && typeof b === "object" ? b : {};
+        var out = Object.assign({}, a);
+        Object.keys(b).forEach(function (k) {
+          if (b[k]) out[k] = true;
+        });
+        return out;
+      }
+
+      function mergeByBlockIdPreferFirst(firstArr, secondArr, firstWinsOnDup) {
+        var map = {};
+        var order = [];
+        function walk(arr, canOverwrite) {
+          (arr || []).forEach(function (blk) {
+            if (!blk || !blk.id) return;
+            if (map[blk.id] == null) {
+              map[blk.id] = blk;
+              order.push(blk.id);
+            } else if (canOverwrite) {
+              map[blk.id] = blk;
+            }
+          });
+        }
+        if (firstWinsOnDup) {
+          walk(firstArr, true);
+          walk(secondArr, false);
+        } else {
+          walk(secondArr, true);
+          walk(firstArr, false);
+        }
+        return order.map(function (id) {
+          return map[id];
+        });
+      }
+
+      function getLifePayloadForSync_() {
+        return {
+          version: 1,
+          goals: lifeState.goals || [],
+          logs: lifeState.logs || [],
+          syncUpdatedAt: Number(lifeState.syncUpdatedAt) || 0,
+        };
+      }
+
+      function mergeLifePayloadForSync(lo, cl) {
+        lo = lo || { version: 1, goals: [], logs: [], syncUpdatedAt: 0 };
+        cl = cl || { version: 1, goals: [], logs: [], syncUpdatedAt: 0 };
+        var goals = mergeEntityByIdNewerCreated(lo.goals || [], cl.goals || [], normalizeLifeGoal);
+        var logs = mergeEntityByIdNewerCreated(lo.logs || [], cl.logs || [], normalizeLifeLog);
+        return {
+          version: 1,
+          goals: goals,
+          logs: logs,
+          syncUpdatedAt: Math.max(Number(lo.syncUpdatedAt) || 0, Number(cl.syncUpdatedAt) || 0),
+        };
+      }
+
+      function mergeRoutineWalletForSync(lo, cl) {
+        lo = normalizeRoutineWallet(lo || {});
+        cl = normalizeRoutineWallet(cl || {});
+        var loT = Number(lo.syncUpdatedAt) || 0;
+        var clT = Number(cl.syncUpdatedAt) || 0;
+        var preferLo = loT >= clT;
+        function normEntry(x) {
+          return normalizeRoutineWallet({ wallet: { entries: [x] } }).wallet.entries[0];
+        }
+        function normPreset(p) {
+          return normalizeRoutineWallet({ wallet: { expensePresets: [p] } }).wallet.expensePresets[0];
+        }
+        function normBlock(b) {
+          return normalizeRoutineWallet({ scheduleBlocks: [b] }).scheduleBlocks[0];
+        }
+        var mergedEntries = mergeEntityByIdNewerCreated(lo.wallet.entries, cl.wallet.entries, normEntry);
+        var mergedPresets = mergeByBlockIdPreferFirst(lo.wallet.expensePresets, cl.wallet.expensePresets, preferLo).map(normPreset);
+        var mergedBlocks = mergeByBlockIdPreferFirst(lo.scheduleBlocks, cl.scheduleBlocks, preferLo).map(normBlock);
+        var merged = {
+          version: 1,
+          scheduleBlocks: mergedBlocks,
+          scheduleDone: mergeScheduleDoneObjects(lo.scheduleDone, cl.scheduleDone),
+          doneLogSent: mergeDoneLogSentObjects(lo.doneLogSent, cl.doneLogSent),
+          wallet: {
+            monthlyExpenseBudget: preferLo ? lo.wallet.monthlyExpenseBudget : cl.wallet.monthlyExpenseBudget,
+            monthlySaveGoal: preferLo ? lo.wallet.monthlySaveGoal : cl.wallet.monthlySaveGoal,
+            dailyExpenseCap: preferLo ? lo.wallet.dailyExpenseCap : cl.wallet.dailyExpenseCap,
+            entries: mergedEntries,
+            expensePresets: mergedPresets,
+          },
+          syncUpdatedAt: Math.max(loT, clT),
+        };
+        return normalizeRoutineWallet(merged);
+      }
+
+      function mergeXauPaperForSync(localPaperObj, cloudPaperObj) {
+        localPaperObj = localPaperObj && typeof localPaperObj === "object" ? localPaperObj : { open: null };
+        cloudPaperObj = cloudPaperObj && typeof cloudPaperObj === "object" ? cloudPaperObj : { open: null };
+        var a = localPaperObj.open;
+        var b = cloudPaperObj.open;
+        if (!a && !b) return { open: null };
+        if (a && !b) return { open: a };
+        if (!a && b) return { open: b };
+        var ta = Number(a.openedAt) || 0;
+        var tb = Number(b.openedAt) || 0;
+        return { open: tb > ta ? b : a };
+      }
+
+      function buildFullAppCloudPayload() {
+        return {
+          version: 2,
+          trades: state.trades,
+          settings: normalizeSettings(state.settings || {}),
+          life: getLifePayloadForSync_(),
+          routineWallet: normalizeRoutineWallet(JSON.parse(JSON.stringify(routineState))),
+          xauPaper: { open: xauPaper.open || null },
+        };
+      }
+
+      function applyMergedFullAppToUi_(mergedTrades, mergedSettings, mergedLife, mergedRoutine, mergedXau, toastMsg) {
         state.trades = mergedTrades;
         state.settings = mergedSettings;
         state.version = 2;
         save(state);
-        buildChips();
-        fillSettingsForm();
-        renderDash();
-        renderDashLifeSummary();
-        var pl = document.getElementById("panel-list");
-        if (pl && pl.classList.contains("active")) renderList();
-        var pa = document.getElementById("panel-analytics");
-        if (pa && pa.classList.contains("active")) renderAnalytics();
+        lifeState.goals = mergedLife.goals || [];
+        lifeState.logs = mergedLife.logs || [];
+        lifeState.syncUpdatedAt = Number(mergedLife.syncUpdatedAt) || 0;
+        lifeState.version = 1;
+        persistLifeToStorage_(lifeState);
+        routineState = normalizeRoutineWallet(mergedRoutine);
+        routineState.syncUpdatedAt = Number(mergedRoutine.syncUpdatedAt) || routineState.syncUpdatedAt || 0;
+        persistRoutineWalletToStorage_();
+        xauPaper.open = mergedXau && mergedXau.open ? mergedXau.open : null;
+        saveXauPaper();
+        refreshAllPanelsAfterFullDataApply_();
         if (toastMsg) toast(toastMsg);
       }
 
@@ -6750,11 +6972,7 @@
       }
 
       function performCloudPushToServer_(silent) {
-        var body = JSON.stringify({
-          version: 2,
-          trades: state.trades,
-          settings: normalizeSettings(state.settings || {}),
-        });
+        var body = JSON.stringify(buildFullAppCloudPayload());
         return postJournalBodyToCloud_(body, silent);
       }
 
@@ -6763,18 +6981,25 @@
           .then(function (cloud) {
             var mergedTrades = mergeTradesById(state.trades, cloud.trades);
             var mergedSettings = mergeSettingsForSync(state.settings, cloud.settings || {});
+            var mergedLife = mergeLifePayloadForSync(getLifePayloadForSync_(), cloud.life || null);
+            var mergedRoutine = mergeRoutineWalletForSync(routineState, cloud.routineWallet || null);
+            var mergedXau = mergeXauPaperForSync(xauPaper, cloud.xauPaper || { open: null });
             var nBefore = (state.trades && state.trades.length) || 0;
             var nCloud = (cloud.trades && cloud.trades.length) || 0;
-            applyMergedJournalToUi_(mergedTrades, mergedSettings, null);
+            applyMergedFullAppToUi_(mergedTrades, mergedSettings, mergedLife, mergedRoutine, mergedXau, null);
             var nAfter = state.trades.length;
-            var body = JSON.stringify({
-              version: 2,
-              trades: state.trades,
-              settings: normalizeSettings(state.settings || {}),
-            });
+            var body = JSON.stringify(buildFullAppCloudPayload());
             return postJournalBodyToCloud_(body, true).then(function () {
               if (!silent) {
-                toast("已合併同步：本機原 " + nBefore + " 筆 · 雲端 " + nCloud + " 筆 → 合併後 " + nAfter + " 筆（同 ID 以較新為準）");
+                toast(
+                  "已合併同步：交易本機 " +
+                    nBefore +
+                    " · 雲端 " +
+                    nCloud +
+                    " → 合併後 " +
+                    nAfter +
+                    " 筆；生活／錢包／XAU 模擬已一併合併上傳（同 ID 以較新為準）"
+                );
               }
             });
           });
