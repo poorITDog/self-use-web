@@ -33,6 +33,11 @@
       --glow: 0 0 80px rgba(56, 189, 248, 0.08);
     }
 
+    /* 表單：配合重複方式顯示／隱藏（避免 hidden 喺 grid 內唔一致） */
+    .field-ux-hidden {
+      display: none !important;
+    }
+
     *,
     *::before,
     *::after {
@@ -41,6 +46,33 @@
 
     html {
       scroll-behavior: smooth;
+      scroll-padding-top: 12px;
+    }
+
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 12px;
+      z-index: 9999;
+      padding: 12px 18px;
+      border-radius: var(--radius-sm);
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.9rem;
+      text-decoration: none;
+      box-shadow: var(--shadow);
+    }
+
+    .skip-link:focus {
+      left: 12px;
+      outline: none;
+    }
+
+    .skip-link:focus-visible {
+      left: 12px;
+      outline: 3px solid #fff;
+      outline-offset: 2px;
     }
 
     body {
@@ -141,6 +173,46 @@
       box-shadow: inset 3px 0 0 #c084fc;
     }
 
+    .side-nav button:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .btn:focus-visible,
+    .subtab-btn:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+
+      section.panel {
+        animation: none !important;
+      }
+
+      .stat-card:hover {
+        transform: none;
+      }
+
+      .btn:active {
+        transform: none;
+      }
+    }
+
     .side-nav .ico {
       width: 22px;
       text-align: center;
@@ -150,7 +222,7 @@
     .main-flow {
       flex: 1;
       min-width: 0;
-      padding: 18px 20px 56px;
+      padding: 18px 20px calc(56px + env(safe-area-inset-bottom, 0px));
     }
 
     @media (max-width: 920px) {
@@ -173,11 +245,20 @@
       .side-nav button {
         flex: 1;
         min-width: 120px;
+        min-height: 44px;
         justify-content: center;
       }
 
       .side-nav button[aria-current="true"] {
         box-shadow: inset 0 -3px 0 #c084fc;
+      }
+
+      .header-actions .btn {
+        min-height: 44px;
+      }
+
+      .subtab-btn {
+        min-height: 44px;
       }
     }
 
@@ -257,6 +338,16 @@
       font-size: 1.25rem;
       font-weight: 700;
       letter-spacing: -0.02em;
+    }
+
+    .brand h1:focus {
+      outline: none;
+    }
+
+    .brand h1:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 4px;
+      border-radius: 4px;
     }
 
     .brand p {
@@ -1893,6 +1984,7 @@
   </style>
 </head>
 <body>
+  <a class="skip-link" href="#main-content">跳至主要內容</a>
   <div class="shell layout-pro">
     <aside class="sidebar" aria-label="主選單">
       <div class="side-brand">
@@ -1900,24 +1992,24 @@
         <strong>TradeLog Pro</strong>
         <small>交易日誌 · 目標追蹤 · 本機儲存</small>
       </div>
-      <nav class="side-nav" role="navigation">
-        <button type="button" data-tab="dash" id="tab-dash" aria-current="true"><span class="ico">◆</span>概覽</button>
-        <button type="button" data-tab="new" id="tab-new" aria-current="false"><span class="ico">＋</span>記一單</button>
-        <button type="button" data-tab="list" id="tab-list" aria-current="false"><span class="ico">≡</span>全部交易</button>
-        <button type="button" data-tab="analytics" id="tab-analytics" aria-current="false"><span class="ico">▤</span>分析</button>
-        <button type="button" data-tab="calendar" id="tab-calendar" aria-current="false"><span class="ico">▦</span>日曆</button>
-        <button type="button" data-tab="goals" id="tab-goals" aria-current="false"><span class="ico">◇</span>目標與進度</button>
-        <button type="button" data-tab="reminders" id="tab-reminders" aria-current="false"><span class="ico">!</span>待辦・提醒</button>
-        <button type="button" data-tab="routine" id="tab-routine" aria-current="false"><span class="ico">▥</span>日程・錢包</button>
-        <button type="button" data-tab="xau" id="tab-xau" aria-current="false"><span class="ico">◎</span>XAU 練習</button>
-        <button type="button" data-tab="settings" id="tab-settings" aria-current="false"><span class="ico">⚙</span>設定</button>
+      <nav class="side-nav" role="navigation" aria-label="主要分頁">
+        <button type="button" data-tab="dash" id="tab-dash" aria-current="true" aria-controls="panel-dash"><span class="ico">◆</span>概覽</button>
+        <button type="button" data-tab="new" id="tab-new" aria-current="false" aria-controls="panel-new"><span class="ico">＋</span>記一單</button>
+        <button type="button" data-tab="list" id="tab-list" aria-current="false" aria-controls="panel-list"><span class="ico">≡</span>全部交易</button>
+        <button type="button" data-tab="analytics" id="tab-analytics" aria-current="false" aria-controls="panel-analytics"><span class="ico">▤</span>分析</button>
+        <button type="button" data-tab="calendar" id="tab-calendar" aria-current="false" aria-controls="panel-calendar"><span class="ico">▦</span>日曆</button>
+        <button type="button" data-tab="goals" id="tab-goals" aria-current="false" aria-controls="panel-goals"><span class="ico">◇</span>目標與進度</button>
+        <button type="button" data-tab="reminders" id="tab-reminders" aria-current="false" aria-controls="panel-reminders"><span class="ico">!</span>待辦・提醒</button>
+        <button type="button" data-tab="routine" id="tab-routine" aria-current="false" aria-controls="panel-routine"><span class="ico">▥</span>日程・錢包</button>
+        <button type="button" data-tab="xau" id="tab-xau" aria-current="false" aria-controls="panel-xau"><span class="ico">◎</span>XAU 練習</button>
+        <button type="button" data-tab="settings" id="tab-settings" aria-current="false" aria-controls="panel-settings"><span class="ico">⚙</span>設定</button>
       </nav>
     </aside>
 
-    <div class="main-flow">
+    <main class="main-flow" id="main-content" tabindex="-1">
       <div class="tip-banner" id="tipBanner" role="note">
         <p>
-          <strong>TradeLog Pro。</strong> 「目標與進度」「日程・錢包」同交易、XAU 模擬一齊用：日程打剔可寫入目標心得；錢包跟本月收支同預算。資料只存瀏覽器。
+          <strong>歡迎使用 TradeLog Pro。</strong> 交易、目標、日程、錢包同 XAU 模擬都喺側欄切換；資料預設<strong>只存喺本機瀏覽器</strong>（可用「設定」嘅雲端備份同步多部機）。
         </p>
         <button type="button" id="tipDismiss" aria-label="關閉提示">✕</button>
       </div>
@@ -1926,7 +2018,7 @@
         <div class="brand">
           <div class="brand-mark">TL</div>
           <div>
-            <h1 id="pageTitle">概覽</h1>
+            <h1 id="pageTitle" tabindex="-1">概覽</h1>
             <p id="pageSub">權益 · 勝率 · 盈虧因子 · 期望值</p>
           </div>
         </div>
@@ -2241,19 +2333,19 @@
       <div class="remind-hero">
         <h2>待辦・提醒</h2>
         <p class="lead" style="margin-bottom: 12px">
-          集中睇：<strong>今日日程未完成</strong>（含<strong>每日／每月幾號</strong>重複）、<strong>目標未剔步驟</strong>、<strong>例行目標提示</strong>、<strong>錢包預算警號</strong>。
+          集中睇：<strong>今日日程未完成</strong>（每日／週一至五／週末／固定星期／每月幾號）、<strong>目標未剔步驟</strong>、<strong>今日相關嘅例行目標</strong>、<strong>錢包預算警號</strong>。
         </p>
         <div class="big-n" id="remindTotalCount">0</div>
         <p class="field-hint" style="margin-top: 4px">完成後去「日程」打剔或去「目標」剔步驟，數字會即時減少。</p>
       </div>
       <div class="card">
         <h2>今日日程未完成 <span class="badge">今日</span></h2>
-        <p class="lead">只列<strong>今日</strong>會出現嘅時段（固定星期／每日／每月幾號）、但未打「今日完成」嘅。</p>
+        <p class="lead">只列<strong>今日</strong>會出現嘅時段（跟你在「日程」設嘅重複方式），但未打「今日完成」嘅。</p>
         <div class="remind-list" id="remindSchedList"></div>
       </div>
       <div class="card">
         <h2>例行目標節奏 <span class="badge">Cadence</span></h2>
-        <p class="lead">標咗「每週／每月」嘅目標會喺呢度提示，方便記住例如<strong>每月讀書</strong>。</p>
+        <p class="lead">標咗節奏嘅目標會按<strong>今日係咪啱嗰個節奏</strong>顯示（例如「週一至五」淨係平日出現）。</p>
         <div class="remind-list" id="remindRoutineGoalsList"></div>
       </div>
       <div class="card">
@@ -2291,12 +2383,17 @@
             </label>
             <label class="field">
               <span class="key">例行節奏</span>
-              <select id="lifeNewCadence">
+              <select id="lifeNewCadence" aria-describedby="lifeNewCadenceHint">
                 <option value="once">一次性／無固定節奏</option>
                 <option value="daily">每日提醒式</option>
-                <option value="weekly">每週</option>
-                <option value="monthly">每月</option>
+                <option value="weekdays">週一至五（節奏標籤）</option>
+                <option value="weekends">週末（節奏標籤）</option>
+                <option value="weekly">每週（節奏標籤）</option>
+                <option value="monthly">每月（節奏標籤）</option>
               </select>
+              <span class="field-hint" id="lifeNewCadenceHint" style="margin-top: 6px; display: block"
+                >節奏用嚟分類同「待辦・提醒」：揀「週一至五／週末」淨係喺嗰啲日子先會出現喺提醒列表。</span
+              >
             </label>
             <label class="field">
               <span class="key">分類</span>
@@ -2417,8 +2514,7 @@
         <div class="card">
           <h2>每週時間表 <span class="badge">Schedule</span></h2>
           <p class="lead">
-            為每個時段揀<strong>時間 + 做咩</strong>；可揀<strong>重複</strong>：<strong>固定星期</strong>、<strong>每日</strong>（每一日同一時間）、<strong>每月幾號</strong>（例如每月 1
-            號檢視預算）。可<strong>綁定目標</strong>。今日完成打剔會寫入該目標嘅心得。
+            為每個時段揀<strong>時間 + 做咩</strong>，再揀<strong>重複方式</strong>：淨係「固定星期」需要揀<strong>星期幾</strong>；揀「每月幾號」先會出現<strong>日期 1–31</strong>；揀「每日／週一至五／週末」唔使填月份。可<strong>綁定目標</strong>；今日完成打剔會寫入該目標嘅心得。
           </p>
           <div class="sched-dow-row" id="schedDowTabs" aria-label="選星期"></div>
           <div id="schedBlockList"></div>
@@ -2428,8 +2524,10 @@
               <label class="field">
                 <span class="key">重複方式</span>
                 <select id="schedNewRepeat">
-                  <option value="none">固定星期（每週一次）</option>
+                  <option value="none">固定星期（每週該日一次）</option>
                   <option value="daily">每日（每一日）</option>
+                  <option value="weekdays">週一至五</option>
+                  <option value="weekends">週末（六、日）</option>
                   <option value="monthly">每月幾號</option>
                 </select>
               </label>
@@ -2445,7 +2543,7 @@
                   <option value="6">六</option>
                 </select>
               </label>
-              <label class="field" id="schedWrapMonthDay" hidden>
+              <label class="field field-ux-hidden" id="schedWrapMonthDay">
                 <span class="key">每月幾號（1–31）</span>
                 <input type="number" id="schedMonthDay" min="1" max="31" value="1" />
               </label>
@@ -2598,6 +2696,7 @@
               <select id="dailyPresetRepeat">
                 <option value="daily">每日</option>
                 <option value="weekdays">週一至五</option>
+                <option value="weekends">週末（六、日）</option>
                 <option value="weekly">每週固定星期</option>
                 <option value="monthly">每月固定幾號</option>
               </select>
@@ -2614,7 +2713,7 @@
                 <option value="0">日</option>
               </select>
             </label>
-            <label class="field" id="dailyPresetWrapMonthDay" hidden>
+            <label class="field field-ux-hidden" id="dailyPresetWrapMonthDay">
               <span class="key">每月幾號（1–31）</span>
               <input type="number" id="dailyPresetMonthDay" min="1" max="31" value="1" />
             </label>
@@ -2693,14 +2792,35 @@
         <label class="field" style="display: flex; align-items: flex-start; gap: 10px; margin-top: 14px">
           <input type="checkbox" id="settingsCloudAutoPush" style="margin-top: 4px" />
           <span class="key" style="margin: 0"
-            ><strong>改動後自動上傳</strong>（本機每次儲存後約 5 秒內上雲一次；多部機仍要靠「從雲端載入」拎最新備份，唔係 Google Docs 式即時合併）</span
+            ><strong>改動後自動合併同步</strong>（儲存後約 5 秒：先拉雲端再合併再上傳；離線會略過。多部機輪流用「雲端合併同步」即可疊加紀錄）</span
           >
         </label>
         <div class="form-actions" style="margin-top: 12px; flex-wrap: wrap; gap: 10px">
           <button type="button" class="btn btn-ghost" id="btnCloudSyncSaveMeta">儲存 URL／Token（本機）</button>
-          <button type="button" class="btn btn-ghost" id="btnCloudSyncPull">從雲端載入</button>
-          <button type="button" class="btn btn-primary" id="btnCloudSyncPush">上傳到雲端</button>
+          <button type="button" class="btn btn-primary" id="btnCloudMergeSync">雲端合併同步</button>
+          <button type="button" class="btn btn-ghost" id="btnCloudSyncPull">從雲端覆蓋本機</button>
         </div>
+        <p class="field-hint" style="margin-top: 12px">
+          <strong>合併同步（預設）：</strong>會先下載雲端，將<strong>交易按 ID 合併</strong>（本機 5 筆 + 雲端 10 筆唔重複＝最多 15 筆；同一 ID 則保留較新 <code>createdAt</code>），再寫回本機並<strong>上傳合併後嘅完整備份</strong>。「從雲端覆蓋本機」才會<strong>唔合併</strong>整份取代本機。進階 <code>DELETE</code> 仍係刻意清空雲端專用。
+        </p>
+        <details
+          class="cloud-danger-zone"
+          style="margin-top: 14px; padding: 12px 14px; border-radius: var(--radius-sm); border: 1px dashed rgba(251, 113, 133, 0.4); background: rgba(0, 0, 0, 0.14)"
+        >
+          <summary style="cursor: pointer; font-weight: 700; color: #fecdd3">進階：我要刻意清空雲端／以空白覆寫（極少人用）</summary>
+          <p class="field-hint" style="margin: 10px 0 8px">
+            只有你喺框度<strong>準確輸入 DELETE</strong>（全大階）再撳下面掣，先會用<strong>而家本機</strong>（可以係 0 筆交易）覆寫雲端備份。
+          </p>
+          <label class="field" style="max-width: 280px; margin-top: 6px">
+            <span class="key">確認字 DELETE</span>
+            <input type="text" id="settingsCloudDeleteConfirm" autocomplete="off" spellcheck="false" placeholder="DELETE" />
+          </label>
+          <div class="form-actions" style="border: none; padding-top: 12px; margin-top: 0">
+            <button type="button" class="btn btn-ghost" id="btnCloudSyncPushDanger" style="border-color: rgba(251, 113, 133, 0.5); color: #fecdd3">
+              我已輸入 DELETE — 仍要覆寫雲端
+            </button>
+          </div>
+        </details>
         <div class="form-actions">
           <button type="button" class="btn btn-primary" id="btnSaveSettings">儲存設定</button>
         </div>
@@ -2921,7 +3041,7 @@
         </div>
       </div>
     </section>
-    </div>
+    </main>
   </div>
 
   <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-hidden="true">
@@ -3140,7 +3260,7 @@
           return a.sort - b.sort;
         });
         var cad = g.cadence;
-        if (["once", "daily", "weekly", "monthly"].indexOf(cad) === -1) cad = "once";
+        if (["once", "daily", "weekdays", "weekends", "weekly", "monthly"].indexOf(cad) === -1) cad = "once";
         return {
           id: g.id || lifeId("g"),
           title: (g.title || "").trim() || "未命名目標",
@@ -3155,10 +3275,24 @@
 
       function lifeCadenceLabel(c) {
         if (c === "daily") return "每日";
+        if (c === "weekdays") return "週一至五";
+        if (c === "weekends") return "週末";
         if (c === "weekly") return "每週";
         if (c === "monthly") return "每月";
         if (c === "once") return "一次性";
         return "";
+      }
+
+      function lifeCadenceShowsToday(g) {
+        if (!g || !g.cadence || g.cadence === "once") return false;
+        var c = g.cadence;
+        if (c === "daily" || c === "weekly" || c === "monthly") return true;
+        var d = new Date();
+        d.setHours(12, 0, 0, 0);
+        var dow = d.getDay();
+        if (c === "weekdays") return dow >= 1 && dow <= 5;
+        if (c === "weekends") return dow === 0 || dow === 6;
+        return false;
       }
 
       function normalizeLifeLog(l) {
@@ -3220,9 +3354,10 @@
         d.scheduleBlocks = Array.isArray(d.scheduleBlocks)
           ? d.scheduleBlocks.map(function (b) {
               var rep = b.repeat;
-              if (rep !== "daily" && rep !== "monthly") rep = "none";
+              if (["none", "daily", "weekdays", "weekends", "monthly"].indexOf(rep) === -1) rep = "none";
               var md = b.monthDay != null ? parseInt(String(b.monthDay), 10) : null;
               if (isNaN(md) || md < 1 || md > 31) md = null;
+              if (rep !== "monthly") md = null;
               return {
                 id: b.id || lifeId("b"),
                 dow: typeof b.dow === "number" ? b.dow : parseInt(String(b.dow), 10) || 0,
@@ -3265,9 +3400,10 @@
         d.wallet.expensePresets = Array.isArray(d.wallet.expensePresets)
           ? d.wallet.expensePresets.map(function (p) {
               var rep = p.repeat;
-              if (["daily", "weekdays", "weekly", "monthly"].indexOf(rep) === -1) rep = "daily";
+              if (["daily", "weekdays", "weekends", "weekly", "monthly"].indexOf(rep) === -1) rep = "daily";
               var md = p.monthDay != null ? parseInt(String(p.monthDay), 10) : null;
               if (isNaN(md) || md < 1 || md > 31) md = null;
+              if (rep !== "monthly") md = null;
               var dow = typeof p.dow === "number" ? p.dow : parseInt(String(p.dow), 10);
               if (isNaN(dow) || dow < 0 || dow > 6) dow = 1;
               return {
@@ -3307,6 +3443,8 @@
         var r = b.repeat || "none";
         var dow = dt.getDay();
         if (r === "daily") return true;
+        if (r === "weekdays") return dow >= 1 && dow <= 5;
+        if (r === "weekends") return dow === 0 || dow === 6;
         if (r === "monthly") {
           var md = typeof b.monthDay === "number" ? b.monthDay : parseInt(String(b.monthDay), 10);
           if (isNaN(md) || md < 1 || md > 31) return false;
@@ -3318,6 +3456,8 @@
       function schedRepeatLabel(b) {
         var r = b.repeat || "none";
         if (r === "daily") return "每日";
+        if (r === "weekdays") return "週一至五";
+        if (r === "weekends") return "週末";
         if (r === "monthly") return "每月 " + (b.monthDay != null ? b.monthDay : "?") + " 號";
         return "每週固定日";
       }
@@ -3388,7 +3528,7 @@
         }, 2800);
       }
 
-      function setTab(id) {
+      function setTab(id, opts) {
         var ids = ["dash", "new", "list", "analytics", "calendar", "goals", "reminders", "routine", "xau", "settings"];
         ids.forEach(function (t) {
           var btn = document.getElementById("tab-" + t);
@@ -3413,11 +3553,17 @@
         if (id === "reminders") renderRemindersPanel();
         if (id === "routine") renderRoutinePanel();
         if (id === "xau") initXauPanel();
+        if (opts && opts.focusTitle) {
+          requestAnimationFrame(function () {
+            var ph = document.getElementById("pageTitle");
+            if (ph) ph.focus({ preventScroll: true });
+          });
+        }
       }
 
       document.querySelectorAll(".side-nav button[data-tab]").forEach(function (btn) {
         btn.addEventListener("click", function () {
-          setTab(btn.getAttribute("data-tab"));
+          setTab(btn.getAttribute("data-tab"), { focusTitle: true });
         });
       });
 
@@ -3479,8 +3625,10 @@
           var rep = sr.value || "daily";
           var wD = document.getElementById("dailyPresetWrapDow");
           var wM = document.getElementById("dailyPresetWrapMonthDay");
-          if (wD) wD.hidden = rep !== "weekly";
-          if (wM) wM.hidden = rep !== "monthly";
+          var showDow = rep === "weekly";
+          var showMonth = rep === "monthly";
+          if (wD) wD.classList.toggle("field-ux-hidden", !showDow);
+          if (wM) wM.classList.toggle("field-ux-hidden", !showMonth);
         }
         sr.addEventListener("change", sync);
         sync();
@@ -3498,7 +3646,7 @@
           return;
         }
         var rep = document.getElementById("dailyPresetRepeat").value || "daily";
-        if (["daily", "weekdays", "weekly", "monthly"].indexOf(rep) === -1) rep = "daily";
+        if (["daily", "weekdays", "weekends", "weekly", "monthly"].indexOf(rep) === -1) rep = "daily";
         var dow = parseInt(document.getElementById("dailyPresetDow").value, 10);
         if (isNaN(dow) || dow < 0 || dow > 6) dow = 1;
         var md = parseInt(String(document.getElementById("dailyPresetMonthDay").value || ""), 10);
@@ -3677,8 +3825,10 @@
           var rep = sr.value || "none";
           var wD = document.getElementById("schedWrapDow");
           var wM = document.getElementById("schedWrapMonthDay");
-          if (wD) wD.hidden = rep === "daily" || rep === "monthly";
-          if (wM) wM.hidden = rep !== "monthly";
+          var showDow = rep === "none";
+          var showMonth = rep === "monthly";
+          if (wD) wD.classList.toggle("field-ux-hidden", !showDow);
+          if (wM) wM.classList.toggle("field-ux-hidden", !showMonth);
         }
         sr.addEventListener("change", sync);
         sync();
@@ -5094,6 +5244,7 @@
         var dow = dt.getDay();
         if (r === "daily") return true;
         if (r === "weekdays") return dow >= 1 && dow <= 5;
+        if (r === "weekends") return dow === 0 || dow === 6;
         if (r === "weekly") {
           var wd = typeof p.dow === "number" ? p.dow : parseInt(String(p.dow), 10);
           if (isNaN(wd) || wd < 0 || wd > 6) wd = 1;
@@ -5161,6 +5312,7 @@
         var r = p.repeat || "daily";
         if (r === "daily") return "每日";
         if (r === "weekdays") return "週一至五";
+        if (r === "weekends") return "週末（六、日）";
         if (r === "weekly") {
           var names = ["日", "一", "二", "三", "四", "五", "六"];
           var wd = typeof p.dow === "number" ? p.dow : 0;
@@ -6273,7 +6425,7 @@
           }
         }
         var routineGoals = goals.filter(function (g) {
-          return g.cadence && g.cadence !== "once";
+          return lifeCadenceShowsToday(g);
         });
         var ym = new Date().getFullYear() + "-" + String(new Date().getMonth() + 1).padStart(2, "0");
         var ent = walletEntriesForMonth(ym);
@@ -6326,7 +6478,7 @@
                   );
                 })
                 .join("")
-            : '<p class="field-hint">未有標「每日／每週／每月」嘅例行目標。</p>';
+            : '<p class="field-hint">今日未有相關例行目標提示（例如「週一至五」只會喺平日出現）。</p>';
         }
         var st = document.getElementById("remindStepsList");
         if (st) {
@@ -6479,14 +6631,106 @@
         toast("已從雲端載入");
       }
 
-      function performCloudPushToServer_(silent) {
+      function fetchCloudJournalJson() {
         var url = buildCloudSyncUrlWithToken();
         if (!url) return Promise.reject(new Error("no_url"));
-        var body = JSON.stringify({
-          version: 2,
-          trades: state.trades,
-          settings: normalizeSettings(state.settings || {}),
+        return fetch(url, { method: "GET", mode: "cors", redirect: "follow", cache: "no-store" })
+          .then(function (r) {
+            return r.text();
+          })
+          .then(function (text) {
+            var parsed = JSON.parse(text);
+            if (parsed && parsed.ok === false) throw new Error(parsed.error || "cloud_error");
+            if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.trades)) throw new Error("bad_cloud_shape");
+            return parsed;
+          });
+      }
+
+      function mergeTradesById(localArr, cloudArr) {
+        var map = {};
+        function consider(t) {
+          var n = normalizeTrade(t);
+          if (!n || !n.id) return;
+          var ex = map[n.id];
+          if (!ex) {
+            map[n.id] = n;
+            return;
+          }
+          var ca = Number(ex.createdAt) || 0;
+          var cb = Number(n.createdAt) || 0;
+          map[n.id] = cb > ca ? n : ex;
+        }
+        (localArr || []).forEach(consider);
+        (cloudArr || []).forEach(consider);
+        return Object.keys(map)
+          .map(function (k) {
+            return map[k];
+          })
+          .sort(function (a, b) {
+            var c = String(b.date || "").localeCompare(String(a.date || ""));
+            if (c !== 0) return c;
+            return (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0);
+          });
+      }
+
+      function mergeSettingsForSync(lo, cl) {
+        function uniqStrArr(arr) {
+          var seen = {};
+          var out = [];
+          (arr || []).forEach(function (x) {
+            var s = String(x).trim();
+            if (s && !seen[s]) {
+              seen[s] = 1;
+              out.push(s);
+            }
+          });
+          return out;
+        }
+        lo = normalizeSettings(lo || {});
+        cl = normalizeSettings(cl || {});
+        var pbs = uniqStrArr((lo.playbooks || []).concat(cl.playbooks || []));
+        var mss = uniqStrArr((lo.mistakes || []).concat(cl.mistakes || []));
+        var tplMap = {};
+        (lo.tradeTemplates || []).forEach(function (t) {
+          if (t && t.id) tplMap[t.id] = t;
         });
+        (cl.tradeTemplates || []).forEach(function (t) {
+          if (t && t.id && !tplMap[t.id]) tplMap[t.id] = t;
+        });
+        var tpls = Object.keys(tplMap)
+          .map(function (k) {
+            return tplMap[k];
+          })
+          .slice(0, 30);
+        var out = Object.assign({}, lo);
+        out.playbooks = pbs.length ? pbs : defaultSettings().playbooks;
+        out.mistakes = mss.length ? mss : defaultSettings().mistakes;
+        out.tradeTemplates = tpls;
+        if (lo.defaultTradeFees != null && !isNaN(Number(lo.defaultTradeFees))) out.defaultTradeFees = lo.defaultTradeFees;
+        else if (cl.defaultTradeFees != null && !isNaN(Number(cl.defaultTradeFees))) out.defaultTradeFees = cl.defaultTradeFees;
+        out.tradeTimeAutoNow = lo.tradeTimeAutoNow !== false || cl.tradeTimeAutoNow !== false;
+        return normalizeSettings(out);
+      }
+
+      function applyMergedJournalToUi_(mergedTrades, mergedSettings, toastMsg) {
+        state.trades = mergedTrades;
+        state.settings = mergedSettings;
+        state.version = 2;
+        save(state);
+        buildChips();
+        fillSettingsForm();
+        renderDash();
+        renderDashLifeSummary();
+        var pl = document.getElementById("panel-list");
+        if (pl && pl.classList.contains("active")) renderList();
+        var pa = document.getElementById("panel-analytics");
+        if (pa && pa.classList.contains("active")) renderAnalytics();
+        if (toastMsg) toast(toastMsg);
+      }
+
+      function postJournalBodyToCloud_(body, silent) {
+        var url = buildCloudSyncUrlWithToken();
+        if (!url) return Promise.reject(new Error("no_url"));
         return fetch(url, {
           method: "POST",
           mode: "cors",
@@ -6501,7 +6745,38 @@
           .then(function (text) {
             var parsed = JSON.parse(text);
             if (!parsed || parsed.ok !== true) throw new Error((parsed && parsed.error) || "upload_failed");
-            if (!silent) toast("已上傳到雲端");
+            if (!silent) toast("已寫入雲端");
+          });
+      }
+
+      function performCloudPushToServer_(silent) {
+        var body = JSON.stringify({
+          version: 2,
+          trades: state.trades,
+          settings: normalizeSettings(state.settings || {}),
+        });
+        return postJournalBodyToCloud_(body, silent);
+      }
+
+      function cloudMergeRoundTrip(silent) {
+        return fetchCloudJournalJson()
+          .then(function (cloud) {
+            var mergedTrades = mergeTradesById(state.trades, cloud.trades);
+            var mergedSettings = mergeSettingsForSync(state.settings, cloud.settings || {});
+            var nBefore = (state.trades && state.trades.length) || 0;
+            var nCloud = (cloud.trades && cloud.trades.length) || 0;
+            applyMergedJournalToUi_(mergedTrades, mergedSettings, null);
+            var nAfter = state.trades.length;
+            var body = JSON.stringify({
+              version: 2,
+              trades: state.trades,
+              settings: normalizeSettings(state.settings || {}),
+            });
+            return postJournalBodyToCloud_(body, true).then(function () {
+              if (!silent) {
+                toast("已合併同步：本機原 " + nBefore + " 筆 · 雲端 " + nCloud + " 筆 → 合併後 " + nAfter + " 筆（同 ID 以較新為準）");
+              }
+            });
           });
       }
 
@@ -6512,9 +6787,9 @@
         clearTimeout(_cloudAutoPushTimer);
         _cloudAutoPushTimer = setTimeout(function () {
           _cloudAutoPushTimer = null;
-          performCloudPushToServer_(true).catch(function (err) {
+          cloudMergeRoundTrip(true).catch(function (err) {
             console.warn(err);
-            toast("自動上傳失敗（可改用手動上傳或檢查網絡）");
+            toast("自動合併同步失敗（檢查網絡或稍後手動撳「雲端合併同步」）");
           });
         }, 5000);
       }
@@ -6549,8 +6824,8 @@
       (function wireCloudSync() {
         var bSave = document.getElementById("btnCloudSyncSaveMeta");
         var bPull = document.getElementById("btnCloudSyncPull");
-        var bPush = document.getElementById("btnCloudSyncPush");
-        if (!bSave || !bPull || !bPush) return;
+        var bMerge = document.getElementById("btnCloudMergeSync");
+        if (!bSave || !bPull || !bMerge) return;
         bSave.addEventListener("click", function () {
           localStorage.setItem(CLOUD_SYNC_URL_KEY, getCloudSyncBaseUrl());
           localStorage.setItem(CLOUD_SYNC_TOKEN_KEY, getCloudSyncToken());
@@ -6564,7 +6839,7 @@
             toast("請填 Web App URL 同 TOKEN");
             return;
           }
-          if (!window.confirm("會用雲端備份取代本機交易同設定，確定？")) return;
+          if (!window.confirm("會用雲端備份「完全取代」本機交易同設定（唔會同本機合併）。確定？")) return;
           fetch(url, { method: "GET", mode: "cors", redirect: "follow", cache: "no-store" })
             .then(function (r) {
               return r.text();
@@ -6579,17 +6854,47 @@
               toast("雲端載入失敗：" + (err && err.message ? err.message : String(err)));
             });
         });
-        bPush.addEventListener("click", function () {
+        bMerge.addEventListener("click", function () {
           if (!buildCloudSyncUrlWithToken()) {
             toast("請填 Web App URL 同 TOKEN");
             return;
           }
-          if (!window.confirm("會用本機資料覆寫雲端備份檔，確定？")) return;
-          performCloudPushToServer_(false).catch(function (err) {
+          if (
+            !window.confirm(
+              "會先下載雲端備份，再同本機按「交易 ID」合併（同一 ID 以較新建立時間為準），然後寫回本機並上傳合併結果。唔會單純用本機蓋晒雲端。確定？"
+            )
+          )
+            return;
+          cloudMergeRoundTrip(false).catch(function (err) {
             console.error(err);
-            toast("上傳失敗：" + (err && err.message ? err.message : String(err)));
+            toast("合併同步失敗：" + (err && err.message ? err.message : String(err)));
           });
         });
+        var bPushDanger = document.getElementById("btnCloudSyncPushDanger");
+        var delIn = document.getElementById("settingsCloudDeleteConfirm");
+        if (bPushDanger && delIn) {
+          bPushDanger.addEventListener("click", function () {
+            if (!buildCloudSyncUrlWithToken()) {
+              toast("請填 Web App URL 同 TOKEN");
+              return;
+            }
+            if (String(delIn.value || "").trim() !== "DELETE") {
+              toast("請喺輸入框準確輸入 DELETE（全大階）");
+              return;
+            }
+            if (
+              !window.confirm(
+                "最後確認：會以本機而家嘅資料（可以係 0 筆交易）覆寫雲端備份。呢步等同你明文同意清空／覆寫雲端。"
+              )
+            )
+              return;
+            delIn.value = "";
+            performCloudPushToServer_(false).catch(function (err) {
+              console.error(err);
+              toast("上傳失敗：" + (err && err.message ? err.message : String(err)));
+            });
+          });
+        }
       })();
 
       var editingId = null;
@@ -6678,6 +6983,14 @@
       document.getElementById("modalClose").addEventListener("click", closeModal);
       document.getElementById("modalBackdrop").addEventListener("click", function (e) {
         if (e.target.id === "modalBackdrop") closeModal();
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key !== "Escape") return;
+        var bd = document.getElementById("modalBackdrop");
+        if (bd && bd.classList.contains("open")) {
+          e.preventDefault();
+          closeModal();
+        }
       });
 
       /* —— XAU / Gold 即時 + 模擬盤（Yahoo GC=F 期金作報價源，貼近 XAUUSD）—— */
