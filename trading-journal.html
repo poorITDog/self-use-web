@@ -211,6 +211,10 @@
       .btn:active {
         transform: none;
       }
+
+      section.panel .card:hover {
+        transform: none;
+      }
     }
 
     .side-nav .ico {
@@ -546,6 +550,13 @@
       padding: 22px 22px 20px;
       margin-bottom: 20px;
       box-shadow: var(--shadow);
+      transition: box-shadow 0.28s ease, border-color 0.22s ease, transform 0.22s ease;
+    }
+
+    section.panel .card:hover {
+      border-color: rgba(255, 255, 255, 0.16);
+      box-shadow: 0 10px 36px rgba(0, 0, 0, 0.28);
+      transform: translateY(-1px);
     }
 
     .card h2 {
@@ -838,7 +849,8 @@
       box-shadow: var(--shadow);
       z-index: 200;
       opacity: 0;
-      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s;
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s, border-color 0.25s ease,
+        box-shadow 0.28s ease;
       pointer-events: none;
       max-width: calc(100% - 32px);
       text-align: center;
@@ -847,6 +859,16 @@
     #toast.show {
       transform: translateX(-50%) translateY(0);
       opacity: 1;
+    }
+
+    #toast.toast-ok {
+      border-color: rgba(74, 222, 128, 0.5);
+      box-shadow: 0 8px 28px rgba(74, 222, 128, 0.12), var(--shadow);
+    }
+
+    #toast.toast-warn {
+      border-color: rgba(251, 191, 36, 0.55);
+      box-shadow: 0 8px 28px rgba(251, 191, 36, 0.1), var(--shadow);
     }
 
     .sr-only {
@@ -956,6 +978,79 @@
       border-color: rgba(192, 132, 252, 0.55);
       background: rgba(192, 132, 252, 0.12);
       color: var(--text);
+    }
+
+    .chip-grid .pb-chip-wrap {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .pill-with-hint {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .pb-strat-hint {
+      padding: 0 4px;
+      font-size: 0.72rem;
+      line-height: 1.2;
+      color: var(--accent);
+    }
+
+    .pb-strat-popup {
+      position: fixed;
+      inset: 0;
+      z-index: 220;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.55);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .pb-strat-popup.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .pb-strat-popup-inner {
+      position: relative;
+      width: 100%;
+      max-width: 520px;
+      max-height: min(72vh, 640px);
+      overflow: auto;
+      padding: 18px 20px 16px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      box-shadow: var(--shadow);
+    }
+
+    .pb-strat-popup-title {
+      margin: 0 28px 10px 0;
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+    .pb-strat-popup-body {
+      margin: 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.82rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--text);
+    }
+
+    .pb-strat-popup-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
     }
 
     .heatmap-head {
@@ -1716,11 +1811,46 @@
       border: 1px solid var(--border);
       background: var(--bg-elevated);
       margin-bottom: 10px;
+      transition: opacity 0.32s ease, transform 0.32s ease, border-color 0.22s ease, background 0.22s ease,
+        box-shadow 0.32s ease;
     }
 
     .sched-block.done {
       border-color: rgba(74, 222, 128, 0.35);
       background: rgba(74, 222, 128, 0.06);
+    }
+
+    .sched-block.ux-sched-completing {
+      pointer-events: none;
+      animation: uxSchedComplete 0.42s ease forwards;
+    }
+
+    @keyframes uxSchedComplete {
+      0% {
+        transform: scale(1);
+        box-shadow: none;
+      }
+      40% {
+        transform: scale(1.02);
+        box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.45);
+      }
+      100% {
+        opacity: 0.5;
+        transform: scale(0.99) translateY(3px);
+      }
+    }
+
+    .sched-block.ux-row-leave,
+    .remind-item.ux-row-leave {
+      pointer-events: none;
+      animation: uxRowLeave 0.32s ease forwards;
+    }
+
+    @keyframes uxRowLeave {
+      to {
+        opacity: 0;
+        transform: translateX(16px) scale(0.97);
+      }
     }
 
     .sched-time {
@@ -2405,6 +2535,12 @@
       border: 1px solid var(--border);
       background: var(--bg-elevated);
       border-left: 4px solid var(--accent);
+      transition: opacity 0.3s ease, transform 0.3s ease, border-color 0.2s ease, box-shadow 0.28s ease;
+    }
+
+    .remind-item.ux-remind-completing {
+      pointer-events: none;
+      animation: uxSchedComplete 0.38s ease forwards;
     }
 
     .remind-item.warn {
@@ -2673,6 +2809,7 @@
 
           <div class="section-title">Playbook（可多選）</div>
           <div class="chip-grid" id="playbookChips"></div>
+          <p class="field-hint" style="margin-top: 6px">喺「設定」寫咗策略說明嘅標籤，會喺右邊出現 <strong>ⓘ</strong>，撳一下睇全文（同雲端同步）。</p>
           <label class="field" style="margin-top: 12px">
             <span class="key">自訂策略（逗號分隔）</span>
             <input name="setupExtra" placeholder="例如：假突破、FOMO" autocomplete="off" />
@@ -3223,7 +3360,7 @@
     <section id="panel-routine" class="panel" role="tabpanel" hidden aria-labelledby="tab-routine">
       <div class="card cal-life-card tt-hero-card">
         <h2>本週課表 <span class="badge">30 分鐘格</span></h2>
-        <p class="lead">與下面「固定時段」同一資料；色塊跟綁定目標分類。</p>
+        <p class="lead">與下面「固定時段」同一資料；<strong>全日 00:00–24:00</strong>每半小時一格（可橫向捲動七日）。色塊跟綁定目標分類。</p>
         <div class="heatmap-head">
           <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
             <button type="button" class="btn btn-ghost" id="calWeekPrev" aria-label="上一週">← 上週</button>
@@ -3274,11 +3411,11 @@
               </label>
               <label class="field">
                 <span class="key">開始（HH:MM）</span>
-                <input type="text" id="schedNewStart" placeholder="07:30" maxlength="5" />
+                <input type="text" id="schedNewStart" placeholder="05:30" maxlength="5" />
               </label>
               <label class="field">
                 <span class="key">結束（HH:MM）</span>
-                <input type="text" id="schedNewEnd" placeholder="08:15" maxlength="5" />
+                <input type="text" id="schedNewEnd" placeholder="07:00" maxlength="5" />
               </label>
               <label class="field" style="grid-column: 1 / -1">
                 <span class="key">做咩</span>
@@ -3489,6 +3626,14 @@
         <h2>Playbook 標籤庫</h2>
         <p class="lead">每行一個；會用喺「記一單」多選同分析統計。</p>
         <textarea id="settingsPlaybooks" rows="6" style="min-height: 120px"></textarea>
+        <h2 style="margin-top: 18px; font-size: 1rem">Playbook／策略說明（選填）</h2>
+        <p class="lead">
+          自用策略寫喺呢度，同上面<strong>標籤名</strong>綁定：例如「A+ 設定」只係分類籤，撳 <strong>ⓘ</strong> 就可以睇你寫嘅定義。「記一單」、列表、詳情都會用到。內容存在 <code>settings.playbookStrategyNotes</code>，跟<strong>同一套雲端上傳／下載／合併同步</strong>走（同其他設定一齊寫入備份 JSON）。
+        </p>
+        <p class="field-hint" style="margin-bottom: 8px">
+          <strong>格式一（長文）：</strong>每段第一行 <code>=== 標籤名稱 ===</code>，跟住多行說明。<strong>格式二（單行）：</strong><code>標籤名稱 | 說明</code>（每行一條；第一個「|」之後係說明）。
+        </p>
+        <textarea id="settingsPlaybookStrategies" rows="10" style="min-height: 180px" spellcheck="true" placeholder="=== A+ 設定 ===&#10;例：15m 回踩 + 量縮 + 前高之上先郁…"></textarea>
         <h2 style="margin-top: 22px; font-size: 1rem">犯錯標籤庫</h2>
         <p class="lead">每行一個，例如：郁止損、報復性交易…</p>
         <textarea id="settingsMistakes" rows="5" style="min-height: 100px"></textarea>
@@ -3534,7 +3679,7 @@
           <button type="button" class="btn btn-ghost" id="btnCloudSyncPull">從雲端覆蓋本機</button>
         </div>
         <p class="field-hint" style="margin-top: 12px">
-          <strong>合併同步（預設）：</strong>會先下載雲端，將<strong>交易、生活目標／日誌、錢包／時間表、工作日曆、每日心情日記、自訂每日金句／效應池、效應庫（閃卡／出現紀錄）、交易思路庫、XAU 模擬倉</strong>等一併按規則合併（交易／帶 <code>createdAt</code> 嘅紀錄：同 ID 保留較新；錢包預設／時間格：邊邊 <code>syncUpdatedAt</code> 新就邊邊主導預算欄；XAU 開倉狀態以較新 <code>openedAt</code> 為準）。<strong>XAU 本地蠟燭時間框／TradingView 時間框</strong>只留本機、唔寫入備份 JSON。再寫回本機並<strong>上傳成個備份</strong>。「從雲端覆蓋本機」才會<strong>唔合併</strong>整份取代本機（舊備份冇嘅欄位會保留本機）。進階 <code>DELETE</code> 仍係刻意清空雲端專用。
+          <strong>合併同步（預設）：</strong>會先下載雲端，將<strong>交易、生活目標／日誌、錢包／時間表、工作日曆、每日心情日記、自訂每日金句／效應池、效應庫（閃卡／出現紀錄）、交易思路庫、待辦快速備忘、XAU 模擬倉</strong>等一併按規則合併（交易／帶 <code>createdAt</code> 嘅紀錄：同 ID 保留較新；快速備忘同思路庫：同 ID 以較新 <code>updatedAt</code> 為準；<strong>設定（含 Playbook 標籤庫、策略說明、犯錯標籤、範本）</strong>：標籤名單會合併去重；同一 Playbook 標籤嘅策略說明以較新 <code>updatedAt</code> 為準；錢包預設／時間格：邊邊 <code>syncUpdatedAt</code> 新就邊邊主導預算欄；XAU 開倉狀態以較新 <code>openedAt</code> 為準）。<strong>XAU 本地蠟燭時間框／TradingView 時間框</strong>只留本機、唔寫入備份 JSON。再寫回本機並<strong>上傳成個備份</strong>。「從雲端覆蓋本機」才會<strong>唔合併</strong>整份取代本機（舊備份冇嘅欄位會保留本機）。進階 <code>DELETE</code> 仍係刻意清空雲端專用。
         </p>
         <details
           class="cloud-danger-zone"
@@ -3805,6 +3950,7 @@
           tradeTemplates: [],
           defaultTradeFees: null,
           tradeTimeAutoNow: true,
+          playbookStrategyNotes: {},
         };
       }
 
@@ -3817,6 +3963,7 @@
           tradeTemplates: [],
           defaultTradeFees: null,
           tradeTimeAutoNow: s.tradeTimeAutoNow !== false,
+          playbookStrategyNotes: {},
         };
         if (Array.isArray(s.tradeTemplates)) {
           out.tradeTemplates = s.tradeTemplates.slice(0, 30).map(function (t) {
@@ -3833,7 +3980,102 @@
           var fn = Number(s.defaultTradeFees);
           if (!isNaN(fn)) out.defaultTradeFees = fn;
         }
+        if (s.playbookStrategyNotes && typeof s.playbookStrategyNotes === "object" && !Array.isArray(s.playbookStrategyNotes)) {
+          Object.keys(s.playbookStrategyNotes).forEach(function (k) {
+            var label = String(k).trim().slice(0, 160);
+            if (!label) return;
+            var ent = s.playbookStrategyNotes[k];
+            var note = "";
+            var u = 0;
+            if (typeof ent === "string") {
+              note = String(ent).trim().slice(0, 8000);
+            } else if (ent && typeof ent === "object") {
+              note = String(ent.note || "").trim().slice(0, 8000);
+              u = Number(ent.updatedAt) || 0;
+            }
+            if (!note) return;
+            out.playbookStrategyNotes[label] = { note: note, updatedAt: u };
+          });
+        }
         return out;
+      }
+
+      function parsePlaybookStrategiesBlocks_(text) {
+        var out = {};
+        var lines = String(text || "").split(/\r?\n/);
+        var curLabel = null;
+        var buf = [];
+        var now = Date.now();
+        var seq = 0;
+        function flush() {
+          if (!curLabel) return;
+          var body = buf.join("\n").trim().slice(0, 8000);
+          if (body) out[curLabel.trim().slice(0, 160)] = { note: body, updatedAt: now + seq++ };
+          curLabel = null;
+          buf = [];
+        }
+        for (var i = 0; i < lines.length; i++) {
+          var ln = lines[i];
+          var m = ln.match(/^===\s*(.+?)\s*===\s*$/);
+          if (m) {
+            flush();
+            curLabel = m[1];
+          } else if (curLabel) buf.push(ln);
+        }
+        flush();
+        return out;
+      }
+
+      function parsePlaybookStrategiesPipeLines_(text) {
+        var out = {};
+        var now = Date.now();
+        var seq = 0;
+        String(text || "")
+          .split(/\n/)
+          .forEach(function (line) {
+            line = line.trim();
+            if (!line || line.charAt(0) === "#") return;
+            var ix = line.indexOf("|");
+            if (ix === -1) return;
+            var label = line.slice(0, ix).trim().slice(0, 160);
+            var note = line
+              .slice(ix + 1)
+              .trim()
+              .replace(/\\n/g, "\n")
+              .slice(0, 8000);
+            if (!label || !note) return;
+            out[label] = { note: note, updatedAt: now + seq++ };
+          });
+        return out;
+      }
+
+      function parsePlaybookStrategiesEditorText_(text) {
+        text = String(text || "").trim();
+        if (!text) return {};
+        if (text.indexOf("===") !== -1) return parsePlaybookStrategiesBlocks_(text);
+        return parsePlaybookStrategiesPipeLines_(text);
+      }
+
+      function serializePlaybookStrategiesEditor_(settings) {
+        settings = normalizeSettings(settings || {});
+        var notes = settings.playbookStrategyNotes || {};
+        var shown = {};
+        var blocks = [];
+        (settings.playbooks || []).forEach(function (pb) {
+          var ent = notes[pb];
+          var n = ent && typeof ent === "object" ? String(ent.note || "").trim() : "";
+          if (!n) return;
+          shown[pb] = 1;
+          blocks.push("=== " + pb + " ===\n" + n);
+        });
+        Object.keys(notes).forEach(function (k) {
+          if (shown[k]) return;
+          var ent = notes[k];
+          var n = ent && typeof ent === "object" ? String(ent.note || "").trim() : "";
+          if (!n) return;
+          blocks.push("=== " + k + " ===\n" + n);
+        });
+        return blocks.join("\n\n");
       }
 
       function normalizeTrade(t) {
@@ -5549,6 +5791,38 @@
         });
       }
 
+      function mergeQuickRemindersForSync(lo, cl) {
+        lo = normalizeQuickRemindersState_(lo || {});
+        cl = normalizeQuickRemindersState_(cl || {});
+        var map = {};
+        function add(x) {
+          x = normalizeQuickRemindItem(x);
+          if (!x.text) return;
+          var ex = map[x.id];
+          if (!ex) {
+            map[x.id] = x;
+            return;
+          }
+          var ua = Number(ex.updatedAt) || 0;
+          var ub = Number(x.updatedAt) || 0;
+          map[x.id] = ub >= ua ? x : ex;
+        }
+        (lo.items || []).forEach(add);
+        (cl.items || []).forEach(add);
+        var items = Object.keys(map)
+          .map(function (k) {
+            return map[k];
+          })
+          .filter(function (x) {
+            return !entityKilledByTombstone_("quickRemind", x.id, Number(x.updatedAt) || 0);
+          });
+        return normalizeQuickRemindersState_({
+          version: 1,
+          items: items,
+          syncUpdatedAt: Math.max(Number(lo.syncUpdatedAt) || 0, Number(cl.syncUpdatedAt) || 0),
+        });
+      }
+
       function mergeDailyPoolsForSync(lo, cl) {
         lo = normalizeDailyPools(lo || {});
         cl = normalizeDailyPools(cl || {});
@@ -6415,13 +6689,23 @@
         return s + n.toLocaleString("zh-HK", { maximumFractionDigits: 2 });
       }
 
-      function toast(msg) {
+      function uxMotionDelayMs_(ms) {
+        try {
+          if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return 0;
+        } catch (eR) {}
+        return typeof ms === "number" && ms > 0 ? ms : 0;
+      }
+
+      function toast(msg, kind) {
         var el = document.getElementById("toast");
         el.textContent = msg;
+        el.classList.remove("toast-ok", "toast-warn");
+        if (kind === "ok") el.classList.add("toast-ok");
+        else if (kind === "warn") el.classList.add("toast-warn");
         el.classList.add("show");
         clearTimeout(toast._t);
         toast._t = setTimeout(function () {
-          el.classList.remove("show");
+          el.classList.remove("show", "toast-ok", "toast-warn");
         }, 2800);
       }
 
@@ -6628,16 +6912,24 @@
         var del = e.target.closest("[data-sched-del]");
         if (del) {
           var id = del.getAttribute("data-sched-del");
-          recordSyncTombstone_("scheduleBlock", id);
-          routineState.scheduleBlocks = (routineState.scheduleBlocks || []).filter(function (x) {
-            return x.id !== id;
-          });
-          saveRoutineWallet();
-          renderSchedulePanel();
-          renderRoutineWeekTimetable();
-          renderDashLifeSummary();
-          if (document.getElementById("panel-reminders") && !document.getElementById("panel-reminders").hidden) renderRemindersPanel();
-          toast("已刪除時段");
+          var row = del.closest(".sched-block");
+          function doDel() {
+            recordSyncTombstone_("scheduleBlock", id);
+            routineState.scheduleBlocks = (routineState.scheduleBlocks || []).filter(function (x) {
+              return x.id !== id;
+            });
+            saveRoutineWallet();
+            renderSchedulePanel();
+            renderRoutineWeekTimetable();
+            renderDashLifeSummary();
+            if (document.getElementById("panel-reminders") && !document.getElementById("panel-reminders").hidden) renderRemindersPanel();
+            toast("已刪除時段", "ok");
+          }
+          var dDel = uxMotionDelayMs_(300);
+          if (row && dDel > 0) {
+            row.classList.add("ux-row-leave");
+            setTimeout(doDel, dDel);
+          } else doDel();
           return;
         }
       });
@@ -6648,32 +6940,42 @@
         var bid = inp.getAttribute("data-sched-done");
         var iso = todayISO();
         var on = inp.checked;
-        schedSetDone(bid, iso, on);
-        saveRoutineWallet();
-        if (on) {
-          var blk = (routineState.scheduleBlocks || []).filter(function (x) {
-            return x.id === bid;
-          })[0];
-          var key = iso + "_" + bid;
-          if (blk && blk.goalId && !routineState.doneLogSent[key]) {
-            routineState.doneLogSent[key] = true;
-            lifeState.logs.unshift(
-              normalizeLifeLog({
-                goalId: blk.goalId,
-                body: "【日程完成】" + (blk.title || "") + "（" + fmtMin(blk.startMin) + "–" + fmtMin(blk.endMin) + "）",
-              })
-            );
-            saveLife(lifeState);
+        var row = inp.closest(".sched-block");
+        function commitSchedDone() {
+          if (row) row.classList.remove("ux-sched-completing");
+          schedSetDone(bid, iso, on);
+          saveRoutineWallet();
+          if (on) {
+            var blk = (routineState.scheduleBlocks || []).filter(function (x) {
+              return x.id === bid;
+            })[0];
+            var key = iso + "_" + bid;
+            if (blk && blk.goalId && !routineState.doneLogSent[key]) {
+              routineState.doneLogSent[key] = true;
+              lifeState.logs.unshift(
+                normalizeLifeLog({
+                  goalId: blk.goalId,
+                  body: "【日程完成】" + (blk.title || "") + "（" + fmtMin(blk.startMin) + "–" + fmtMin(blk.endMin) + "）",
+                })
+              );
+              saveLife(lifeState);
+              saveRoutineWallet();
+            }
+          } else {
+            var key2 = iso + "_" + bid;
+            delete routineState.doneLogSent[key2];
             saveRoutineWallet();
           }
-        } else {
-          var key2 = iso + "_" + bid;
-          delete routineState.doneLogSent[key2];
-          saveRoutineWallet();
+          renderSchedulePanel();
+          renderLifePanel();
+          renderDashLifeSummary();
+          if (on) toast("完成！已更新日程同生活軌跡", "ok");
         }
-        renderSchedulePanel();
-        renderLifePanel();
-        renderDashLifeSummary();
+        var dDone = uxMotionDelayMs_(420);
+        if (on && row && dDone > 0) {
+          row.classList.add("ux-sched-completing");
+          setTimeout(commitSchedDone, dDone);
+        } else commitSchedDone();
       });
 
       document.getElementById("btnSchedAdd").addEventListener("click", function () {
@@ -6682,7 +6984,7 @@
         var sm = parseHHMM(document.getElementById("schedNewStart").value || "");
         var em = parseHHMM(document.getElementById("schedNewEnd").value || "");
         if (sm == null || em == null) {
-          toast("時間格式用 HH:MM，例如 07:30");
+          toast("時間格式用 HH:MM（00:00–23:59），例如 05:30 或 02:00");
           return;
         }
         if (em <= sm) {
@@ -6717,7 +7019,7 @@
         renderRoutineWeekTimetable();
         renderDashLifeSummary();
         if (document.getElementById("panel-reminders") && !document.getElementById("panel-reminders").hidden) renderRemindersPanel();
-        toast("已加入時段");
+        toast("已加入時段", "ok");
       });
 
       (function bindSchedRepeatForm() {
@@ -7047,6 +7349,60 @@
         r.readAsText(f);
       });
 
+      function getPlaybookStrategyNoteText_(label) {
+        var st = normalizeSettings(state.settings || {});
+        var m = st.playbookStrategyNotes && st.playbookStrategyNotes[String(label).trim()];
+        if (!m) return "";
+        if (typeof m === "string") return String(m).trim();
+        return String(m.note || "").trim();
+      }
+
+      function showPlaybookStrategyPopup_(label, body) {
+        var el = document.getElementById("pbStratPopup");
+        if (!el) {
+          el = document.createElement("div");
+          el.id = "pbStratPopup";
+          el.className = "pb-strat-popup";
+          el.setAttribute("role", "dialog");
+          el.innerHTML =
+            '<div class="pb-strat-popup-inner"><button type="button" class="pb-strat-popup-close btn btn-ghost btn-sm" aria-label="關閉">&times;</button><h3 class="pb-strat-popup-title"></h3><pre class="pb-strat-popup-body"></pre></div>';
+          document.body.appendChild(el);
+          el.addEventListener("click", function (ev) {
+            if (ev.target === el) el.classList.remove("open");
+          });
+          el.querySelector(".pb-strat-popup-close").addEventListener("click", function () {
+            el.classList.remove("open");
+          });
+        }
+        el.querySelector(".pb-strat-popup-title").textContent = label || "策略說明";
+        el.querySelector(".pb-strat-popup-body").textContent = body || "";
+        el.classList.add("open");
+      }
+
+      function pillPlaybookWithHintHtml_(p) {
+        var note = getPlaybookStrategyNoteText_(p);
+        var pill = '<span class="pill">' + escapeHtml(p) + "</span>";
+        if (!note) return pill;
+        return (
+          '<span class="pill-with-hint">' +
+          pill +
+          '<button type="button" class="btn btn-ghost btn-sm pb-strat-hint" data-pb-strat="' +
+          escapeHtml(p) +
+          '" aria-label="睇「' +
+          escapeHtml(p) +
+          '」策略說明">ⓘ</button></span>'
+        );
+      }
+
+      document.addEventListener("click", function (e) {
+        var b = e.target.closest("[data-pb-strat]");
+        if (!b) return;
+        var lab = b.getAttribute("data-pb-strat");
+        if (!lab) return;
+        var txt = getPlaybookStrategyNoteText_(lab);
+        if (txt) showPlaybookStrategyPopup_(lab, txt);
+      });
+
       function buildChips() {
         var pbEl = document.getElementById("playbookChips");
         var msEl = document.getElementById("mistakeChips");
@@ -7055,12 +7411,23 @@
         var ms = state.settings.mistakes || [];
         pbEl.innerHTML = pbs
           .map(function (p) {
+            var hasN = getPlaybookStrategyNoteText_(p);
+            var hint = hasN
+              ? '<button type="button" class="btn btn-ghost btn-sm pb-strat-hint" data-pb-strat="' +
+                escapeHtml(p) +
+                '" aria-label="睇「' +
+                escapeHtml(p) +
+                '」策略說明" tabindex="-1">ⓘ</button>'
+              : "";
             return (
+              '<div class="pb-chip-wrap">' +
               '<label class="pb-chip"><input type="checkbox" name="pb" value="' +
               escapeHtml(p) +
               '"><span>' +
               escapeHtml(p) +
-              "</span></label>"
+              "</span></label>" +
+              hint +
+              "</div>"
             );
           })
           .join("");
@@ -9133,10 +9500,10 @@
             "/" +
             end.getDate();
         }
-        var H0 = 6;
+        var H0 = 0;
         var H1 = 23;
         var slotMin = 30;
-        var slotPx = 28;
+        var slotPx = 26;
         var slotStartMin = H0 * 60;
         var slotEndMax = (H1 + 1) * 60;
         var nSlots = Math.round((slotEndMax - slotStartMin) / slotMin);
@@ -9314,12 +9681,34 @@
 
       function normalizeQuickRemindItem(x) {
         x = x || {};
+        var created = Number(x.createdAt) || Date.now();
+        var updated = Number(x.updatedAt) || 0;
+        if (!updated || updated < created) updated = created;
         return {
           id: String(x.id || "").trim() || lifeId("qr"),
           text: String(x.text || "").trim().slice(0, 320),
           done: !!x.done,
-          createdAt: Number(x.createdAt) || Date.now(),
+          createdAt: created,
+          updatedAt: updated,
         };
+      }
+
+      function normalizeQuickRemindersState_(st) {
+        st = st || {};
+        var items = (Array.isArray(st.items) ? st.items : [])
+          .map(normalizeQuickRemindItem)
+          .filter(function (it) {
+            return it.text;
+          });
+        if (items.length > 120) items = items.slice(-120);
+        var su = Number(st.syncUpdatedAt) || 0;
+        if (isNaN(su)) su = 0;
+        return { version: 1, items: items, syncUpdatedAt: su };
+      }
+
+      function persistQuickRemindersToStorage_(st) {
+        st = normalizeQuickRemindersState_(st);
+        localStorage.setItem(QUICK_REMINDERS_KEY, JSON.stringify(st));
       }
 
       function loadQuickRemindersState_() {
@@ -9328,24 +9717,21 @@
           if (raw) {
             var d = JSON.parse(raw);
             if (d && Array.isArray(d.items))
-              return {
+              return normalizeQuickRemindersState_({
                 version: 1,
-                items: d.items.map(normalizeQuickRemindItem).filter(function (it) {
-                  return it.text;
-                }),
-              };
+                items: d.items,
+                syncUpdatedAt: d.syncUpdatedAt,
+              });
           }
         } catch (eQR) {}
-        return { version: 1, items: [] };
+        return normalizeQuickRemindersState_({ version: 1, items: [], syncUpdatedAt: 0 });
       }
 
       function saveQuickRemindersState_(st) {
-        st = st || { version: 1, items: [] };
-        var items = (st.items || []).map(normalizeQuickRemindItem).filter(function (x) {
-          return x.text;
-        });
-        if (items.length > 120) items = items.slice(-120);
-        localStorage.setItem(QUICK_REMINDERS_KEY, JSON.stringify({ version: 1, items: items }));
+        st = normalizeQuickRemindersState_(st);
+        st.syncUpdatedAt = Date.now();
+        persistQuickRemindersToStorage_(st);
+        scheduleDebouncedCloudAutoPush_();
       }
 
       function renderQuickRemindersList_() {
@@ -9556,32 +9942,53 @@
         saveQuickRemindersState_(st);
         if (inp) inp.value = "";
         renderRemindersPanel();
-        toast("已加入備忘");
+        toast("已加入備忘", "ok");
       });
 
       document.getElementById("panel-reminders").addEventListener("click", function (e) {
         var qd = e.target.closest("[data-quick-del]");
         if (qd) {
           var idd = qd.getAttribute("data-quick-del");
-          var stD = loadQuickRemindersState_();
-          stD.items = (stD.items || []).filter(function (x) {
-            return x.id !== idd;
-          });
-          saveQuickRemindersState_(stD);
-          renderRemindersPanel();
-          toast("已刪除");
+          var rowD = qd.closest(".remind-item");
+          function doQuickDel() {
+            recordSyncTombstone_("quickRemind", idd);
+            var stD = loadQuickRemindersState_();
+            stD.items = (stD.items || []).filter(function (x) {
+              return x.id !== idd;
+            });
+            saveQuickRemindersState_(stD);
+            renderRemindersPanel();
+            toast("已刪除", "ok");
+          }
+          var dQd = uxMotionDelayMs_(300);
+          if (rowD && dQd > 0) {
+            rowD.classList.add("ux-row-leave");
+            setTimeout(doQuickDel, dQd);
+          } else doQuickDel();
           return;
         }
         var qn = e.target.closest("[data-quick-done]");
         if (qn) {
           var idn = qn.getAttribute("data-quick-done");
-          var stN = loadQuickRemindersState_();
-          for (var qi = 0; qi < (stN.items || []).length; qi++) {
-            if (stN.items[qi].id === idn) stN.items[qi].done = true;
+          var rowN = qn.closest(".remind-item");
+          function doQuickDone() {
+            if (rowN) rowN.classList.remove("ux-remind-completing");
+            var stN = loadQuickRemindersState_();
+            for (var qi = 0; qi < (stN.items || []).length; qi++) {
+              if (stN.items[qi].id === idn) {
+                stN.items[qi].done = true;
+                stN.items[qi].updatedAt = Date.now();
+              }
+            }
+            saveQuickRemindersState_(stN);
+            renderRemindersPanel();
+            toast("已標完成", "ok");
           }
-          saveQuickRemindersState_(stN);
-          renderRemindersPanel();
-          toast("已標完成");
+          var dQn = uxMotionDelayMs_(380);
+          if (rowN && dQn > 0) {
+            rowN.classList.add("ux-remind-completing");
+            setTimeout(doQuickDone, dQn);
+          } else doQuickDone();
           return;
         }
         if (e.target.closest("[data-remind-open-routine]")) {
@@ -9693,6 +10100,8 @@
       function fillSettingsForm() {
         state.settings = normalizeSettings(state.settings || {});
         document.getElementById("settingsPlaybooks").value = (state.settings.playbooks || []).join("\n");
+        var stratEl = document.getElementById("settingsPlaybookStrategies");
+        if (stratEl) stratEl.value = serializePlaybookStrategiesEditor_(state.settings);
         document.getElementById("settingsMistakes").value = (state.settings.mistakes || []).join("\n");
         var df = document.getElementById("settingsDefaultFees");
         if (df)
@@ -9759,6 +10168,10 @@
         try {
           renderTradeIdeasPanel();
         } catch (eTi) {}
+        try {
+          renderRemindersPanel();
+          renderQuickRemindersList_();
+        } catch (eQr) {}
         var pl = document.getElementById("panel-list");
         if (pl && pl.classList.contains("active")) renderList();
         var pa = document.getElementById("panel-analytics");
@@ -9812,6 +10225,9 @@
           dailyPoolsState = normalizeDailyPools(parsed.dailyPools);
           persistDailyPoolsToStorage_();
         }
+        if (parsed.quickReminders && typeof parsed.quickReminders === "object" && Array.isArray(parsed.quickReminders.items)) {
+          persistQuickRemindersToStorage_(normalizeQuickRemindersState_(parsed.quickReminders));
+        }
         refreshAllPanelsAfterFullDataApply_();
         toast("已從雲端載入");
       }
@@ -9861,6 +10277,39 @@
           });
       }
 
+      function mergePlaybookStrategyNotesForSync_(a, b) {
+        function normEntry(v) {
+          if (v == null) return { note: "", updatedAt: 0 };
+          if (typeof v === "string") return { note: String(v).trim().slice(0, 8000), updatedAt: 0 };
+          return {
+            note: String((v && v.note) || "").trim().slice(0, 8000),
+            updatedAt: Number(v && v.updatedAt) || 0,
+          };
+        }
+        a = a && typeof a === "object" && !Array.isArray(a) ? a : {};
+        b = b && typeof b === "object" && !Array.isArray(b) ? b : {};
+        var keys = {};
+        Object.keys(a).forEach(function (k) {
+          keys[String(k).trim()] = 1;
+        });
+        Object.keys(b).forEach(function (k) {
+          keys[String(k).trim()] = 1;
+        });
+        var out = {};
+        Object.keys(keys).forEach(function (k) {
+          if (!k) return;
+          var na = normEntry(a[k]);
+          var nb = normEntry(b[k]);
+          if (nb.updatedAt > na.updatedAt) out[k] = { note: nb.note, updatedAt: nb.updatedAt };
+          else if (na.updatedAt > nb.updatedAt) out[k] = { note: na.note, updatedAt: na.updatedAt };
+          else {
+            var pick = na.note.length >= nb.note.length ? na : nb;
+            out[k] = { note: pick.note, updatedAt: Math.max(na.updatedAt, nb.updatedAt) };
+          }
+        });
+        return out;
+      }
+
       function mergeSettingsForSync(lo, cl) {
         function uniqStrArr(arr) {
           var seen = {};
@@ -9897,6 +10346,7 @@
         if (lo.defaultTradeFees != null && !isNaN(Number(lo.defaultTradeFees))) out.defaultTradeFees = lo.defaultTradeFees;
         else if (cl.defaultTradeFees != null && !isNaN(Number(cl.defaultTradeFees))) out.defaultTradeFees = cl.defaultTradeFees;
         out.tradeTimeAutoNow = lo.tradeTimeAutoNow !== false || cl.tradeTimeAutoNow !== false;
+        out.playbookStrategyNotes = mergePlaybookStrategyNotesForSync_(lo.playbookStrategyNotes, cl.playbookStrategyNotes);
         return normalizeSettings(out);
       }
 
@@ -10150,6 +10600,7 @@
           psychBank: normalizePsychBank(JSON.parse(JSON.stringify(psychBankState))),
           tradeIdeas: normalizeTradeIdeasState(JSON.parse(JSON.stringify(tradeIdeasState))),
           dailyPools: normalizeDailyPools(JSON.parse(JSON.stringify(dailyPoolsState))),
+          quickReminders: normalizeQuickRemindersState_(JSON.parse(JSON.stringify(loadQuickRemindersState_()))),
           tombstones: normalizeSyncTombstones(JSON.parse(JSON.stringify(syncTombstonesState))),
         };
       }
@@ -10192,6 +10643,9 @@
         if (dataExtra && dataExtra.dailyPools && typeof dataExtra.dailyPools === "object") {
           dailyPoolsState = normalizeDailyPools(dataExtra.dailyPools);
           persistDailyPoolsToStorage_();
+        }
+        if (dataExtra && dataExtra.quickReminders && typeof dataExtra.quickReminders === "object") {
+          persistQuickRemindersToStorage_(dataExtra.quickReminders);
         }
         refreshAllPanelsAfterFullDataApply_();
         if (toastMsg) toast(toastMsg);
@@ -10238,6 +10692,7 @@
             var mergedPsychBank = mergePsychBankForSync(psychBankState, cloud.psychBank || null);
             var mergedTradeIdeas = mergeTradeIdeasForSync(tradeIdeasState, cloud.tradeIdeas || null);
             var mergedDailyPools = mergeDailyPoolsForSync(dailyPoolsState, cloud.dailyPools || null);
+            var mergedQuickReminders = mergeQuickRemindersForSync(loadQuickRemindersState_(), cloud.quickReminders || null);
             var mergedTombs = normalizeSyncTombstones(syncTombstonesState);
             var nBefore = (state.trades && state.trades.length) || 0;
             var nCloud = (cloud.trades && cloud.trades.length) || 0;
@@ -10245,6 +10700,7 @@
               psychBank: mergedPsychBank,
               tradeIdeas: mergedTradeIdeas,
               dailyPools: mergedDailyPools,
+              quickReminders: mergedQuickReminders,
               tombstones: mergedTombs,
             });
             var nAfter = state.trades.length;
@@ -10299,6 +10755,8 @@
         cur.mistakes = ms.length ? ms : defaultSettings().mistakes;
         cur.defaultTradeFees = parseNum(document.getElementById("settingsDefaultFees").value);
         cur.tradeTimeAutoNow = !!document.getElementById("settingsTradeAutoTime").checked;
+        var stratEl = document.getElementById("settingsPlaybookStrategies");
+        cur.playbookStrategyNotes = stratEl ? parsePlaybookStrategiesEditorText_(stratEl.value) : cur.playbookStrategyNotes || {};
         state.settings = cur;
         save(state);
         buildChips();
@@ -10324,7 +10782,7 @@
             toast("請填 Web App URL 同 TOKEN");
             return;
           }
-          if (!window.confirm("會用雲端備份「完全取代」本機交易同設定（唔會同本機合併）。確定？")) return;
+          if (!window.confirm("會用雲端備份「完全取代」本機交易、設定及雲端檔內已有嘅欄位（例如生活／錢包／快速備忘等；舊備份冇嘅欄位會保留本機）。唔會同本機合併。確定？")) return;
           fetch(url, { method: "GET", mode: "cors", redirect: "follow", cache: "no-store" })
             .then(function (r) {
               return r.text();
@@ -10404,7 +10862,7 @@
         document.getElementById("modalTitle").textContent = t.symbol + " · " + (t.date || "");
         var pillsPB = (t.playbooks || [])
           .map(function (p) {
-            return '<span class="pill">' + escapeHtml(p) + "</span>";
+            return pillPlaybookWithHintHtml_(p);
           })
           .join("");
         var pillsMS = (t.mistakes || [])
@@ -11864,7 +12322,7 @@
             if (t.rMultiple != null && !isNaN(t.rMultiple)) nums.push("R " + Number(t.rMultiple).toFixed(2));
             var numStr = nums.length ? nums.join(" · ") : "";
             var pb = (t.playbooks || []).slice(0, 3).map(function (p) {
-              return '<span class="pill">' + escapeHtml(p) + "</span>";
+              return pillPlaybookWithHintHtml_(p);
             });
             return (
               '<article class="trade-row" data-id="' +
