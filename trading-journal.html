@@ -300,10 +300,6 @@
       .heat-cell {
         min-height: 42px;
       }
-
-      .work-cal-cell {
-        min-height: 100px;
-      }
     }
 
     .tip-banner {
@@ -1043,7 +1039,6 @@
       grid-template-columns: repeat(7, 1fr);
       gap: 6px;
       font-size: 0.68rem;
-      margin-top: 14px;
     }
 
     .work-cal-grid .dow {
@@ -1055,21 +1050,33 @@
     }
 
     .work-cal-cell {
-      min-height: 88px;
+      aspect-ratio: 1;
+      min-height: 44px;
       border-radius: 10px;
-      border: 1px solid var(--border);
-      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: linear-gradient(165deg, rgba(30, 41, 59, 0.45), rgba(8, 12, 18, 0.92));
       padding: 6px 5px 5px;
       display: flex;
       flex-direction: column;
       align-items: stretch;
       gap: 3px;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition: border-color 0.15s, box-shadow 0.18s, transform 0.12s;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
 
     .work-cal-cell:hover {
       border-color: rgba(252, 211, 77, 0.45);
-      box-shadow: 0 0 0 1px rgba(252, 211, 77, 0.12);
+      box-shadow: 0 0 0 1px rgba(252, 211, 77, 0.1), 0 10px 28px rgba(0, 0, 0, 0.35);
+      transform: translateY(-1px);
+    }
+
+    .work-cal-chips {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow: hidden;
     }
 
     .work-cal-cell.muted {
@@ -1089,8 +1096,8 @@
     }
 
     .work-cal-chip {
-      font-size: 0.58rem;
-      line-height: 1.25;
+      font-size: 0.55rem;
+      line-height: 1.2;
       font-weight: 700;
       padding: 2px 4px;
       border-radius: 4px;
@@ -1098,6 +1105,7 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       border: 1px solid rgba(255, 255, 255, 0.12);
+      flex-shrink: 0;
     }
 
     .work-cal-chip.hk {
@@ -1166,6 +1174,25 @@
       display: flex;
       flex-direction: column;
       gap: 22px;
+    }
+
+    #panel-routine.active,
+    #panel-wallet.active {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .tt-wrap--hero {
+      border-radius: var(--radius);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.4) 0%, rgba(8, 12, 18, 0.92) 100%);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .tt-hero-card {
+      border-color: rgba(56, 189, 248, 0.25);
+      background: linear-gradient(165deg, rgba(56, 189, 248, 0.1), transparent 42%), var(--bg-card);
     }
 
     .daily-quote-block {
@@ -2062,8 +2089,8 @@
 
     .tt-wrap {
       overflow-x: auto;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       background: rgba(0, 0, 0, 0.22);
       margin-top: 12px;
     }
@@ -2076,7 +2103,7 @@
     .tt-time-col {
       width: 44px;
       flex-shrink: 0;
-      padding-top: 36px;
+      padding-top: 40px;
       font-size: 0.68rem;
       font-weight: 700;
       color: var(--text-muted);
@@ -2280,16 +2307,18 @@
     }
 
     .tt-day-head {
-      height: 36px;
-      padding: 6px 4px;
+      height: 40px;
+      padding: 8px 6px;
       text-align: center;
-      font-size: 0.72rem;
-      font-weight: 800;
-      border-bottom: 1px solid var(--border);
-      background: rgba(15, 20, 28, 0.95);
+      font-size: 0.74rem;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid rgba(56, 189, 248, 0.15);
+      background: linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.75));
       position: sticky;
       top: 0;
       z-index: 2;
+      border-radius: 12px 12px 0 0;
     }
 
     .tt-day-head small {
@@ -2386,6 +2415,15 @@
       border-left-color: #a78bfa;
     }
 
+    .quick-remind-done {
+      opacity: 0.68;
+    }
+
+    .quick-remind-done strong {
+      text-decoration: line-through;
+      font-weight: 600;
+    }
+
     .remind-item .meta {
       font-size: 0.72rem;
       color: var(--text-muted);
@@ -2400,7 +2438,7 @@
       <div class="side-brand">
         <div class="mark">TL</div>
         <strong>TradeLog Pro</strong>
-        <small>交易日誌 · 目標追蹤 · 本機儲存</small>
+        <small>個人日誌 · 本機儲存</small>
       </div>
       <nav class="side-nav" role="navigation" aria-label="主要分頁">
         <div class="side-nav-group">
@@ -2412,13 +2450,14 @@
           <button type="button" data-tab="calendar" id="tab-calendar" aria-current="false" aria-controls="panel-calendar"><span class="ico">▦</span>日曆</button>
         </div>
         <div class="side-nav-group">
-          <div class="side-nav-label">生活 · 心態 · 日程</div>
+          <div class="side-nav-label">生活 · 心態 · 理財</div>
           <button type="button" data-tab="goals" id="tab-goals" aria-current="false" aria-controls="panel-goals"><span class="ico">◇</span>目標與進度</button>
           <button type="button" data-tab="reminders" id="tab-reminders" aria-current="false" aria-controls="panel-reminders"><span class="ico">!</span>待辦・提醒</button>
           <button type="button" data-tab="daily" id="tab-daily" aria-current="false" aria-controls="panel-daily"><span class="ico">✎</span>每日心情</button>
           <button type="button" data-tab="psych" id="tab-psych" aria-current="false" aria-controls="panel-psych"><span class="ico">✧</span>效應庫</button>
           <button type="button" data-tab="tradeideas" id="tab-tradeideas" aria-current="false" aria-controls="panel-tradeideas"><span class="ico">◈</span>交易思路</button>
-          <button type="button" data-tab="routine" id="tab-routine" aria-current="false" aria-controls="panel-routine"><span class="ico">▥</span>日程・錢包</button>
+          <button type="button" data-tab="routine" id="tab-routine" aria-current="false" aria-controls="panel-routine"><span class="ico">▥</span>每週課表</button>
+          <button type="button" data-tab="wallet" id="tab-wallet" aria-current="false" aria-controls="panel-wallet"><span class="ico">$</span>錢包</button>
         </div>
         <div class="side-nav-group">
           <div class="side-nav-label">工具</div>
@@ -2434,7 +2473,7 @@
     <main class="main-flow" id="main-content" tabindex="-1">
       <div class="tip-banner" id="tipBanner" role="note">
         <p>
-          <strong>歡迎使用 TradeLog Pro。</strong> 交易、目標、日程、錢包同 XAU 模擬都喺側欄切換；資料預設<strong>只存喺本機瀏覽器</strong>（可用「設定」嘅雲端備份同步多部機）。
+          <strong>TradeLog Pro</strong>：側欄分類瀏覽；資料預設<strong>本機</strong>，可用<strong>設定 → 雲端合併同步</strong>備份多部機。
         </p>
         <button type="button" id="tipDismiss" aria-label="關閉提示">✕</button>
       </div>
@@ -2469,7 +2508,8 @@
         <div class="form-actions" style="border: none; padding-top: 0; margin-top: 0">
           <button type="button" class="btn btn-primary" id="btnDashToGoals">目標頁</button>
           <button type="button" class="btn btn-accent" id="btnDashToRemind">待辦提醒</button>
-          <button type="button" class="btn btn-ghost" id="btnDashToRoutine">日程／錢包</button>
+          <button type="button" class="btn btn-ghost" id="btnDashToRoutine">每週課表</button>
+          <button type="button" class="btn btn-ghost" id="btnDashToWallet">錢包</button>
           <button type="button" class="btn btn-ghost" id="btnDashToXau">XAU 練習</button>
         </div>
       </div>
@@ -2686,8 +2726,8 @@
         </select>
         <select id="filterResult" aria-label="結果篩選">
           <option value="">全部結果</option>
-          <option value="win">净賺</option>
-          <option value="loss">净蝕</option>
+          <option value="win">淨賺</option>
+          <option value="loss">淨蝕</option>
         </select>
         <select id="sortList" aria-label="排序">
           <option value="date-desc">日期：新→舊</option>
@@ -2723,14 +2763,14 @@
     <section id="panel-calendar" class="panel" role="tabpanel" hidden>
       <div class="card cal-trade-card">
         <h2>交易月曆 <span class="badge">P&amp;L</span></h2>
-        <p class="lead">顏色 = 當日交易淨額；灰格 = 無交易。專注帳戶表現。</p>
+        <p class="lead">每日淨額著色；灰格＝無交易。</p>
         <div class="heatmap-head">
           <div style="display: flex; align-items: center; gap: 10px">
             <button type="button" class="btn btn-ghost" id="calPrev" aria-label="上個月">←</button>
             <strong id="calLabel" style="font-size: 1rem">—</strong>
             <button type="button" class="btn btn-ghost" id="calNext" aria-label="下個月">→</button>
           </div>
-          <span class="field-hint">同下面生活課表分開：呢度只係交易。細螢幕可<strong>橫向捲動</strong>睇晒格。</span>
+          <span class="field-hint">窄螢可橫向捲動。</span>
         </div>
         <div class="cal-grid-scroll" role="region" aria-label="交易月曆（可橫向捲動）">
           <div class="cal-grid-scroll-inner">
@@ -2740,12 +2780,10 @@
       </div>
 
       <div class="card cal-work-card">
-        <h2>生活／工作日曆 <span class="badge">假期 · 記念 · 自訂</span></h2>
-        <p class="lead">
-          同上面<strong>交易盈虧月曆</strong>完全分開。預設已入<strong>香港公眾假期（General Holidays）2025–2026</strong>；其他年份會顯示固定公眾日（元旦、勞動、回歸、國慶、聖誕等），其餘農曆假期請用「自訂」補。月份跟上面「←／→」同步。
-        </p>
+        <h2>假期 · 記念日 <span class="badge">月曆</span></h2>
+        <p class="lead">與上面交易月曆<strong>同一套格仔尺寸</strong>；黃＝公眾假期、青＝自訂。月份跟上面 ←／→。</p>
         <div class="heatmap-head">
-          <span class="field-hint" style="margin: 0">黃底＝香港假期 · 青底＝你自訂 · 今日日期金色</span>
+          <span class="field-hint" style="margin: 0">今日日期金色高亮</span>
         </div>
         <div class="work-cal-upcoming" id="workCalUpcoming" aria-live="polite"></div>
         <div class="form-grid" style="margin-top: 14px">
@@ -2789,38 +2827,36 @@
           </div>
         </div>
       </div>
-
-      <div class="card cal-life-card">
-        <h2>生活週課表 <span class="badge">Routine</span></h2>
-        <p class="lead">
-          <strong>日曆式格線</strong>：先睇晒每個<strong>半小時格</strong>（06:00–23:30），日程色塊疊喺對應時段上面；顏色跟綁定目標分類（無綁定用預設紫藍）。
-        </p>
-        <div class="heatmap-head">
-          <div style="display: flex; align-items: center; gap: 10px">
-            <button type="button" class="btn btn-ghost" id="calWeekPrev" aria-label="上一週">← 上週</button>
-            <strong id="calWeekLabel" style="font-size: 0.95rem">—</strong>
-            <button type="button" class="btn btn-ghost" id="calWeekNext" aria-label="下一週">下週 →</button>
-          </div>
-          <span class="field-hint">每格＝30 分鐘；可橫向捲動睇晒七日。</span>
-        </div>
-        <div class="tt-wrap">
-          <div id="routineWeekTimetable" class="tt-columns" aria-label="本週生活時間表"></div>
-        </div>
-      </div>
     </section>
 
     <section id="panel-reminders" class="panel" role="tabpanel" hidden aria-labelledby="tab-reminders">
       <div class="remind-hero">
         <h2>待辦・提醒</h2>
         <p class="lead" style="margin-bottom: 12px">
-          集中睇：<strong>今日日程未完成</strong>（每日／週一至五／週末／固定星期／每月幾號）、<strong>目標未剔步驟</strong>、<strong>今日相關嘅例行目標</strong>、<strong>錢包預算警號</strong>。
+          集中睇：<strong>快速備忘</strong>、<strong>今日日程未完成</strong>、<strong>目標未剔步驟</strong>、<strong>例行目標節奏</strong>、<strong>錢包預算警號</strong>。
         </p>
         <div class="big-n" id="remindTotalCount">0</div>
-        <p class="field-hint" style="margin-top: 4px">完成後去「日程」打剔或去「目標」剔步驟，數字會即時減少。</p>
+        <p class="field-hint" style="margin-top: 4px">完成後去「每週課表」打剔或去「目標」剔步驟。</p>
+      </div>
+      <div class="card">
+        <h2>快速備忘 <span class="badge">本機</span></h2>
+        <p class="lead">一兩句記低怕聽日唔記得嘅事；<strong>唔同步雲端</strong>，淨存呢部機。</p>
+        <div class="toolbar" style="margin-top: 10px; flex-wrap: wrap">
+          <input
+            type="text"
+            id="quickRemindInput"
+            maxlength="320"
+            placeholder="例：交表、覆 email、買嘢…"
+            autocomplete="off"
+            style="flex: 1; min-width: 200px"
+          />
+          <button type="button" class="btn btn-primary" id="btnQuickRemindAdd">加入</button>
+        </div>
+        <div id="quickRemindList" class="remind-list" style="margin-top: 14px" aria-live="polite"></div>
       </div>
       <div class="card">
         <h2>今日日程未完成 <span class="badge">今日</span></h2>
-        <p class="lead">只列<strong>今日</strong>會出現嘅時段（跟你在「日程」設嘅重複方式），但未打「今日完成」嘅。</p>
+        <p class="lead">只列<strong>今日</strong>適用嘅時段，但未打「今日完成」。</p>
         <div class="remind-list" id="remindSchedList"></div>
       </div>
       <div class="card">
@@ -2839,7 +2875,8 @@
         <div class="remind-list" id="remindWalletList"></div>
       </div>
       <div class="form-actions" style="border: none; padding-top: 0">
-        <button type="button" class="btn btn-primary" id="btnRemindToRoutine">去日程／錢包</button>
+        <button type="button" class="btn btn-primary" id="btnRemindToRoutine">去每週課表</button>
+        <button type="button" class="btn btn-accent" id="btnRemindToWallet">去錢包</button>
         <button type="button" class="btn btn-ghost" id="btnRemindToGoals">去目標</button>
         <button type="button" class="btn btn-ghost" id="btnRemindToCal">去日曆課表</button>
         <button type="button" class="btn btn-ghost" id="btnRemindToDaily">去每日心情</button>
@@ -2858,9 +2895,9 @@
         <blockquote id="dailyEffectBlock" class="daily-quote-block daily-effect-block"></blockquote>
       </div>
       <div class="card">
-        <h2>今日網絡一句 <span class="badge">API · 本機快取</span></h2>
+        <h2>今日網絡摘句 <span class="badge">篩選 · 本機</span></h2>
         <p class="lead" id="dailyNetworkLead">
-          每日<strong>自動</strong>向公開 API 擷取一句（多數中文來自一言）；同上面「今日一句／效應」<strong>分開顯示</strong>，唔會用晒你自訂池嘅「一日一格」。每曆日最多請求一次並寫入本機；<strong>唔上傳雲端備份</strong>（換機要重新擷取）。需網絡。
+          每日向一言 API 擷取<strong>一條</strong>，優先<strong>哲學／文學／詩詞</strong>類（盡量避免動漫評論、網易雲段子等雜質）；仍係第三方內容，<strong>唔保證</strong>句句係名家原作。與上面「今日一句／效應」分開顯示。每曆日本機快取一次、<strong>唔入雲端備份</strong>。需網絡。
         </p>
         <blockquote id="dailyNetworkBlock" class="daily-quote-block daily-net-block"></blockquote>
         <h3 class="section-title" style="margin-top: 22px">今日網絡心理學 · 效應摘要</h3>
@@ -3184,18 +3221,26 @@
     </section>
 
     <section id="panel-routine" class="panel" role="tabpanel" hidden aria-labelledby="tab-routine">
-      <div class="subtab-row" role="tablist">
-        <button type="button" class="subtab-btn on" data-rsub="schedule" id="rsubSchedule">每日日程</button>
-        <button type="button" class="subtab-btn" data-rsub="wallet" id="rsubWallet">生活錢包</button>
-        <button type="button" class="subtab-btn" data-rsub="dailySpend" id="rsubDailySpend">每日開支</button>
+      <div class="card cal-life-card tt-hero-card">
+        <h2>本週課表 <span class="badge">30 分鐘格</span></h2>
+        <p class="lead">與下面「固定時段」同一資料；色塊跟綁定目標分類。</p>
+        <div class="heatmap-head">
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+            <button type="button" class="btn btn-ghost" id="calWeekPrev" aria-label="上一週">← 上週</button>
+            <strong id="calWeekLabel" style="font-size: 0.95rem">—</strong>
+            <button type="button" class="btn btn-ghost" id="calWeekNext" aria-label="下一週">下週 →</button>
+          </div>
+          <span class="field-hint">可橫向捲動睇晒七日</span>
+        </div>
+        <div class="tt-wrap tt-wrap--hero">
+          <div id="routineWeekTimetable" class="tt-columns" aria-label="本週生活時間表"></div>
+        </div>
       </div>
 
       <div id="routinePaneSchedule">
         <div class="card">
           <h2>每週時間表 <span class="badge">Schedule</span></h2>
-          <p class="lead">
-            為每個時段揀<strong>時間 + 做咩</strong>，再揀<strong>重複方式</strong>：淨係「固定星期」需要揀<strong>星期幾</strong>；揀「每月幾號」先會出現<strong>日期 1–31</strong>；揀「每日／週一至五／週末」唔使填月份。可<strong>綁定目標</strong>；今日完成打剔會寫入該目標嘅心得。
-          </p>
+          <p class="lead">時間、標題、重複方式；可綁目標，打剔完成會寫入該目標心得。</p>
           <div class="sched-dow-row" id="schedDowTabs" aria-label="選星期"></div>
           <div id="schedBlockList"></div>
           <div class="card" style="margin-top: 16px; background: rgba(0,0,0,0.15); border-style: dashed">
@@ -3253,7 +3298,15 @@
         </div>
       </div>
 
-      <div id="routinePaneWallet" hidden>
+    </section>
+
+    <section id="panel-wallet" class="panel" role="tabpanel" hidden aria-labelledby="tab-wallet">
+      <div class="subtab-row" role="tablist" aria-label="錢包子分頁">
+        <button type="button" class="subtab-btn on" data-wsub="ledger" id="wsubLedger">收支帳本</button>
+        <button type="button" class="subtab-btn" data-wsub="dailySpend" id="wsubDailySpend">日限／預設</button>
+      </div>
+
+      <div id="routinePaneWallet">
         <div class="card">
           <h2>本月錢包 <span class="badge">Wallet</span></h2>
           <p class="lead">記錄<strong>收入／支出</strong>；設定<strong>本月花費預算</strong>，睇「尚可花用」。結餘 = 收入 − 支出。</p>
@@ -4244,7 +4297,7 @@
       }
 
       var routineState = loadRoutineWallet();
-      var routineSubtab = "schedule";
+      var walletSubtab = "ledger";
       var schedSelectedDow = new Date().getDay();
 
       var WORK_CAL_KEY = "tradeLogWorkCalendarV1";
@@ -4423,7 +4476,7 @@
           var iso = workCalIso(y, m, day);
           var titles = workCalTitlesForDay(y, m, day);
           var bnSet = workCalBuiltinTitlesForDay(y, m, day);
-          var chips = "";
+          var chips = '<div class="work-cal-chips">';
           var maxC = 3;
           for (var ci = 0; ci < titles.length && ci < maxC; ci++) {
             var t = titles[ci];
@@ -4441,6 +4494,7 @@
           if (titles.length > maxC) {
             chips += '<div class="work-cal-chip hk" title="' + escapeHtml(titles.join("、")) + '">+' + (titles.length - maxC) + "</div>";
           }
+          chips += "</div>";
           var tdCls = iso === today ? " today" : "";
           html +=
             '<div class="work-cal-cell"><div class="wd' +
@@ -4886,7 +4940,7 @@
         return false;
       }
 
-      var DAILY_NET_HITOKOTO_KEY = "tradeLogDailyNetHitokotoV1";
+      var DAILY_NET_HITOKOTO_KEY = "tradeLogDailyNetHitokotoV2";
       var DAILY_NET_WIKI_PSY_KEY = "tradeLogDailyNetWikiPsyV1";
       var _dailyNetQuoteBusy = null;
       var _dailyNetWikiBusy = null;
@@ -4955,7 +5009,7 @@
         var el = document.getElementById("dailyNetworkBlock");
         if (!el) return;
         if (mode === "loading") {
-          el.innerHTML = '<span class="field-hint">連線緊（一言 / 備援英文句）…\u003c/span>';
+          el.innerHTML = '<span class="field-hint">連線緊（一言：哲學／文學／詩詞 → 備援英文句）…\u003c/span>';
           return;
         }
         if (mode === "fail") {
@@ -4979,10 +5033,10 @@
         var src =
           rec.source === "quotable"
             ? "備援：Quotable（api.quotable.io）"
-            : "第一來源：一言（v1.hitokoto.cn）";
+            : "來源：一言（v1.hitokoto.cn）· 已篩哲學／文學／詩詞類";
         el.innerHTML =
           escapeHtml(rec.hitokoto) +
-          "<cite>— " +
+          "<cite><span class=\"enc-cite-detail\" style=\"display:block;margin-top:10px;font-weight:700\">說話者／作品\u003c/span>— " +
           escapeHtml(citeMain) +
           citeExtra +
           "<br/><span class=\"enc-cite-detail\">" +
@@ -5115,9 +5169,57 @@
           .then(settleW, settleW);
       }
 
+      function hitokotoStrictUrls_() {
+        return [
+          "https://v1.hitokoto.cn/?encode=json&c=k&min_length=10&max_length=220",
+          "https://v1.hitokoto.cn/?encode=json&c=d&min_length=10&max_length=220",
+          "https://v1.hitokoto.cn/?encode=json&c=i&min_length=8&max_length=220",
+        ];
+      }
+
+      function trySaveHitokotoJson_(j, iso) {
+        var text = String(j.hitokoto || "").trim();
+        if (text.length < 8) throw new Error("hk_short");
+        var ty = String(j.type || "").toLowerCase();
+        if (ty === "a" || ty === "b" || ty === "c" || ty === "j" || ty === "f") throw new Error("hk_type_skip");
+        var fromStr = String(j.from || "");
+        if (/網易雲|网易云|bilibili|B站|動漫|动漫/i.test(fromStr + text)) throw new Error("hk_src_skip");
+        var rec = normalizeDailyNetRec({
+          date: iso,
+          hitokoto: text,
+          from: j.from,
+          from_who: j.from_who,
+          creator: j.creator,
+          type: j.type,
+          uuid: j.uuid,
+          source: "hitokoto",
+          fetchedAt: Date.now(),
+        });
+        saveDailyNetCache(rec);
+        applyDailyNetworkToDom_(rec, null);
+      }
+
+      function fetchHitokotoStrictChain_(iso, urls, idx) {
+        if (idx >= urls.length) return Promise.reject(new Error("hk_all_fail"));
+        return fetch(urls[idx], { mode: "cors", cache: "no-store" })
+          .then(function (r) {
+            if (!r.ok) throw new Error("hk_http");
+            return r.json();
+          })
+          .then(function (j) {
+            trySaveHitokotoJson_(j, iso);
+          })
+          .catch(function () {
+            return fetchHitokotoStrictChain_(iso, urls, idx + 1);
+          });
+      }
+
       function fetchDailyNetworkQuote_(iso, force) {
         if (force) {
           _dailyNetQuoteBusy = null;
+          try {
+            localStorage.removeItem("tradeLogDailyNetHitokotoV1");
+          } catch (eRm0) {}
         } else if (_dailyNetQuoteBusy === iso) {
           return Promise.resolve();
         }
@@ -5133,34 +5235,18 @@
         var settle = function () {
           if (_dailyNetQuoteBusy === iso) _dailyNetQuoteBusy = null;
         };
-        var hitUrl = "https://v1.hitokoto.cn/?encode=json&min_length=6&max_length=200";
-        return fetch(hitUrl, { mode: "cors", cache: "no-store" })
-          .then(function (r) {
-            if (!r.ok) throw new Error("hk_http");
-            return r.json();
-          })
-          .then(function (j) {
-            var text = String(j.hitokoto || "").trim();
-            if (!text) throw new Error("hk_empty");
-            var rec = normalizeDailyNetRec({
-              date: iso,
-              hitokoto: text,
-              from: j.from,
-              from_who: j.from_who,
-              creator: j.creator,
-              type: j.type,
-              uuid: j.uuid,
-              source: "hitokoto",
-              fetchedAt: Date.now(),
-            });
-            saveDailyNetCache(rec);
-            applyDailyNetworkToDom_(rec, null);
-          })
+        return fetchHitokotoStrictChain_(iso, hitokotoStrictUrls_(), 0)
           .catch(function () {
-            return fetch("https://api.quotable.io/random?maxLength=220", { mode: "cors", cache: "no-store" })
+            return fetch("https://api.quotable.io/random?tags=wisdom&maxLength=220", { mode: "cors", cache: "no-store" })
               .then(function (r2) {
                 if (!r2.ok) throw new Error("q_http");
                 return r2.json();
+              })
+              .catch(function () {
+                return fetch("https://api.quotable.io/random?maxLength=220", { mode: "cors", cache: "no-store" }).then(function (r3) {
+                  if (!r3.ok) throw new Error("q2_http");
+                  return r3.json();
+                });
               })
               .then(function (q) {
                 var t2 = String(q.content || "").trim();
@@ -6073,10 +6159,15 @@
         var eq = document.getElementById("dailyEncourageBlock");
         if (eq) {
           var citeEnc =
-            "<cite>— " +
+            '<p class="enc-attrib" style="font-size:0.84rem;color:var(--text-muted);margin-top:14px;line-height:1.55">' +
+            "<strong>標籤／說話者\u003c/strong>：" +
             escapeHtml(enc.s) +
-            (enc.cite ? "<br/><span class=\"enc-cite-detail\">" + escapeHtml(enc.cite) + "\u003c/span>" : "") +
-            "\u003c/cite>";
+            "</p>" +
+            (enc.cite
+              ? '<p class="enc-attrib" style="font-size:0.82rem;color:var(--text-muted);margin-top:8px;line-height:1.55"><strong>出處／性質\u003c/strong><br/><span class="enc-cite-detail">' +
+                escapeHtml(enc.cite) +
+                "\u003c/span>\u003c/p>"
+              : "");
           eq.innerHTML = escapeHtml(enc.q) + citeEnc;
         }
         var ef = document.getElementById("dailyEffectBlock");
@@ -6090,7 +6181,7 @@
           lead.innerHTML =
             "今日係 <strong>" +
             escapeHtml(iso) +
-            "\u003c/strong>；過咗午夜會換新一句同新概念。金句同效應會<strong>盡量唔用同一組顯示字</strong>（你自訂入池嘅亦會計在內）。";
+            "</strong>；過咗午夜換新一句同新概念。內建金句會顯示<strong>標籤／說話者</strong>同<strong>出處／性質</strong>；自訂入池請填「出處說明」。金句同效應盡量唔用同一組顯示字。";
         }
         renderDailyPoolCustomList_();
         scheduleDailyNetworkFetch_(iso);
@@ -6280,13 +6371,14 @@
         new: { title: "記一單", sub: "Playbook · R · 止損 · 情緒 · 截圖" },
         list: { title: "全部交易", sub: "點一筆可詳情／編輯" },
         analytics: { title: "分析", sub: "策略標籤 · 商品表現" },
-        calendar: { title: "日曆", sub: "交易盈虧 · 生活假期 · 週課表（直向分開）" },
+        calendar: { title: "日曆", sub: "交易月曆 · 假期與記念" },
         daily: { title: "每日心情", sub: "今日一句 · 效應概念 · 心情日記" },
         psych: { title: "效應庫", sub: "心理學圖鑑 · 出處 · 閃卡複習" },
         tradeideas: { title: "交易思路", sub: "策略與 idea 筆記庫" },
         goals: { title: "目標與進度", sub: "大目標 · 細步驟 · 心得 · 連住交易日誌" },
-        routine: { title: "日程・錢包", sub: "每週時間表 · 今日打剔 · 收支與預算" },
-        reminders: { title: "待辦・提醒", sub: "日程 · 目標步驟 · 錢包警號" },
+        routine: { title: "每週課表", sub: "本週格線 · 固定時段 · 打剔同步目標" },
+        wallet: { title: "錢包", sub: "收支 · 預算 · 日限與預設扣減" },
+        reminders: { title: "待辦・提醒", sub: "課表 · 目標 · 錢包" },
         xau: { title: "XAU 練習", sub: "限價／止損 · 美金風險 · 模擬平倉寫日誌" },
         settings: { title: "設定", sub: "標籤庫" },
       };
@@ -6334,7 +6426,7 @@
       }
 
       function setTab(id, opts) {
-        var ids = ["dash", "new", "list", "analytics", "calendar", "goals", "reminders", "daily", "psych", "tradeideas", "routine", "xau", "settings"];
+        var ids = ["dash", "new", "list", "analytics", "calendar", "goals", "reminders", "daily", "psych", "tradeideas", "routine", "wallet", "xau", "settings"];
         ids.forEach(function (t) {
           var btn = document.getElementById("tab-" + t);
           var panel = document.getElementById("panel-" + t);
@@ -6360,6 +6452,7 @@
         if (id === "psych") renderPsychPanel();
         if (id === "tradeideas") renderTradeIdeasPanel();
         if (id === "routine") renderRoutinePanel();
+        if (id === "wallet") renderWalletTab();
         if (id === "xau") initXauPanel();
         if (opts && opts.focusTitle) {
           requestAnimationFrame(function () {
@@ -6400,21 +6493,20 @@
         setTab("reminders");
       });
       document.getElementById("btnDashToRoutine").addEventListener("click", function () {
-        routineSubtab = "schedule";
-        setTab("routine");
+        setTab("routine", { focusTitle: true });
+      });
+      document.getElementById("btnDashToWallet").addEventListener("click", function () {
+        walletSubtab = "ledger";
+        setTab("wallet", { focusTitle: true });
       });
 
-      document.getElementById("rsubSchedule").addEventListener("click", function () {
-        routineSubtab = "schedule";
-        renderRoutinePanel();
+      document.getElementById("wsubLedger").addEventListener("click", function () {
+        walletSubtab = "ledger";
+        renderWalletTab();
       });
-      document.getElementById("rsubWallet").addEventListener("click", function () {
-        routineSubtab = "wallet";
-        renderRoutinePanel();
-      });
-      document.getElementById("rsubDailySpend").addEventListener("click", function () {
-        routineSubtab = "dailySpend";
-        renderRoutinePanel();
+      document.getElementById("wsubDailySpend").addEventListener("click", function () {
+        walletSubtab = "dailySpend";
+        renderWalletTab();
       });
 
       document.getElementById("btnWalletDailyCapSave").addEventListener("click", function () {
@@ -6755,6 +6847,7 @@
             });
             saveRoutineWallet();
             renderRoutinePanel();
+            renderWalletTab();
             renderDashLifeSummary();
             toast("匯入完成");
           } catch (err) {
@@ -7922,8 +8015,8 @@
           if (document.getElementById("panel-dash").classList.contains("active")) {
             renderCharts();
           }
-          var pr = document.getElementById("panel-routine");
-          if (pr && pr.classList.contains("active") && routineSubtab === "wallet") {
+          var pr = document.getElementById("panel-wallet");
+          if (pr && pr.classList.contains("active") && walletSubtab === "ledger") {
             drawWalletSpendChart();
           }
         }, 150);
@@ -8138,8 +8231,8 @@
       }
 
       function bumpDailySpendIfVisible() {
-        var pr = document.getElementById("panel-routine");
-        if (pr && pr.classList.contains("active") && routineSubtab === "dailySpend") renderDailySpendPanel();
+        var pw = document.getElementById("panel-wallet");
+        if (pw && pw.classList.contains("active") && walletSubtab === "dailySpend") renderDailySpendPanel();
       }
 
       function renderDailySpendPanel() {
@@ -8303,26 +8396,28 @@
         selectEl.innerHTML = opts;
       }
 
-      function renderRoutinePanel() {
-        var ps = document.getElementById("routinePaneSchedule");
+      function renderWalletTab() {
         var pw = document.getElementById("routinePaneWallet");
         var pd = document.getElementById("routinePaneDailySpend");
-        var bSched = document.getElementById("rsubSchedule");
-        var bWallet = document.getElementById("rsubWallet");
-        var bDaily = document.getElementById("rsubDailySpend");
-        if (!ps || !pw || !pd) return;
+        var bL = document.getElementById("wsubLedger");
+        var bD = document.getElementById("wsubDailySpend");
+        if (!pw || !pd) return;
         function tabOn(btn, on) {
           if (!btn) return;
           if (on) btn.classList.add("on");
           else btn.classList.remove("on");
         }
-        if (routineSubtab === "wallet") {
-          ps.hidden = true;
+        if (walletSubtab === "dailySpend") {
+          pw.hidden = true;
+          pd.hidden = false;
+          tabOn(bL, false);
+          tabOn(bD, true);
+          renderDailySpendPanel();
+        } else {
           pw.hidden = false;
           pd.hidden = true;
-          tabOn(bSched, false);
-          tabOn(bWallet, true);
-          tabOn(bDaily, false);
+          tabOn(bL, true);
+          tabOn(bD, false);
           var wm = document.getElementById("walletMonth");
           if (wm && !wm._inited) {
             wm.value = new Date().getFullYear() + "-" + String(new Date().getMonth() + 1).padStart(2, "0");
@@ -8341,24 +8436,16 @@
                 ? String(routineState.wallet.monthlySaveGoal)
                 : "";
           renderWalletPanel();
-        } else if (routineSubtab === "dailySpend") {
-          ps.hidden = true;
-          pw.hidden = true;
-          pd.hidden = false;
-          tabOn(bSched, false);
-          tabOn(bWallet, false);
-          tabOn(bDaily, true);
-          renderDailySpendPanel();
-        } else {
-          ps.hidden = false;
-          pw.hidden = true;
-          pd.hidden = true;
-          tabOn(bSched, true);
-          tabOn(bWallet, false);
-          tabOn(bDaily, false);
-          fillSchedGoalDropdown(document.getElementById("schedNewGoalId"));
-          renderSchedulePanel();
         }
+      }
+
+      function renderRoutinePanel() {
+        var ps = document.getElementById("routinePaneSchedule");
+        if (!ps) return;
+        ps.hidden = false;
+        fillSchedGoalDropdown(document.getElementById("schedNewGoalId"));
+        renderSchedulePanel();
+        renderRoutineWeekTimetable();
       }
 
       function renderSchedulePanel() {
@@ -9017,7 +9104,6 @@
             html += '<div class="heat-cell muted"></div>';
           }
         grid.innerHTML = html;
-        renderRoutineWeekTimetable();
         renderWorkCalendarPanel();
       }
 
@@ -9054,7 +9140,7 @@
         var slotStartMin = H0 * 60;
         var slotEndMax = (H1 + 1) * 60;
         var nSlots = Math.round((slotEndMax - slotStartMin) / slotMin);
-        var dayHead = 36;
+        var dayHead = 40;
         var colBodyH = nSlots * slotPx;
         var colH = dayHead + colBodyH;
         var html = '<div class="tt-time-col" style="height:' + colH + "px;padding-top:" + dayHead + 'px">';
@@ -9224,6 +9310,83 @@
         }
       }
 
+      var QUICK_REMINDERS_KEY = "tradeLogQuickRemindersV1";
+
+      function normalizeQuickRemindItem(x) {
+        x = x || {};
+        return {
+          id: String(x.id || "").trim() || lifeId("qr"),
+          text: String(x.text || "").trim().slice(0, 320),
+          done: !!x.done,
+          createdAt: Number(x.createdAt) || Date.now(),
+        };
+      }
+
+      function loadQuickRemindersState_() {
+        try {
+          var raw = localStorage.getItem(QUICK_REMINDERS_KEY);
+          if (raw) {
+            var d = JSON.parse(raw);
+            if (d && Array.isArray(d.items))
+              return {
+                version: 1,
+                items: d.items.map(normalizeQuickRemindItem).filter(function (it) {
+                  return it.text;
+                }),
+              };
+          }
+        } catch (eQR) {}
+        return { version: 1, items: [] };
+      }
+
+      function saveQuickRemindersState_(st) {
+        st = st || { version: 1, items: [] };
+        var items = (st.items || []).map(normalizeQuickRemindItem).filter(function (x) {
+          return x.text;
+        });
+        if (items.length > 120) items = items.slice(-120);
+        localStorage.setItem(QUICK_REMINDERS_KEY, JSON.stringify({ version: 1, items: items }));
+      }
+
+      function renderQuickRemindersList_() {
+        var host = document.getElementById("quickRemindList");
+        if (!host) return;
+        var st = loadQuickRemindersState_();
+        var items = st.items || [];
+        if (!items.length) {
+          host.innerHTML = '<p class="field-hint">未有加；打幾隻字再撳「加入」。</p>';
+          return;
+        }
+        var active = [];
+        var done = [];
+        for (var qi = 0; qi < items.length; qi++) {
+          if (items[qi].done) done.push(items[qi]);
+          else active.push(items[qi]);
+        }
+        var rows = active.concat(done);
+        host.innerHTML = rows
+          .map(function (it) {
+            return (
+              '<div class="remind-item' +
+              (it.done ? " quick-remind-done" : "") +
+              '"><div><strong>' +
+              escapeHtml(it.text) +
+              '</strong><div class="meta" style="margin-top:6px">' +
+              (it.done ? "已完成" : "備忘") +
+              "</div></div><div style=\"display:flex;gap:6px;flex-wrap:wrap\">" +
+              (it.done
+                ? ""
+                : '<button type="button" class="btn btn-accent btn-sm" data-quick-done="' +
+                  escapeHtml(it.id) +
+                  '">完成\u003c/button>') +
+              '<button type="button" class="btn btn-ghost btn-sm" data-quick-del="' +
+              escapeHtml(it.id) +
+              '">刪除\u003c/button></div></div>'
+            );
+          })
+          .join("");
+      }
+
       function renderRemindersPanel() {
         var iso = todayISO();
         var todayDt = new Date();
@@ -9254,7 +9417,12 @@
         }
         var budget = routineState.wallet.monthlyExpenseBudget;
         var over = budget != null && !isNaN(budget) && exp > budget;
-        var n = undoneSched.length + stepsTodo.length + routineGoals.length + (over ? 1 : 0);
+        var qrSt = loadQuickRemindersState_();
+        var qrUndone = 0;
+        for (var qx = 0; qx < (qrSt.items || []).length; qx++) {
+          if (!qrSt.items[qx].done) qrUndone++;
+        }
+        var n = undoneSched.length + stepsTodo.length + routineGoals.length + (over ? 1 : 0) + qrUndone;
         var tot = document.getElementById("remindTotalCount");
         if (tot) tot.textContent = String(n);
 
@@ -9273,7 +9441,7 @@
                     escapeHtml(b.title) +
                     "</strong>" +
                     (gl ? '<p class="field-hint" style="margin:4px 0 0">綁「' + escapeHtml(gl.title) + "」</p>" : "") +
-                    '</div><button type="button" class="btn btn-primary btn-sm" data-remind-open-routine>去日程打剔</button></div>'
+                    '</div><button type="button" class="btn btn-primary btn-sm" data-remind-open-routine>去課表打剔</button></div>'
                   );
                 })
                 .join("")
@@ -9336,9 +9504,10 @@
               left.toLocaleString("zh-HK", { maximumFractionDigits: 0 }) +
               "</strong><p class=\"field-hint\" style=\"margin:6px 0 0\">未超支，保持記帳習慣。</p></div></div>";
           } else {
-            wl.innerHTML = '<p class="field-hint">未設定本月花費預算；去「日程・錢包」設定後會喺度提醒。</p>';
+            wl.innerHTML = '<p class="field-hint">未設定本月花費預算；去「錢包」頁設定。</p>';
           }
         }
+        renderQuickRemindersList_();
       }
 
       document.getElementById("calWeekPrev").addEventListener("click", function () {
@@ -9351,9 +9520,15 @@
       });
 
       document.getElementById("btnRemindToRoutine").addEventListener("click", function () {
-        routineSubtab = "schedule";
         setTab("routine");
       });
+      var btnRemindToWallet = document.getElementById("btnRemindToWallet");
+      if (btnRemindToWallet) {
+        btnRemindToWallet.addEventListener("click", function () {
+          walletSubtab = "ledger";
+          setTab("wallet");
+        });
+      }
       document.getElementById("btnRemindToGoals").addEventListener("click", function () {
         lifeSelectedId = null;
         setTab("goals");
@@ -9368,9 +9543,48 @@
         });
       }
 
+      document.getElementById("btnQuickRemindAdd").addEventListener("click", function () {
+        var inp = document.getElementById("quickRemindInput");
+        var t = inp ? String(inp.value || "").trim() : "";
+        if (!t) {
+          toast("打幾隻字先");
+          return;
+        }
+        var st = loadQuickRemindersState_();
+        st.items = st.items || [];
+        st.items.push(normalizeQuickRemindItem({ text: t, done: false }));
+        saveQuickRemindersState_(st);
+        if (inp) inp.value = "";
+        renderRemindersPanel();
+        toast("已加入備忘");
+      });
+
       document.getElementById("panel-reminders").addEventListener("click", function (e) {
+        var qd = e.target.closest("[data-quick-del]");
+        if (qd) {
+          var idd = qd.getAttribute("data-quick-del");
+          var stD = loadQuickRemindersState_();
+          stD.items = (stD.items || []).filter(function (x) {
+            return x.id !== idd;
+          });
+          saveQuickRemindersState_(stD);
+          renderRemindersPanel();
+          toast("已刪除");
+          return;
+        }
+        var qn = e.target.closest("[data-quick-done]");
+        if (qn) {
+          var idn = qn.getAttribute("data-quick-done");
+          var stN = loadQuickRemindersState_();
+          for (var qi = 0; qi < (stN.items || []).length; qi++) {
+            if (stN.items[qi].id === idn) stN.items[qi].done = true;
+          }
+          saveQuickRemindersState_(stN);
+          renderRemindersPanel();
+          toast("已標完成");
+          return;
+        }
         if (e.target.closest("[data-remind-open-routine]")) {
-          routineSubtab = "schedule";
           setTab("routine");
           return;
         }
@@ -9521,9 +9735,9 @@
         renderDash();
         renderDashLifeSummary();
         try {
-          renderWalletPanel();
+          renderWalletTab();
           bumpDailySpendIfVisible();
-        } catch (eW) {}
+        } catch (eW2) {}
         try {
           renderRoutinePanel();
         } catch (eR) {}
