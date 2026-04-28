@@ -219,6 +219,27 @@
       opacity: 0.9;
     }
 
+    .side-nav-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 12px;
+    }
+
+    .side-nav-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .side-nav-label {
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 4px 12px 2px;
+      opacity: 0.9;
+    }
+
     .main-flow {
       flex: 1;
       min-width: 0;
@@ -238,19 +259,28 @@
       }
 
       .side-nav {
-        flex-direction: row;
-        flex-wrap: wrap;
+        flex-direction: column;
+        flex-wrap: nowrap;
+        max-height: min(52vh, 420px);
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        padding-right: 4px;
       }
 
       .side-nav button {
-        flex: 1;
-        min-width: 120px;
+        flex: 0 0 auto;
+        min-width: 0;
         min-height: 44px;
-        justify-content: center;
+        justify-content: flex-start;
       }
 
       .side-nav button[aria-current="true"] {
-        box-shadow: inset 0 -3px 0 #c084fc;
+        box-shadow: inset 3px 0 0 #c084fc;
+      }
+
+      .side-nav-group {
+        margin-bottom: 10px;
       }
 
       .header-actions .btn {
@@ -259,6 +289,20 @@
 
       .subtab-btn {
         min-height: 44px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .cal-grid-scroll-inner {
+        min-width: 520px;
+      }
+
+      .heat-cell {
+        min-height: 42px;
+      }
+
+      .work-cal-cell {
+        min-height: 100px;
       }
     }
 
@@ -1104,6 +1148,18 @@
 
     .work-cal-row:last-child {
       border-bottom: none;
+    }
+
+    .cal-grid-scroll {
+      overflow-x: auto;
+      overflow-y: visible;
+      -webkit-overflow-scrolling: touch;
+      margin: 0 -2px;
+      padding: 2px 2px 10px;
+    }
+
+    .cal-grid-scroll-inner {
+      min-width: 560px;
     }
 
     #panel-calendar.active {
@@ -2347,19 +2403,31 @@
         <small>交易日誌 · 目標追蹤 · 本機儲存</small>
       </div>
       <nav class="side-nav" role="navigation" aria-label="主要分頁">
-        <button type="button" data-tab="dash" id="tab-dash" aria-current="true" aria-controls="panel-dash"><span class="ico">◆</span>概覽</button>
-        <button type="button" data-tab="new" id="tab-new" aria-current="false" aria-controls="panel-new"><span class="ico">＋</span>記一單</button>
-        <button type="button" data-tab="list" id="tab-list" aria-current="false" aria-controls="panel-list"><span class="ico">≡</span>全部交易</button>
-        <button type="button" data-tab="analytics" id="tab-analytics" aria-current="false" aria-controls="panel-analytics"><span class="ico">▤</span>分析</button>
-        <button type="button" data-tab="calendar" id="tab-calendar" aria-current="false" aria-controls="panel-calendar"><span class="ico">▦</span>日曆</button>
-        <button type="button" data-tab="goals" id="tab-goals" aria-current="false" aria-controls="panel-goals"><span class="ico">◇</span>目標與進度</button>
-        <button type="button" data-tab="reminders" id="tab-reminders" aria-current="false" aria-controls="panel-reminders"><span class="ico">!</span>待辦・提醒</button>
-        <button type="button" data-tab="daily" id="tab-daily" aria-current="false" aria-controls="panel-daily"><span class="ico">✎</span>每日心情</button>
-        <button type="button" data-tab="psych" id="tab-psych" aria-current="false" aria-controls="panel-psych"><span class="ico">✧</span>效應庫</button>
-        <button type="button" data-tab="tradeideas" id="tab-tradeideas" aria-current="false" aria-controls="panel-tradeideas"><span class="ico">◈</span>交易思路</button>
-        <button type="button" data-tab="routine" id="tab-routine" aria-current="false" aria-controls="panel-routine"><span class="ico">▥</span>日程・錢包</button>
-        <button type="button" data-tab="xau" id="tab-xau" aria-current="false" aria-controls="panel-xau"><span class="ico">◎</span>XAU 練習</button>
-        <button type="button" data-tab="settings" id="tab-settings" aria-current="false" aria-controls="panel-settings"><span class="ico">⚙</span>設定</button>
+        <div class="side-nav-group">
+          <div class="side-nav-label">交易紀錄</div>
+          <button type="button" data-tab="dash" id="tab-dash" aria-current="true" aria-controls="panel-dash"><span class="ico">◆</span>概覽</button>
+          <button type="button" data-tab="new" id="tab-new" aria-current="false" aria-controls="panel-new"><span class="ico">＋</span>記一單</button>
+          <button type="button" data-tab="list" id="tab-list" aria-current="false" aria-controls="panel-list"><span class="ico">≡</span>全部交易</button>
+          <button type="button" data-tab="analytics" id="tab-analytics" aria-current="false" aria-controls="panel-analytics"><span class="ico">▤</span>分析</button>
+          <button type="button" data-tab="calendar" id="tab-calendar" aria-current="false" aria-controls="panel-calendar"><span class="ico">▦</span>日曆</button>
+        </div>
+        <div class="side-nav-group">
+          <div class="side-nav-label">生活 · 心態 · 日程</div>
+          <button type="button" data-tab="goals" id="tab-goals" aria-current="false" aria-controls="panel-goals"><span class="ico">◇</span>目標與進度</button>
+          <button type="button" data-tab="reminders" id="tab-reminders" aria-current="false" aria-controls="panel-reminders"><span class="ico">!</span>待辦・提醒</button>
+          <button type="button" data-tab="daily" id="tab-daily" aria-current="false" aria-controls="panel-daily"><span class="ico">✎</span>每日心情</button>
+          <button type="button" data-tab="psych" id="tab-psych" aria-current="false" aria-controls="panel-psych"><span class="ico">✧</span>效應庫</button>
+          <button type="button" data-tab="tradeideas" id="tab-tradeideas" aria-current="false" aria-controls="panel-tradeideas"><span class="ico">◈</span>交易思路</button>
+          <button type="button" data-tab="routine" id="tab-routine" aria-current="false" aria-controls="panel-routine"><span class="ico">▥</span>日程・錢包</button>
+        </div>
+        <div class="side-nav-group">
+          <div class="side-nav-label">工具</div>
+          <button type="button" data-tab="xau" id="tab-xau" aria-current="false" aria-controls="panel-xau"><span class="ico">◎</span>XAU 練習</button>
+        </div>
+        <div class="side-nav-group">
+          <div class="side-nav-label">系統</div>
+          <button type="button" data-tab="settings" id="tab-settings" aria-current="false" aria-controls="panel-settings"><span class="ico">⚙</span>設定</button>
+        </div>
       </nav>
     </aside>
 
@@ -2662,9 +2730,13 @@
             <strong id="calLabel" style="font-size: 1rem">—</strong>
             <button type="button" class="btn btn-ghost" id="calNext" aria-label="下個月">→</button>
           </div>
-          <span class="field-hint">同下面生活課表分開：呢度只係交易。</span>
+          <span class="field-hint">同下面生活課表分開：呢度只係交易。細螢幕可<strong>橫向捲動</strong>睇晒格。</span>
         </div>
-        <div class="heatmap-grid" id="calendarHeat" aria-label="月曆熱力"></div>
+        <div class="cal-grid-scroll" role="region" aria-label="交易月曆（可橫向捲動）">
+          <div class="cal-grid-scroll-inner">
+            <div class="heatmap-grid" id="calendarHeat" aria-label="月曆熱力"></div>
+          </div>
+        </div>
       </div>
 
       <div class="card cal-work-card">
@@ -2711,7 +2783,11 @@
           <button type="button" class="btn btn-primary" id="btnWorkCalAdd">加入日曆</button>
         </div>
         <div class="work-cal-list" id="workCalEventList" aria-label="已加入事項"></div>
-        <div class="work-cal-grid" id="calendarWorkHeat" aria-label="生活工作日曆格"></div>
+        <div class="cal-grid-scroll" role="region" aria-label="生活工作日曆格（可橫向捲動）">
+          <div class="cal-grid-scroll-inner">
+            <div class="work-cal-grid" id="calendarWorkHeat" aria-label="生活工作日曆格"></div>
+          </div>
+        </div>
       </div>
 
       <div class="card cal-life-card">
@@ -3831,6 +3907,119 @@
         data.settings = normalizeSettings(data.settings);
         localStorage.setItem(STORAGE_V2, JSON.stringify(data));
         scheduleDebouncedCloudAutoPush_();
+      }
+
+      var TOMBSTONES_KEY = "tradeLogSyncTombstonesV1";
+      var TOMB_NESTED_NO_TS = {
+        lifeStep: true,
+        expensePreset: true,
+        scheduleBlock: true,
+      };
+
+      function normalizeSyncTombstones(t) {
+        t = t || {};
+        t.version = 1;
+        t.entries = Array.isArray(t.entries)
+          ? t.entries
+              .map(function (e) {
+                return {
+                  scope: String(e.scope || "").trim().slice(0, 48),
+                  id: String(e.id || "").trim().slice(0, 128),
+                  deletedAt: Number(e.deletedAt) || 0,
+                };
+              })
+              .filter(function (e) {
+                return e.scope && e.id && e.deletedAt > 0;
+              })
+          : [];
+        if (typeof t.syncUpdatedAt !== "number" || isNaN(t.syncUpdatedAt)) t.syncUpdatedAt = 0;
+        if (t.entries.length > 6000) {
+          t.entries.sort(function (a, b) {
+            return (Number(b.deletedAt) || 0) - (Number(a.deletedAt) || 0);
+          });
+          t.entries = t.entries.slice(0, 6000);
+        }
+        return t;
+      }
+
+      function loadSyncTombstones() {
+        try {
+          var raw = localStorage.getItem(TOMBSTONES_KEY);
+          if (raw) {
+            var d = JSON.parse(raw);
+            if (d) return normalizeSyncTombstones(d);
+          }
+        } catch (eTom) {}
+        return normalizeSyncTombstones({});
+      }
+
+      function persistSyncTombstonesToStorage_() {
+        syncTombstonesState = normalizeSyncTombstones(syncTombstonesState);
+        localStorage.setItem(TOMBSTONES_KEY, JSON.stringify(syncTombstonesState));
+      }
+
+      function mergeSyncTombstonesForSync(lo, cl) {
+        lo = normalizeSyncTombstones(lo || {});
+        cl = normalizeSyncTombstones(cl || {});
+        var map = {};
+        function add(e) {
+          if (!e || !e.scope || !e.id) return;
+          var k = e.scope + "\t" + e.id;
+          var ex = map[k];
+          var da = Number(e.deletedAt) || 0;
+          if (!ex || da >= (Number(ex.deletedAt) || 0)) {
+            map[k] = { scope: e.scope, id: e.id, deletedAt: da };
+          }
+        }
+        (lo.entries || []).forEach(add);
+        (cl.entries || []).forEach(add);
+        return normalizeSyncTombstones({
+          version: 1,
+          entries: Object.keys(map).map(function (k) {
+            return map[k];
+          }),
+          syncUpdatedAt: Math.max(Number(lo.syncUpdatedAt) || 0, Number(cl.syncUpdatedAt) || 0),
+        });
+      }
+
+      var syncTombstonesState = loadSyncTombstones();
+
+      function recordSyncTombstone_(scope, id) {
+        if (!scope || id == null || String(id).trim() === "") return;
+        syncTombstonesState = normalizeSyncTombstones(syncTombstonesState);
+        syncTombstonesState.entries.push({
+          scope: String(scope).slice(0, 48),
+          id: String(id).slice(0, 128),
+          deletedAt: Date.now(),
+        });
+        syncTombstonesState.syncUpdatedAt = Date.now();
+        persistSyncTombstonesToStorage_();
+        scheduleDebouncedCloudAutoPush_();
+      }
+
+      function entityKilledByTombstone_(scope, id, entityTs) {
+        var maxD = 0;
+        var found = false;
+        (syncTombstonesState.entries || []).forEach(function (e) {
+          if (!e || e.scope !== scope || String(e.id) !== String(id)) return;
+          found = true;
+          var d = Number(e.deletedAt) || 0;
+          if (d > maxD) maxD = d;
+        });
+        if (!found) return false;
+        if (TOMB_NESTED_NO_TS[scope]) return true;
+        return maxD >= (Number(entityTs) || 0);
+      }
+
+      function filterGoalsStripTombstonedSteps_(goals) {
+        return (goals || []).map(function (g) {
+          g = normalizeLifeGoal(g);
+          if (!g.steps || !g.steps.length) return g;
+          g.steps = g.steps.filter(function (s) {
+            return !entityKilledByTombstone_("lifeStep", s.id, 0);
+          });
+          return g;
+        });
       }
 
       var state = load();
@@ -5212,21 +5401,32 @@
         }
         (lo.userNotes || []).forEach(addNote);
         (cl.userNotes || []).forEach(addNote);
+        var userNotes = Object.keys(noteMap)
+          .map(function (k) {
+            return noteMap[k];
+          })
+          .filter(function (n) {
+            return !entityKilledByTombstone_("psychUserNote", n.id, Number(n.updatedAt) || 0);
+          });
+        var noteIdSet = {};
+        userNotes.forEach(function (n) {
+          noteIdSet[n.id] = 1;
+        });
         var deck = [];
         var seenD = {};
         function pushDeckId(id) {
           if (!id || seenD[id]) return;
-          seenD[id] = 1;
-          deck.push(id);
+          if (getBuiltinEffectById_(id) || noteIdSet[id]) {
+            seenD[id] = 1;
+            deck.push(id);
+          }
         }
         (lo.deckIds || []).forEach(pushDeckId);
         (cl.deckIds || []).forEach(pushDeckId);
         return normalizePsychBank({
           version: 1,
           appearances: mergedApps,
-          userNotes: Object.keys(noteMap).map(function (k) {
-            return noteMap[k];
-          }),
+          userNotes: userNotes,
           deckIds: deck,
           syncUpdatedAt: Math.max(Number(lo.syncUpdatedAt) || 0, Number(cl.syncUpdatedAt) || 0),
         });
@@ -5249,11 +5449,16 @@
         }
         (lo.ideas || []).forEach(add);
         (cl.ideas || []).forEach(add);
+        var ideas = Object.keys(map)
+          .map(function (k) {
+            return map[k];
+          })
+          .filter(function (x) {
+            return !entityKilledByTombstone_("tradeIdea", x.id, Number(x.updatedAt) || 0);
+          });
         return normalizeTradeIdeasState({
           version: 1,
-          ideas: Object.keys(map).map(function (k) {
-            return map[k];
-          }),
+          ideas: ideas,
           syncUpdatedAt: Math.max(Number(lo.syncUpdatedAt) || 0, Number(cl.syncUpdatedAt) || 0),
         });
       }
@@ -5281,12 +5486,20 @@
         (cl.customEffects || []).forEach(addF);
         return normalizeDailyPools({
           version: 1,
-          customEncourage: Object.keys(mapE).map(function (k) {
-            return mapE[k];
-          }),
-          customEffects: Object.keys(mapF).map(function (k) {
-            return mapF[k];
-          }),
+          customEncourage: Object.keys(mapE)
+            .map(function (k) {
+              return mapE[k];
+            })
+            .filter(function (x) {
+              return !entityKilledByTombstone_("dailyPoolEnc", x.id, Number(x.updatedAt) || 0);
+            }),
+          customEffects: Object.keys(mapF)
+            .map(function (k) {
+              return mapF[k];
+            })
+            .filter(function (x) {
+              return !entityKilledByTombstone_("dailyPoolFx", x.id, Number(x.updatedAt) || 0);
+            }),
           syncUpdatedAt: Math.max(Number(lo.syncUpdatedAt) || 0, Number(cl.syncUpdatedAt) || 0),
         });
       }
@@ -5517,6 +5730,7 @@
             if (!t || !t.getAttribute) return;
             var del = t.getAttribute("data-psych-user-del");
             if (del) {
+              recordSyncTombstone_("psychUserNote", del);
               psychBankState.userNotes = (psychBankState.userNotes || []).filter(function (u) {
                 return u.id !== del;
               });
@@ -5702,6 +5916,7 @@
             }
             var did = t.getAttribute("data-trade-idea-del");
             if (did) {
+              recordSyncTombstone_("tradeIdea", did);
               tradeIdeasState.ideas = (tradeIdeasState.ideas || []).filter(function (x) {
                 return x.id !== did;
               });
@@ -6001,6 +6216,7 @@
             if (!t || !t.getAttribute) return;
             var de = t.getAttribute("data-daily-pool-del-enc");
             if (de) {
+              recordSyncTombstone_("dailyPoolEnc", de);
               dailyPoolsState.customEncourage = (dailyPoolsState.customEncourage || []).filter(function (x) {
                 return x.id !== de;
               });
@@ -6012,6 +6228,7 @@
             }
             var df = t.getAttribute("data-daily-pool-del-fx");
             if (df) {
+              recordSyncTombstone_("dailyPoolFx", df);
               dailyPoolsState.customEffects = (dailyPoolsState.customEffects || []).filter(function (x) {
                 return x.id !== df;
               });
@@ -6270,6 +6487,7 @@
         var del = e.target.closest("[data-daily-preset-del]");
         if (!del) return;
         var id = del.getAttribute("data-daily-preset-del");
+        recordSyncTombstone_("expensePreset", id);
         routineState.wallet.expensePresets = (routineState.wallet.expensePresets || []).filter(function (x) {
           return x.id !== id;
         });
@@ -6318,6 +6536,7 @@
         var del = e.target.closest("[data-sched-del]");
         if (del) {
           var id = del.getAttribute("data-sched-del");
+          recordSyncTombstone_("scheduleBlock", id);
           routineState.scheduleBlocks = (routineState.scheduleBlocks || []).filter(function (x) {
             return x.id !== id;
           });
@@ -6492,6 +6711,7 @@
         var del = e.target.closest("[data-wallet-del]");
         if (!del) return;
         var id = del.getAttribute("data-wallet-del");
+        recordSyncTombstone_("walletEntry", id);
         routineState.wallet.entries = (routineState.wallet.entries || []).filter(function (x) {
           return x.id !== id;
         });
@@ -6601,6 +6821,7 @@
         var delS = e.target.closest("[data-life-del-step]");
         if (delS && lifeSelectedId) {
           var sid = delS.getAttribute("data-life-del-step");
+          recordSyncTombstone_("lifeStep", sid);
           var g = findLifeGoal(lifeSelectedId);
           if (!g) return;
           g.steps = g.steps.filter(function (s) {
@@ -6672,6 +6893,7 @@
         var g = findLifeGoal(lifeSelectedId);
         if (!g) return;
         if (!window.confirm("確定刪除「" + g.title + "」？綁定過嘅心得仍會留低喺列表（會顯示「已刪目標」）。")) return;
+        recordSyncTombstone_("lifeGoal", lifeSelectedId);
         lifeState.goals = lifeState.goals.filter(function (x) {
           return x.id !== lifeSelectedId;
         });
@@ -9243,6 +9465,7 @@
             var b = e.target.closest("[data-work-cal-del]");
             if (!b) return;
             var id = b.getAttribute("data-work-cal-del");
+            recordSyncTombstone_("workCalEvent", id);
             workCalState.events = (workCalState.events || []).filter(function (x) {
               return x.id !== id;
             });
@@ -9332,6 +9555,10 @@
       function applyCloudJournalPayload(parsed) {
         if (!parsed || typeof parsed !== "object") throw new Error("empty_json");
         if (!Array.isArray(parsed.trades)) throw new Error("no_trades_array");
+        if (parsed.tombstones && typeof parsed.tombstones === "object") {
+          syncTombstonesState = mergeSyncTombstonesForSync(syncTombstonesState, parsed.tombstones);
+          persistSyncTombstonesToStorage_();
+        }
         state.trades = parsed.trades.map(normalizeTrade);
         state.settings = normalizeSettings(parsed.settings || {});
         state.version = 2;
@@ -9409,6 +9636,9 @@
         return Object.keys(map)
           .map(function (k) {
             return map[k];
+          })
+          .filter(function (t) {
+            return !entityKilledByTombstone_("trade", t.id, Number(t.createdAt) || 0);
           })
           .sort(function (a, b) {
             var c = String(b.date || "").localeCompare(String(a.date || ""));
@@ -9555,8 +9785,13 @@
       function mergeLifePayloadForSync(lo, cl) {
         lo = lo || { version: 1, goals: [], logs: [], syncUpdatedAt: 0 };
         cl = cl || { version: 1, goals: [], logs: [], syncUpdatedAt: 0 };
-        var goals = mergeEntityByIdNewerCreated(lo.goals || [], cl.goals || [], normalizeLifeGoal);
-        var logs = mergeEntityByIdNewerCreated(lo.logs || [], cl.logs || [], normalizeLifeLog);
+        var goals = mergeEntityByIdNewerCreated(lo.goals || [], cl.goals || [], normalizeLifeGoal).filter(function (g) {
+          return !entityKilledByTombstone_("lifeGoal", g.id, Number(g.createdAt) || 0);
+        });
+        goals = filterGoalsStripTombstonedSteps_(goals);
+        var logs = mergeEntityByIdNewerCreated(lo.logs || [], cl.logs || [], normalizeLifeLog).filter(function (l) {
+          return !entityKilledByTombstone_("lifeLog", l.id, Number(l.createdAt) || 0);
+        });
         return {
           version: 1,
           goals: goals,
@@ -9580,9 +9815,19 @@
         function normBlock(b) {
           return normalizeRoutineWallet({ scheduleBlocks: [b] }).scheduleBlocks[0];
         }
-        var mergedEntries = mergeEntityByIdNewerCreated(lo.wallet.entries, cl.wallet.entries, normEntry);
-        var mergedPresets = mergeByBlockIdPreferFirst(lo.wallet.expensePresets, cl.wallet.expensePresets, preferLo).map(normPreset);
-        var mergedBlocks = mergeByBlockIdPreferFirst(lo.scheduleBlocks, cl.scheduleBlocks, preferLo).map(normBlock);
+        var mergedEntries = mergeEntityByIdNewerCreated(lo.wallet.entries, cl.wallet.entries, normEntry).filter(function (x) {
+          return !entityKilledByTombstone_("walletEntry", x.id, Number(x.createdAt) || 0);
+        });
+        var mergedPresets = mergeByBlockIdPreferFirst(lo.wallet.expensePresets, cl.wallet.expensePresets, preferLo)
+          .map(normPreset)
+          .filter(function (p) {
+            return !entityKilledByTombstone_("expensePreset", p.id, 0);
+          });
+        var mergedBlocks = mergeByBlockIdPreferFirst(lo.scheduleBlocks, cl.scheduleBlocks, preferLo)
+          .map(normBlock)
+          .filter(function (b) {
+            return !entityKilledByTombstone_("scheduleBlock", b.id, 0);
+          });
         var merged = {
           version: 1,
           scheduleBlocks: mergedBlocks,
@@ -9618,11 +9863,16 @@
         }
         (lo.events || []).forEach(add);
         (cl.events || []).forEach(add);
+        var events = Object.keys(map)
+          .map(function (k) {
+            return map[k];
+          })
+          .filter(function (ev) {
+            return !entityKilledByTombstone_("workCalEvent", ev.id, Number(ev.updatedAt) || 0);
+          });
         return normalizeWorkCal({
           version: 1,
-          events: Object.keys(map).map(function (k) {
-            return map[k];
-          }),
+          events: events,
           syncUpdatedAt: Math.max(Number(lo.syncUpdatedAt) || 0, Number(cl.syncUpdatedAt) || 0),
         });
       }
@@ -9646,11 +9896,16 @@
         (lo.entries || []).forEach(add);
         (cl.entries || []).forEach(add);
         var keys = Object.keys(byDate).sort();
+        var entries = keys
+          .map(function (k) {
+            return byDate[k];
+          })
+          .filter(function (e) {
+            return !entityKilledByTombstone_("dailyJournalEntry", e.id, Number(e.updatedAt) || 0);
+          });
         return normalizeDailyJournal({
           version: 1,
-          entries: keys.map(function (k) {
-            return byDate[k];
-          }),
+          entries: entries,
           syncUpdatedAt: Math.max(Number(lo.syncUpdatedAt) || 0, Number(cl.syncUpdatedAt) || 0),
         });
       }
@@ -9681,10 +9936,15 @@
           psychBank: normalizePsychBank(JSON.parse(JSON.stringify(psychBankState))),
           tradeIdeas: normalizeTradeIdeasState(JSON.parse(JSON.stringify(tradeIdeasState))),
           dailyPools: normalizeDailyPools(JSON.parse(JSON.stringify(dailyPoolsState))),
+          tombstones: normalizeSyncTombstones(JSON.parse(JSON.stringify(syncTombstonesState))),
         };
       }
 
       function applyMergedFullAppToUi_(mergedTrades, mergedSettings, mergedLife, mergedRoutine, mergedXau, mergedWorkCal, mergedDailyJournal, toastMsg, dataExtra) {
+        if (dataExtra && dataExtra.tombstones && typeof dataExtra.tombstones === "object") {
+          syncTombstonesState = normalizeSyncTombstones(dataExtra.tombstones);
+          persistSyncTombstonesToStorage_();
+        }
         state.trades = mergedTrades;
         state.settings = mergedSettings;
         state.version = 2;
@@ -9752,6 +10012,8 @@
       function cloudMergeRoundTrip(silent) {
         return fetchCloudJournalJson()
           .then(function (cloud) {
+            syncTombstonesState = mergeSyncTombstonesForSync(syncTombstonesState, cloud.tombstones || null);
+            persistSyncTombstonesToStorage_();
             var mergedTrades = mergeTradesById(state.trades, cloud.trades);
             var mergedSettings = mergeSettingsForSync(state.settings, cloud.settings || {});
             var mergedLife = mergeLifePayloadForSync(getLifePayloadForSync_(), cloud.life || null);
@@ -9762,12 +10024,14 @@
             var mergedPsychBank = mergePsychBankForSync(psychBankState, cloud.psychBank || null);
             var mergedTradeIdeas = mergeTradeIdeasForSync(tradeIdeasState, cloud.tradeIdeas || null);
             var mergedDailyPools = mergeDailyPoolsForSync(dailyPoolsState, cloud.dailyPools || null);
+            var mergedTombs = normalizeSyncTombstones(syncTombstonesState);
             var nBefore = (state.trades && state.trades.length) || 0;
             var nCloud = (cloud.trades && cloud.trades.length) || 0;
             applyMergedFullAppToUi_(mergedTrades, mergedSettings, mergedLife, mergedRoutine, mergedXau, mergedWorkCal, mergedDailyJournal, null, {
               psychBank: mergedPsychBank,
               tradeIdeas: mergedTradeIdeas,
               dailyPools: mergedDailyPools,
+              tombstones: mergedTombs,
             });
             var nAfter = state.trades.length;
             var body = JSON.stringify(buildFullAppCloudPayload());
@@ -9975,7 +10239,8 @@
           toast("已更新");
         };
         document.getElementById("m_del").onclick = function () {
-          if (!confirm("確定刪除？")) return;
+            if (!confirm("確定刪除？")) return;
+          recordSyncTombstone_("trade", editingId);
           state.trades = state.trades.filter(function (x) {
             return x.id !== editingId;
           });
@@ -11440,6 +11705,7 @@
             e.stopPropagation();
             var id = btn.getAttribute("data-del");
             if (!confirm("確定刪除呢筆紀錄？")) return;
+            recordSyncTombstone_("trade", id);
             state.trades = state.trades.filter(function (x) {
               return x.id !== id;
             });
