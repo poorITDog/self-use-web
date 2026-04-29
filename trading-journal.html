@@ -639,6 +639,40 @@
       line-height: 1.45;
     }
 
+    .journal-ai-box {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.18);
+    }
+
+    .journal-ai-log {
+      max-height: 360px;
+      overflow: auto;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.22);
+      margin-top: 10px;
+    }
+
+    .journal-ai-msg {
+      margin-bottom: 12px;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .journal-ai-msg.user {
+      color: var(--accent);
+    }
+
+    .journal-ai-msg.assistant {
+      color: var(--text);
+    }
+
     .pnl-preview {
       font-size: 0.8rem;
       font-weight: 700;
@@ -1435,6 +1469,262 @@
       color: var(--text-muted);
     }
 
+    /* —— 交易筆記分頁（閃卡庫）—— */
+    #panel-tradnotes.tn-page {
+      --tn-line: rgba(56, 189, 248, 0.35);
+      --tn-glow: rgba(56, 189, 248, 0.12);
+    }
+
+    #panel-tradnotes.tn-page .card {
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    #panel-tradnotes.tn-page .tn-hero {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(17, 24, 39, 0.88) 45%, rgba(12, 18, 28, 0.95) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.08), 0 20px 50px rgba(0, 0, 0, 0.45);
+    }
+
+    #panel-tradnotes.tn-page .tn-hero::before {
+      content: "";
+      position: absolute;
+      inset: -40% -20% auto auto;
+      width: 55%;
+      height: 120%;
+      background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.15), transparent 65%);
+      pointer-events: none;
+    }
+
+    #panel-tradnotes.tn-page .tn-hero h2 {
+      position: relative;
+      letter-spacing: -0.02em;
+    }
+
+    #panel-tradnotes.tn-page .tn-hero .lead {
+      position: relative;
+      max-width: 58rem;
+      line-height: 1.65;
+    }
+
+    #panel-tradnotes.tn-page .tn-section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+
+    #panel-tradnotes.tn-page .tn-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+      margin-top: 12px;
+    }
+
+    #panel-tradnotes.tn-page .tn-toolbar .field {
+      margin-bottom: 0;
+    }
+
+    #panel-tradnotes.tn-page .tn-list-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+      margin-bottom: 16px;
+    }
+
+    #panel-tradnotes.tn-page .tn-card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    #panel-tradnotes.tn-page .tn-study-card {
+      position: relative;
+      border-radius: var(--radius);
+      background: linear-gradient(165deg, rgba(22, 30, 44, 0.98) 0%, rgba(14, 19, 28, 0.99) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+    }
+
+    #panel-tradnotes.tn-page .tn-study-card::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: linear-gradient(180deg, var(--accent), rgba(196, 181, 253, 0.75));
+      opacity: 0.85;
+      border-radius: 2px 0 0 2px;
+    }
+
+    #panel-tradnotes.tn-page .tn-study-card--editing {
+      border-color: rgba(56, 189, 248, 0.35);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.12), 0 12px 40px rgba(0, 0, 0, 0.45);
+    }
+
+    #panel-tradnotes.tn-page .tn-study-card--editing::before {
+      opacity: 1;
+      width: 5px;
+    }
+
+    #panel-tradnotes.tn-page .tn-study-card__inner {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px 16px;
+      padding: 16px 18px 16px 20px;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+
+    #panel-tradnotes.tn-page .tn-study-card__body {
+      flex: 1;
+      min-width: min(100%, 220px);
+    }
+
+    #panel-tradnotes.tn-page .tn-study-card__meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    #panel-tradnotes.tn-page .tn-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: rgba(56, 189, 248, 0.14);
+      color: #bae6fd;
+      border: 1px solid rgba(56, 189, 248, 0.28);
+    }
+
+    #panel-tradnotes.tn-page .tn-pill--star {
+      background: rgba(252, 211, 77, 0.12);
+      color: #fde68a;
+      border-color: rgba(252, 211, 77, 0.35);
+    }
+
+    #panel-tradnotes.tn-page .tn-study-card__q {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 750;
+      line-height: 1.45;
+      color: #f8fafc;
+      letter-spacing: -0.015em;
+    }
+
+    #panel-tradnotes.tn-page .tn-study-card__hint {
+      margin: 10px 0 0;
+      font-size: 0.82rem;
+      line-height: 1.55;
+      color: var(--text-muted);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    #panel-tradnotes.tn-page .tn-study-card__aside {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: stretch;
+      min-width: min(100%, 168px);
+    }
+
+    #panel-tradnotes.tn-page .tn-study-card__aside .field {
+      margin: 0;
+      text-align: right;
+    }
+
+    #panel-tradnotes.tn-page .tn-study-card__aside .key {
+      font-size: 0.68rem;
+      opacity: 0.85;
+    }
+
+    #panel-tradnotes.tn-page .tn-select-compact,
+    #panel-tradnotes.tn-page .tn-study-card select {
+      width: 100%;
+      max-width: 220px;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(8, 12, 18, 0.65);
+      color: var(--text);
+      font-size: 0.8rem;
+    }
+
+    #panel-tradnotes.tn-page .tn-study-card__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+
+    #panel-tradnotes.tn-page .tn-inline-form {
+      padding: 16px 18px 18px 20px;
+    }
+
+    #panel-tradnotes.tn-page .tn-inline-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    #panel-tradnotes.tn-page .tn-inline-grid .field {
+      margin: 0;
+    }
+
+    #panel-tradnotes.tn-page .tn-inline-grid textarea {
+      width: 100%;
+      min-height: 64px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(6, 10, 16, 0.75);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.88rem;
+      line-height: 1.5;
+      resize: vertical;
+    }
+
+    #panel-tradnotes.tn-page .tn-inline-grid textarea:focus {
+      outline: none;
+      border-color: rgba(56, 189, 248, 0.45);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12);
+    }
+
+    #panel-tradnotes.tn-page .tn-inline-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: flex-end;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    #panel-tradnotes.tn-page .tn-empty {
+      text-align: center;
+      padding: 28px 16px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      border-radius: var(--radius);
+      border: 1px dashed rgba(255, 255, 255, 0.12);
+      background: rgba(8, 12, 18, 0.35);
+    }
+
     .analytics-table {
       width: 100%;
       border-collapse: collapse;
@@ -1743,6 +2033,11 @@
     .life-area-tag.body {
       background: rgba(52, 211, 153, 0.18);
       color: #6ee7b7;
+    }
+
+    .life-area-tag.custom {
+      background: rgba(148, 163, 184, 0.22);
+      color: #e2e8f0;
     }
 
     .subtab-row {
@@ -2318,6 +2613,10 @@
       background: linear-gradient(145deg, rgba(244, 114, 182, 0.52), rgba(167, 139, 250, 0.35));
     }
 
+    .tt-block-cal.custom {
+      background: linear-gradient(145deg, rgba(148, 163, 184, 0.45), rgba(99, 102, 241, 0.35));
+    }
+
     .tt-block-cal .blk-time {
       font-size: 0.62rem;
       font-weight: 700;
@@ -2592,6 +2891,7 @@
           <button type="button" data-tab="daily" id="tab-daily" aria-current="false" aria-controls="panel-daily"><span class="ico">✎</span>每日心情</button>
           <button type="button" data-tab="psych" id="tab-psych" aria-current="false" aria-controls="panel-psych"><span class="ico">✧</span>效應庫</button>
           <button type="button" data-tab="tradeideas" id="tab-tradeideas" aria-current="false" aria-controls="panel-tradeideas"><span class="ico">◈</span>交易思路</button>
+          <button type="button" data-tab="tradnotes" id="tab-tradnotes" aria-current="false" aria-controls="panel-tradnotes"><span class="ico">≣</span>交易筆記</button>
           <button type="button" data-tab="routine" id="tab-routine" aria-current="false" aria-controls="panel-routine"><span class="ico">▥</span>每週課表</button>
           <button type="button" data-tab="wallet" id="tab-wallet" aria-current="false" aria-controls="panel-wallet"><span class="ico">$</span>錢包</button>
         </div>
@@ -2976,8 +3276,10 @@
         <p class="field-hint" style="margin-top: 4px">完成後去「每週課表」打剔或去「目標」剔步驟。</p>
       </div>
       <div class="card">
-        <h2>快速備忘 <span class="badge">本機</span></h2>
-        <p class="lead">一兩句記低怕聽日唔記得嘅事；<strong>唔同步雲端</strong>，淨存呢部機。</p>
+        <h2>快速備忘 <span class="badge">本機 + 雲端</span></h2>
+        <p class="lead">
+          一兩句記低怕聽日唔記得嘅事；資料<strong>預設喺本機</strong>。若你已喺<strong>設定</strong>連接 Google Drive 並用<strong>雲端合併同步／自動合併同步</strong>，待辦快速備忘會跟備份 JSON<strong>一併上傳、合併</strong>（同其他模組一樣，唔使再當「只限呢部機」）。
+        </p>
         <div class="toolbar" style="margin-top: 10px; flex-wrap: wrap">
           <input
             type="text"
@@ -3219,6 +3521,125 @@
       </div>
     </section>
 
+    <section id="panel-tradnotes" class="panel tn-page" role="tabpanel" hidden aria-labelledby="tab-tradnotes">
+      <div class="card tn-hero">
+        <h2>交易筆記 · 閃卡溫習 <span class="badge">本機 + 雲端</span></h2>
+        <p class="lead">
+          將你嘅<strong>交易學習卡</strong>（例如 Anki 匯出）按<strong>主題</strong>整理；溫習翻面記憶。資料跟<strong>雲端合併同步</strong>寫入備份 JSON（以
+          <code>updatedAt</code> 合併）。<strong>唔係額外加密</strong>：靠私密網址、TOKEN、唔分享連結；無權限就睇唔到。
+        </p>
+      </div>
+      <div class="card">
+        <div class="tn-section-title">
+          <h2 style="margin: 0">主題</h2>
+          <span class="badge">Topic</span>
+        </div>
+        <p class="field-hint" style="margin-top: 4px">匯入／新增卡前請揀或新增主題；「全部主題」溫習會洗牌所有卡。</p>
+        <div class="tn-toolbar">
+          <label class="field" style="min-width: 200px; margin: 0">
+            <span class="key">目前主題</span>
+            <select id="tnTopicSelect"></select>
+          </label>
+          <label class="field" style="flex: 1; min-width: 180px; margin: 0">
+            <span class="key">新主題名稱</span>
+            <input type="text" id="tnNewTopicName" maxlength="80" placeholder="例：打火／T1T2、道氏、成交量…" autocomplete="off" />
+          </label>
+          <button type="button" class="btn btn-primary" id="tnBtnAddTopic">新增主題</button>
+          <button type="button" class="btn btn-ghost" id="tnBtnDeleteTopic" title="刪除目前揀嘅主題；卡會搬到其餘第一個主題">刪除此主題</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="tn-section-title">
+          <h2 style="margin: 0">Anki／分欄文字匯入</h2>
+          <span class="badge">Import</span>
+        </div>
+        <p class="lead" style="margin-top: 8px">
+          支援 Anki 匯出嘅 <strong>純文字卡包</strong>：<code>#separator:tab</code>、<code>#html:true</code>；每行<strong>正面＋Tab＋背面</strong>（背面可含簡單 HTML，同
+          <code>LifeChange.txt</code>）。
+        </p>
+        <div class="form-grid">
+          <label class="field" style="grid-column: 1 / -1">
+            <span class="key">匯入到主題</span>
+            <select id="tnImportTopicSelect"></select>
+          </label>
+          <label class="field" style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px">
+            <input type="checkbox" id="tnImportMerge" class="ux-chk" checked />
+            <span class="key" style="margin: 0"><strong>合併</strong>到現有卡（唔剔＝先清空該主題所有卡再匯入）</span>
+          </label>
+        </div>
+        <div class="form-actions" style="border: none; padding-top: 10px; margin-top: 0; flex-wrap: wrap; gap: 10px">
+          <input type="file" id="tnImportFile" accept=".txt,text/plain" class="sr-only" />
+          <button type="button" class="btn btn-accent" id="tnBtnPickImport">揀檔匯入…</button>
+          <button type="button" class="btn btn-ghost" id="tnBtnExportJson">匯出交易筆記 JSON</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="tn-section-title">
+          <h2 style="margin: 0">手動加一張卡</h2>
+          <span class="badge">New</span>
+        </div>
+        <p class="field-hint" style="margin-top: 4px">新增用呢格；改舊卡請喺下面卡片庫撳「編輯」，喺原位置改。</p>
+        <input type="hidden" id="tnEditCardId" value="" />
+        <div class="form-grid">
+          <label class="field" style="grid-column: 1 / -1">
+            <span class="key">正面（問題）</span>
+            <textarea id="tnCardFront" rows="2" maxlength="4000" placeholder="例：甚麼是 FVG？"></textarea>
+          </label>
+          <label class="field" style="grid-column: 1 / -1">
+            <span class="key">背面（答案，可簡單 HTML）</span>
+            <textarea id="tnCardBack" rows="5" maxlength="24000" placeholder="例：三連續 K 中間留空…"></textarea>
+          </label>
+          <label class="field" style="grid-column: 1 / -1">
+            <span class="key">自己嘅補充筆記（純文字，可選）</span>
+            <textarea id="tnCardExtra" rows="2" maxlength="8000" placeholder="考試技巧、易錯位、連結自己嘅單…"></textarea>
+          </label>
+          <label class="field" style="display: flex; align-items: center; gap: 10px">
+            <input type="checkbox" id="tnCardStar" class="ux-chk" />
+            <span class="key" style="margin: 0">標為重點（溫習可篩選）</span>
+          </label>
+        </div>
+        <div class="form-actions" style="border: none; padding-top: 10px; margin-top: 0; flex-wrap: wrap; gap: 10px">
+          <button type="button" class="btn btn-primary" id="tnBtnSaveCard">儲存新卡片</button>
+          <button type="button" class="btn btn-ghost" id="tnBtnClearCardForm">清空表單</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="tn-section-title">
+          <h2 style="margin: 0">卡片庫</h2>
+          <span class="badge">List</span>
+        </div>
+        <div class="tn-list-head">
+          <label class="field" style="flex: 1; min-width: 200px; margin: 0">
+            <span class="key">搜尋（正面／背面／補充）</span>
+            <input type="search" id="tnCardFilter" maxlength="200" placeholder="關鍵字…" autocomplete="off" />
+          </label>
+          <label class="field" style="display: flex; align-items: center; gap: 10px; margin: 0">
+            <input type="checkbox" id="tnFilterStar" class="ux-chk" />
+            <span class="key" style="margin: 0">只顯示重點</span>
+          </label>
+          <button type="button" class="btn btn-accent" id="tnBtnStudy">溫習閃卡</button>
+        </div>
+        <div id="tnCardList" class="tn-card-list" aria-live="polite"></div>
+      </div>
+      <div id="tnFlashOverlay" class="psych-flash-overlay" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="tnFlashTitle" tabindex="0">
+        <div class="psych-flash-card" style="max-width: min(560px, 96vw)">
+          <div id="tnFlashTitle" class="front"></div>
+          <div id="tnFlashBack" class="back" hidden></div>
+          <div id="tnFlashExtra" class="field-hint" style="margin-top: 12px; white-space: pre-wrap; word-break: break-word" hidden></div>
+          <div class="psych-flash-actions">
+            <button type="button" class="btn btn-primary" id="tnBtnFlashFlip">翻面／顯示答案</button>
+            <button type="button" class="btn btn-ghost" id="tnBtnFlashPrev">上一張</button>
+            <button type="button" class="btn btn-ghost" id="tnBtnFlashNext">下一張</button>
+            <button type="button" class="btn btn-ghost" id="tnBtnFlashClose">關閉</button>
+          </div>
+          <p class="psych-flash-hint" id="tnFlashMeta"></p>
+          <p class="field-hint" style="margin-top: 10px; text-align: center">
+            快捷鍵：<kbd>空白</kbd>翻面 · <kbd>←</kbd>／<kbd>→</kbd>上一張／下一張 · <kbd>Enter</kbd>下一張 · <kbd>Esc</kbd>關閉 · 點外面灰色位關閉
+          </p>
+        </div>
+      </div>
+    </section>
+
     <section id="panel-goals" class="panel" role="tabpanel" hidden aria-labelledby="tab-goals">
       <div id="lifeGoalsListView">
         <div class="card life-hero">
@@ -3251,14 +3672,10 @@
             </label>
             <label class="field">
               <span class="key">分類</span>
-              <select id="lifeNewArea">
-                <option value="streaming">直播／內容</option>
-                <option value="cyber">網安學習</option>
-                <option value="study">進修／讀書</option>
-                <option value="trading">交易訓練</option>
-                <option value="body">健身／作息</option>
-                <option value="other">其他</option>
-              </select>
+              <select id="lifeNewArea" aria-describedby="lifeNewAreaHint"></select>
+              <span class="field-hint" id="lifeNewAreaHint" style="margin-top: 6px; display: block"
+                >內建六大類＋「設定 → 目標分類（自訂）」每行一個；例如跑步、樂器、副業。</span
+              >
             </label>
           </div>
           <label class="field" style="margin-top: 12px">
@@ -3514,6 +3931,40 @@
         </div>
 
         <div class="card">
+          <h2>每月固定支出 <span class="badge">月費</span></h2>
+          <p class="lead">
+            例如<strong>租金、健身房月費、訂閱</strong>：設好範本後，每當你喺上面揀某個<strong>檢視月份</strong>而該月尚未有對應一筆，系統會<strong>自動加一筆支出</strong>到流水（可單月刪除，唔會刪走範本）。每月幾號建議填
+            <strong>1–28</strong>避免 2 月無該日。
+          </p>
+          <div class="form-grid">
+            <label class="field" style="grid-column: 1 / -1">
+              <span class="key">名稱（會寫入備註）</span>
+              <input type="text" id="walletFixedTitle" placeholder="例：租金、健身房" maxlength="80" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span class="key">金額</span>
+              <input type="number" id="walletFixedAmt" min="0" step="0.01" placeholder="8000" />
+            </label>
+            <label class="field">
+              <span class="key">支出分類</span>
+              <select id="walletFixedCat"></select>
+            </label>
+            <label class="field">
+              <span class="key">每月幾號入帳（1–28）</span>
+              <input type="number" id="walletFixedDay" min="1" max="28" value="1" />
+            </label>
+            <label class="field" style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px">
+              <input type="checkbox" id="walletFixedExcludeDaily" class="ux-chk" />
+              <span class="key" style="margin: 0">唔計入<strong>每日開支上限</strong>（建議租金／月費剔呢項）</span>
+            </label>
+          </div>
+          <div class="form-actions" style="border: none; padding-top: 12px; margin-top: 0">
+            <button type="button" class="btn btn-primary" id="btnWalletFixedAdd">加入月費範本</button>
+          </div>
+          <div id="walletFixedList" style="margin-top: 14px" aria-live="polite"></div>
+        </div>
+
+        <div class="card">
           <h2>本月流水 <span class="badge">List</span></h2>
           <div id="walletEntryList"></div>
         </div>
@@ -3637,6 +4088,24 @@
         <h2 style="margin-top: 22px; font-size: 1rem">犯錯標籤庫</h2>
         <p class="lead">每行一個，例如：郁止損、報復性交易…</p>
         <textarea id="settingsMistakes" rows="5" style="min-height: 100px"></textarea>
+        <h2 style="margin-top: 22px; font-size: 1rem">錢包分類（自訂）</h2>
+        <p class="lead">
+          下面兩欄會<strong>加喺預設分類前面</strong>（去重）；用嚟「記一筆」、快速記支出、每月固定支出揀分類。例：健身房、寵物、學費。
+        </p>
+        <label class="field">
+          <span class="key">額外支出分類（每行一個）</span>
+          <textarea id="settingsWalletExpenseCats" rows="4" style="min-height: 88px" spellcheck="false" placeholder="健身房&#10;寵物"></textarea>
+        </label>
+        <label class="field" style="margin-top: 12px">
+          <span class="key">額外收入分類（每行一個）</span>
+          <textarea id="settingsWalletIncomeCats" rows="3" style="min-height: 72px" spellcheck="false" placeholder="花紅&#10;轉贈"></textarea>
+        </label>
+        <h2 style="margin-top: 22px; font-size: 1rem">目標分類（自訂）</h2>
+        <p class="lead">每行一個名稱（例如：跑步、彈琴、副業）。會出現喺「目標與進度 → 新增大目標」嘅<strong>分類</strong>揀單，同內建分類一齊用。</p>
+        <label class="field">
+          <span class="key">自訂人生／生活目標分類</span>
+          <textarea id="settingsLifeCustomAreas" rows="5" style="min-height: 100px" spellcheck="true" placeholder="跑步&#10;樂器&#10;副業項目"></textarea>
+        </label>
         <h2 style="margin-top: 22px; font-size: 1rem">記一單預設</h2>
         <p class="lead">減少每次重填：預設手續費、開／平倉時間用而家系統時間（仍可手改）。</p>
         <div class="form-grid">
@@ -3679,8 +4148,24 @@
           <button type="button" class="btn btn-ghost" id="btnCloudSyncPull">從雲端覆蓋本機</button>
         </div>
         <p class="field-hint" style="margin-top: 12px">
-          <strong>合併同步（預設）：</strong>會先下載雲端，將<strong>交易、生活目標／日誌、錢包／時間表、工作日曆、每日心情日記、自訂每日金句／效應池、效應庫（閃卡／出現紀錄）、交易思路庫、待辦快速備忘、XAU 模擬倉</strong>等一併按規則合併（交易／帶 <code>createdAt</code> 嘅紀錄：同 ID 保留較新；快速備忘同思路庫：同 ID 以較新 <code>updatedAt</code> 為準；<strong>設定（含 Playbook 標籤庫、策略說明、犯錯標籤、範本）</strong>：標籤名單會合併去重；同一 Playbook 標籤嘅策略說明以較新 <code>updatedAt</code> 為準；錢包預設／時間格：邊邊 <code>syncUpdatedAt</code> 新就邊邊主導預算欄；XAU 開倉狀態以較新 <code>openedAt</code> 為準）。<strong>XAU 本地蠟燭時間框／TradingView 時間框</strong>只留本機、唔寫入備份 JSON。再寫回本機並<strong>上傳成個備份</strong>。「從雲端覆蓋本機」才會<strong>唔合併</strong>整份取代本機（舊備份冇嘅欄位會保留本機）。進階 <code>DELETE</code> 仍係刻意清空雲端專用。
+          <strong>合併同步（預設）：</strong>會先下載雲端，將<strong>交易、生活目標／日誌、錢包／時間表、工作日曆、每日心情日記、自訂每日金句／效應池、效應庫（閃卡／出現紀錄）、交易思路庫、交易筆記閃卡（主題／卡片）、待辦快速備忘、XAU 模擬倉</strong>等一併按規則合併（交易／帶 <code>createdAt</code> 嘅紀錄：同 ID 保留較新；快速備忘同思路庫：同 ID 以較新 <code>updatedAt</code> 為準；<strong>設定（含 Playbook 標籤庫、策略說明、犯錯標籤、範本）</strong>：標籤名單會合併去重；同一 Playbook 標籤嘅策略說明以較新 <code>updatedAt</code> 為準；錢包預設／時間格：邊邊 <code>syncUpdatedAt</code> 新就邊邊主導預算欄；XAU 開倉狀態以較新 <code>openedAt</code> 為準）。<strong>XAU 本地蠟燭時間框／TradingView 時間框</strong>只留本機、唔寫入備份 JSON。再寫回本機並<strong>上傳成個備份</strong>。「從雲端覆蓋本機」才會<strong>唔合併</strong>整份取代本機（舊備份冇嘅欄位會保留本機）。進階 <code>DELETE</code> 仍係刻意清空雲端專用。
         </p>
+        <div class="journal-ai-box">
+          <h3 style="margin: 0 0 8px; font-size: 1rem">備份 AI 助手（Google Gemini）</h3>
+          <p class="field-hint" style="margin: 0 0 10px">
+            伺服器會讀你<strong>雲端備份 JSON</strong>（截斷前約 100k 字元）再答你問題；<strong>唔會</strong>用呢個 POST 覆寫備份。請喺 Apps Script「指令碼屬性」加
+            <code>GEMINI_API_KEY</code>（唔好寫入本 HTML）。詳見 <code>journal-google-sync/README.md</code>。
+          </p>
+          <label class="field" style="margin-bottom: 0">
+            <span class="key">問題（例如：總結最近犯錯標籤、邊隻 symbol 最多單）</span>
+            <textarea id="journalAiQuestion" rows="3" style="min-height: 72px; resize: vertical" spellcheck="true" placeholder="例：用備份入面嘅交易，幫我總結上季 P&amp;L 同最常見嘅犯錯標籤"></textarea>
+          </label>
+          <div class="form-actions" style="border: none; padding-top: 12px; margin-top: 0; flex-wrap: wrap; gap: 10px">
+            <button type="button" class="btn btn-primary" id="btnJournalAiSend">送出問題</button>
+            <button type="button" class="btn btn-ghost" id="btnJournalAiClear">清空對話顯示</button>
+          </div>
+          <div id="journalAiLog" class="journal-ai-log" aria-live="polite"></div>
+        </div>
         <details
           class="cloud-danger-zone"
           style="margin-top: 14px; padding: 12px 14px; border-radius: var(--radius-sm); border: 1px dashed rgba(251, 113, 133, 0.4); background: rgba(0, 0, 0, 0.14)"
@@ -3951,6 +4436,9 @@
           defaultTradeFees: null,
           tradeTimeAutoNow: true,
           playbookStrategyNotes: {},
+          walletExpenseCategories: [],
+          walletIncomeCategories: [],
+          lifeCustomAreas: [],
         };
       }
 
@@ -3964,6 +4452,9 @@
           defaultTradeFees: null,
           tradeTimeAutoNow: s.tradeTimeAutoNow !== false,
           playbookStrategyNotes: {},
+          walletExpenseCategories: [],
+          walletIncomeCategories: [],
+          lifeCustomAreas: [],
         };
         if (Array.isArray(s.tradeTemplates)) {
           out.tradeTemplates = s.tradeTemplates.slice(0, 30).map(function (t) {
@@ -3997,7 +4488,112 @@
             out.playbookStrategyNotes[label] = { note: note, updatedAt: u };
           });
         }
+        function normStrArr_(arr, maxN, maxLen) {
+          var seen = {};
+          var o = [];
+          (Array.isArray(arr) ? arr : []).forEach(function (x) {
+            var t = String(x || "")
+              .trim()
+              .slice(0, maxLen);
+            if (!t || seen[t]) return;
+            seen[t] = 1;
+            o.push(t);
+          });
+          return o.slice(0, maxN);
+        }
+        out.walletExpenseCategories = normStrArr_(s.walletExpenseCategories, 24, 28);
+        out.walletIncomeCategories = normStrArr_(s.walletIncomeCategories, 16, 28);
+        out.lifeCustomAreas = normStrArr_(s.lifeCustomAreas, 24, 32);
         return out;
+      }
+
+      function getWalletExpenseCategories_() {
+        var st = normalizeSettings(state.settings || {});
+        var base = ["餐飲", "交通", "住屋", "訂閱", "娛樂", "醫療", "儲蓄／投資", "其他支出"];
+        var seen = {};
+        var out = [];
+        (st.walletExpenseCategories || []).concat(base).forEach(function (c) {
+          c = String(c || "").trim();
+          if (!c || seen[c]) return;
+          seen[c] = 1;
+          out.push(c);
+        });
+        return out;
+      }
+
+      function getWalletIncomeCategories_() {
+        var st = normalizeSettings(state.settings || {});
+        var base = ["工資", "兼職", "利息／回報", "其他收入"];
+        var seen = {};
+        var out = [];
+        (st.walletIncomeCategories || []).concat(base).forEach(function (c) {
+          c = String(c || "").trim();
+          if (!c || seen[c]) return;
+          seen[c] = 1;
+          out.push(c);
+        });
+        return out;
+      }
+
+      var LIFE_BUILTIN_AREAS = ["streaming", "cyber", "study", "trading", "body", "other"];
+
+      function lifeAreaTagClass(area) {
+        return LIFE_BUILTIN_AREAS.indexOf(area) !== -1 ? area : "custom";
+      }
+
+      function populateLifeNewAreaSelect_() {
+        var sel = document.getElementById("lifeNewArea");
+        if (!sel) return;
+        var cur = sel.value;
+        var opts = [];
+        var builtins = [
+          { v: "streaming", l: "直播／內容" },
+          { v: "cyber", l: "網安學習" },
+          { v: "study", l: "進修／讀書" },
+          { v: "trading", l: "交易訓練" },
+          { v: "body", l: "健身／作息" },
+          { v: "other", l: "其他（內建）" },
+        ];
+        builtins.forEach(function (b) {
+          opts.push('<option value="' + escapeHtml(b.v) + '">' + escapeHtml(b.l) + "</option>");
+        });
+        var customs = normalizeSettings(state.settings || {}).lifeCustomAreas || [];
+        customs.forEach(function (label) {
+          if (LIFE_BUILTIN_AREAS.indexOf(label) !== -1) return;
+          opts.push('<option value="' + escapeHtml(label) + '">' + escapeHtml(label) + "（自訂）</option>");
+        });
+        sel.innerHTML = opts.join("");
+        if (cur && Array.prototype.some.call(sel.options, function (o) { return o.value === cur; })) sel.value = cur;
+      }
+
+      function fillWalletCategorySelect_(selectEl, expenseOnly) {
+        if (!selectEl) return;
+        var list = expenseOnly ? getWalletExpenseCategories_() : getWalletIncomeCategories_();
+        selectEl.innerHTML = list
+          .map(function (c) {
+            return '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + "</option>";
+          })
+          .join("");
+      }
+
+      function refreshWalletCategoryDropdowns_() {
+        var cat = document.getElementById("walletEntryCat");
+        var wf = document.getElementById("walletFixedCat");
+        if (cat) {
+          var incC = getWalletIncomeCategories_();
+          var expC = getWalletExpenseCategories_();
+          cat._inc = incC;
+          cat._exp = expC;
+          cat._built = true;
+          var typ = document.getElementById("walletEntryType");
+          var isInc = typ && typ.value === "income";
+          cat.innerHTML = (isInc ? incC : expC)
+            .map(function (c) {
+              return '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + "</option>";
+            })
+            .join("");
+        }
+        if (wf) fillWalletCategorySelect_(wf, true);
       }
 
       function parsePlaybookStrategiesBlocks_(text) {
@@ -4349,10 +4945,12 @@
         });
         var cad = g.cadence;
         if (["once", "daily", "weekdays", "weekends", "weekly", "monthly"].indexOf(cad) === -1) cad = "once";
+        var ar = (g.area || "").trim().slice(0, 40);
+        if (!ar) ar = "other";
         return {
           id: g.id || lifeId("g"),
           title: (g.title || "").trim() || "未命名目標",
-          area: ["streaming", "cyber", "study", "trading", "body", "other"].indexOf(g.area) !== -1 ? g.area : "other",
+          area: ar,
           vision: (g.vision || "").trim(),
           cadence: cad,
           steps: steps,
@@ -4439,6 +5037,7 @@
             entries: [],
             dailyExpenseCap: null,
             expensePresets: [],
+            monthlyFixedTemplates: [],
           },
         };
       }
@@ -4490,6 +5089,7 @@
                 note: (e.note || "").trim(),
                 excludeFromDailyCap: !!(e.type === "expense" && e.excludeFromDailyCap),
                 createdAt: e.createdAt != null ? Number(e.createdAt) : Date.now(),
+                monthlyFixedTemplateId: e.monthlyFixedTemplateId ? String(e.monthlyFixedTemplateId) : "",
               };
             })
           : [];
@@ -4509,6 +5109,21 @@
                 repeat: rep,
                 dow: dow,
                 monthDay: md,
+              };
+            })
+          : [];
+        d.wallet.monthlyFixedTemplates = Array.isArray(d.wallet.monthlyFixedTemplates)
+          ? d.wallet.monthlyFixedTemplates.map(function (t) {
+              var billDay = t.billDay != null ? parseInt(String(t.billDay), 10) : 1;
+              if (isNaN(billDay) || billDay < 1) billDay = 1;
+              if (billDay > 28) billDay = 28;
+              return {
+                id: t.id || lifeId("ft"),
+                title: (t.title || "").trim() || "月費",
+                amount: Math.max(0, Math.abs(Number(t.amount) || 0)),
+                category: (t.category || "住屋").trim() || "其他支出",
+                billDay: billDay,
+                excludeFromDailyCap: !!t.excludeFromDailyCap,
               };
             })
           : [];
@@ -5693,6 +6308,9 @@
       var tradeIdeasState = loadTradeIdeas();
 
       var _psychFlash = { order: [], idx: 0, revealed: false };
+      var _tnStudy = { order: [], idx: 0, revealed: false };
+      /** 交易筆記：卡片庫內聯編輯中嘅卡 id（空字串＝冇） */
+      var tnInlineEditingId = "";
 
       function psychDeckHasId_(id) {
         return (psychBankState.deckIds || []).indexOf(id) !== -1;
@@ -5787,6 +6405,150 @@
         return normalizeTradeIdeasState({
           version: 1,
           ideas: ideas,
+          syncUpdatedAt: Math.max(Number(lo.syncUpdatedAt) || 0, Number(cl.syncUpdatedAt) || 0),
+        });
+      }
+
+      var TRADING_STUDY_KEY = "tradeLogTradingStudyV1";
+
+      function normalizeTradingStudyTopic(t) {
+        t = t || {};
+        return {
+          id: t.id || lifeId("tnt"),
+          name: String(t.name || "").trim().slice(0, 80) || "未命名主題",
+          sort: typeof t.sort === "number" ? t.sort : 0,
+          createdAt: t.createdAt != null ? Number(t.createdAt) : Date.now(),
+          updatedAt: t.updatedAt != null ? Number(t.updatedAt) : Date.now(),
+        };
+      }
+
+      function normalizeTradingStudyCard(c) {
+        c = c || {};
+        return {
+          id: c.id || lifeId("tnc"),
+          topicId: String(c.topicId || "").trim(),
+          front: String(c.front || "").trim().slice(0, 8000),
+          back: String(c.back || "").trim().slice(0, 48000),
+          extraNotes: String(c.extraNotes || "").trim().slice(0, 8000),
+          starred: !!c.starred,
+          source: c.source === "anki" ? "anki" : "manual",
+          lastReviewedAt: c.lastReviewedAt != null ? Number(c.lastReviewedAt) : 0,
+          reviewCount: typeof c.reviewCount === "number" && !isNaN(c.reviewCount) ? Math.max(0, Math.floor(c.reviewCount)) : 0,
+          createdAt: c.createdAt != null ? Number(c.createdAt) : Date.now(),
+          updatedAt: c.updatedAt != null ? Number(c.updatedAt) : Date.now(),
+        };
+      }
+
+      function normalizeTradingStudyState(s) {
+        s = s || {};
+        s.version = 1;
+        s.topics = Array.isArray(s.topics) ? s.topics.map(normalizeTradingStudyTopic) : [];
+        s.cards = Array.isArray(s.cards) ? s.cards.map(normalizeTradingStudyCard) : [];
+        if (typeof s.syncUpdatedAt !== "number" || isNaN(s.syncUpdatedAt)) s.syncUpdatedAt = 0;
+        return s;
+      }
+
+      function ensureTradingStudyDefaultTopic_(st) {
+        st = normalizeTradingStudyState(st);
+        if (!st.topics.length) {
+          st.topics.push(
+            normalizeTradingStudyTopic({
+              id: lifeId("tnt"),
+              name: "交易概念（預設）",
+              sort: 0,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            })
+          );
+        }
+        return st;
+      }
+
+      function loadTradingStudyState() {
+        try {
+          var raw = localStorage.getItem(TRADING_STUDY_KEY);
+          if (raw) {
+            var d = JSON.parse(raw);
+            if (d) return ensureTradingStudyDefaultTopic_(normalizeTradingStudyState(d));
+          }
+        } catch (eTn) {}
+        return ensureTradingStudyDefaultTopic_(normalizeTradingStudyState({}));
+      }
+
+      function persistTradingStudyToStorage_() {
+        tradingStudyState.version = 1;
+        if (typeof tradingStudyState.syncUpdatedAt !== "number" || isNaN(tradingStudyState.syncUpdatedAt))
+          tradingStudyState.syncUpdatedAt = 0;
+        localStorage.setItem(TRADING_STUDY_KEY, JSON.stringify(tradingStudyState));
+      }
+
+      function saveTradingStudyState_() {
+        tradingStudyState.syncUpdatedAt = Date.now();
+        persistTradingStudyToStorage_();
+        scheduleDebouncedCloudAutoPush_();
+      }
+
+      var tradingStudyState = loadTradingStudyState();
+
+      function mergeTradingStudyForSync(lo, cl) {
+        lo = normalizeTradingStudyState(lo || {});
+        cl = normalizeTradingStudyState(cl || {});
+        var tmap = {};
+        function addTop(t) {
+          t = normalizeTradingStudyTopic(t);
+          if (!t.id) return;
+          var ex = tmap[t.id];
+          if (!ex) {
+            tmap[t.id] = t;
+            return;
+          }
+          var ua = Number(ex.updatedAt) || 0;
+          var ub = Number(t.updatedAt) || 0;
+          tmap[t.id] = ub >= ua ? t : ex;
+        }
+        (lo.topics || []).forEach(addTop);
+        (cl.topics || []).forEach(addTop);
+        var topics = Object.keys(tmap)
+          .map(function (k) {
+            return tmap[k];
+          })
+          .filter(function (t) {
+            return !entityKilledByTombstone_("tradeStudyTopic", t.id, Number(t.updatedAt) || 0);
+          });
+        topics.sort(function (a, b) {
+          return a.sort - b.sort || String(a.name).localeCompare(String(b.name));
+        });
+        var cmap = {};
+        function addCard(c) {
+          c = normalizeTradingStudyCard(c);
+          if (!c.id || !c.front) return;
+          var ex = cmap[c.id];
+          if (!ex) {
+            cmap[c.id] = c;
+            return;
+          }
+          var ua = Number(ex.updatedAt) || 0;
+          var ub = Number(c.updatedAt) || 0;
+          cmap[c.id] = ub >= ua ? c : ex;
+        }
+        (lo.cards || []).forEach(addCard);
+        (cl.cards || []).forEach(addCard);
+        var tidSet = {};
+        topics.forEach(function (t) {
+          tidSet[t.id] = 1;
+        });
+        var cards = Object.keys(cmap)
+          .map(function (k) {
+            return cmap[k];
+          })
+          .filter(function (c) {
+            if (!tidSet[c.topicId]) return false;
+            return !entityKilledByTombstone_("tradeStudyCard", c.id, Number(c.updatedAt) || 0);
+          });
+        return normalizeTradingStudyState({
+          version: 1,
+          topics: topics,
+          cards: cards,
           syncUpdatedAt: Math.max(Number(lo.syncUpdatedAt) || 0, Number(cl.syncUpdatedAt) || 0),
         });
       }
@@ -6325,6 +7087,690 @@
           .join("");
       }
 
+      function tnStripHtmlPreview_(html) {
+        return String(html || "")
+          .replace(/<script[\s\S]*?<\/script>/gi, " ")
+          .replace(/<style[\s\S]*?<\/style>/gi, " ")
+          .replace(/<[^>]+>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
+      function tnShuffleInPlace_(arr) {
+        for (var i = arr.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var t = arr[i];
+          arr[i] = arr[j];
+          arr[j] = t;
+        }
+        return arr;
+      }
+
+      function tnTopicName_(id) {
+        var topics = tradingStudyState.topics || [];
+        for (var i = 0; i < topics.length; i++) {
+          if (topics[i].id === id) return topics[i].name;
+        }
+        return "—";
+      }
+
+      function tnFillTopicSelects_() {
+        var topics = (tradingStudyState.topics || []).slice().sort(function (a, b) {
+          return a.sort - b.sort || String(a.name).localeCompare(String(b.name));
+        });
+        function optsHtml(includeAll) {
+          var h = "";
+          if (includeAll) h += '<option value="__all__">全部主題（列表／溫習）</option>';
+          topics.forEach(function (t) {
+            h += '<option value="' + escapeHtml(t.id) + '">' + escapeHtml(t.name) + "</option>";
+          });
+          return h;
+        }
+        var ts = document.getElementById("tnTopicSelect");
+        var im = document.getElementById("tnImportTopicSelect");
+        var prevTs = ts ? ts.value : "";
+        var prevIm = im ? im.value : "";
+        if (ts) {
+          ts.innerHTML = optsHtml(true);
+          if (prevTs && (prevTs === "__all__" || topics.some(function (t) { return t.id === prevTs; }))) ts.value = prevTs;
+          else if (topics[0]) ts.value = topics[0].id;
+        }
+        if (im) {
+          im.innerHTML = optsHtml(false);
+          if (prevIm && topics.some(function (t) { return t.id === prevIm; })) im.value = prevIm;
+          else if (topics[0]) im.value = topics[0].id;
+        }
+      }
+
+      function tnParseAnkiTabImport_(text, topicId) {
+        var out = [];
+        var lines = String(text || "").split(/\r?\n/);
+        for (var i = 0; i < lines.length; i++) {
+          var ln = lines[i];
+          if (!ln || ln.charAt(0) === "#") continue;
+          var tabIdx = ln.indexOf("\t");
+          if (tabIdx === -1) continue;
+          var front = ln.slice(0, tabIdx).trim();
+          var back = ln.slice(tabIdx + 1).trim();
+          if (!front) continue;
+          out.push(
+            normalizeTradingStudyCard({
+              topicId: topicId,
+              front: front,
+              back: back,
+              extraNotes: "",
+              starred: false,
+              source: "anki",
+            })
+          );
+        }
+        return out;
+      }
+
+      function tnFlashRender_() {
+        var ov = document.getElementById("tnFlashOverlay");
+        var tit = document.getElementById("tnFlashTitle");
+        var back = document.getElementById("tnFlashBack");
+        var ex = document.getElementById("tnFlashExtra");
+        var meta = document.getElementById("tnFlashMeta");
+        if (!ov || !tit || !back || !meta) return;
+        var ids = _tnStudy.order;
+        if (!ids.length) {
+          tit.textContent = "無可用卡片";
+          back.innerHTML = "";
+          back.hidden = true;
+          if (ex) ex.hidden = true;
+          meta.textContent = "";
+          return;
+        }
+        var idx = Math.max(0, Math.min(_tnStudy.idx, ids.length - 1));
+        _tnStudy.idx = idx;
+        var cid = ids[idx];
+        var card = null;
+        for (var i = 0; i < (tradingStudyState.cards || []).length; i++) {
+          if (tradingStudyState.cards[i].id === cid) {
+            card = tradingStudyState.cards[i];
+            break;
+          }
+        }
+        if (!card) {
+          tit.textContent = "（卡片已刪）";
+          back.innerHTML = "";
+          back.hidden = true;
+          if (ex) ex.hidden = true;
+          meta.textContent = idx + 1 + " / " + ids.length;
+          return;
+        }
+        tit.textContent = card.front;
+        back.innerHTML = card.back || "（無背面）";
+        back.hidden = !_tnStudy.revealed;
+        if (ex) {
+          if (card.extraNotes && String(card.extraNotes).trim()) {
+            ex.textContent = "補充：" + card.extraNotes;
+            ex.hidden = false;
+          } else {
+            ex.textContent = "";
+            ex.hidden = true;
+          }
+        }
+        meta.textContent =
+          (idx + 1) +
+          " / " +
+          ids.length +
+          " · " +
+          tnTopicName_(card.topicId) +
+          (card.starred ? " · ★" : "");
+      }
+
+      function tnFlashClose_() {
+        var ov = document.getElementById("tnFlashOverlay");
+        if (ov) {
+          ov.hidden = true;
+          ov.setAttribute("aria-hidden", "true");
+        }
+        renderTradingStudyPanel_();
+      }
+
+      function tnOpenStudy_(allTopics) {
+        var topicSel = document.getElementById("tnTopicSelect");
+        var tid = topicSel && topicSel.value ? topicSel.value : "";
+        var cards = (tradingStudyState.cards || []).filter(function (c) {
+          return c && c.front;
+        });
+        if (!allTopics && tid && tid !== "__all__") cards = cards.filter(function (c) {
+          return c.topicId === tid;
+        });
+        var starOnly = document.getElementById("tnFilterStar") && document.getElementById("tnFilterStar").checked;
+        if (starOnly) cards = cards.filter(function (c) {
+          return c.starred;
+        });
+        if (!cards.length) {
+          toast("冇符合條件嘅卡");
+          return;
+        }
+        _tnStudy.order = tnShuffleInPlace_(cards.map(function (c) {
+          return c.id;
+        }));
+        _tnStudy.idx = 0;
+        _tnStudy.revealed = false;
+        var ov = document.getElementById("tnFlashOverlay");
+        if (ov) {
+          ov.hidden = false;
+          ov.setAttribute("aria-hidden", "false");
+        }
+        tnFlashRender_();
+        var now = Date.now();
+        var cid0 = _tnStudy.order[0];
+        for (var u = 0; u < tradingStudyState.cards.length; u++) {
+          if (tradingStudyState.cards[u].id === cid0) {
+            tradingStudyState.cards[u].lastReviewedAt = now;
+            tradingStudyState.cards[u].reviewCount = (Number(tradingStudyState.cards[u].reviewCount) || 0) + 1;
+            tradingStudyState.cards[u].updatedAt = now;
+            break;
+          }
+        }
+        saveTradingStudyState_();
+        var ovF = document.getElementById("tnFlashOverlay");
+        if (ovF) {
+          try {
+            ovF.focus({ preventScroll: true });
+          } catch (eF) {
+            ovF.focus();
+          }
+        }
+      }
+
+      function renderTradingStudyPanel_() {
+        tradingStudyState = ensureTradingStudyDefaultTopic_(normalizeTradingStudyState(tradingStudyState));
+        tnFillTopicSelects_();
+        var host = document.getElementById("tnCardList");
+        if (!host) return;
+        var topicSel = document.getElementById("tnTopicSelect");
+        var tid = topicSel && topicSel.value ? topicSel.value : "";
+        var qEl = document.getElementById("tnCardFilter");
+        var q = qEl ? String(qEl.value || "").trim().toLowerCase() : "";
+        var starOnly = document.getElementById("tnFilterStar") && document.getElementById("tnFilterStar").checked;
+        var cards = (tradingStudyState.cards || []).slice().sort(function (a, b) {
+          return (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0);
+        });
+        if (tid && tid !== "__all__") {
+          cards = cards.filter(function (c) {
+            return c.topicId === tid;
+          });
+        }
+        if (starOnly) {
+          cards = cards.filter(function (c) {
+            return c.starred;
+          });
+        }
+        if (q) {
+          cards = cards.filter(function (c) {
+            var blob = (
+              (c.front || "") +
+              " " +
+              tnStripHtmlPreview_(c.back || "") +
+              " " +
+              (c.extraNotes || "")
+            ).toLowerCase();
+            return blob.indexOf(q) !== -1;
+          });
+        }
+        if (tnInlineEditingId && !cards.some(function (c0) { return c0.id === tnInlineEditingId; })) tnInlineEditingId = "";
+        if (!cards.length) {
+          tnInlineEditingId = "";
+          host.innerHTML = '<p class="tn-empty">未有卡片，或者無符合篩選。可用匯入加入 Anki 文字卡。</p>';
+          return;
+        }
+        var topicsSorted = (tradingStudyState.topics || []).slice().sort(function (a, b) {
+          return a.sort - b.sort || String(a.name).localeCompare(String(b.name));
+        });
+        function tnMoveSelectHtml_(cardId, currentTopicId) {
+          return (
+            '<label class="field tn-select-compact"><span class="key">主題</span><select data-tn-move="' +
+            escapeHtml(cardId) +
+            '">' +
+            topicsSorted
+              .map(function (t) {
+                return (
+                  '<option value="' +
+                  escapeHtml(t.id) +
+                  '"' +
+                  (t.id === currentTopicId ? " selected" : "") +
+                  ">" +
+                  escapeHtml(t.name) +
+                  "</option>"
+                );
+              })
+              .join("") +
+            "</select></label>"
+          );
+        }
+        host.innerHTML = cards
+          .map(function (c) {
+            var isEdit = tnInlineEditingId === c.id;
+            if (isEdit) {
+              return (
+                '<article class="tn-study-card tn-study-card--editing" data-tn-card="' +
+                escapeHtml(c.id) +
+                '"><div class="tn-inline-form"><div class="tn-inline-grid">' +
+                '<label class="field"><span class="key">正面（問題）</span><textarea data-tn-inline-field="front" rows="3" maxlength="8000">' +
+                escapeHtml(c.front) +
+                "</textarea></label>" +
+                '<label class="field"><span class="key">背面（可 HTML）</span><textarea data-tn-inline-field="back" rows="6" maxlength="48000">' +
+                escapeHtml(c.back) +
+                "</textarea></label>" +
+                '<label class="field"><span class="key">補充筆記</span><textarea data-tn-inline-field="extra" rows="2" maxlength="8000">' +
+                escapeHtml(c.extraNotes || "") +
+                "</textarea></label>" +
+                '<label class="field" style="display:flex;align-items:center;gap:10px"><input type="checkbox" class="ux-chk" data-tn-inline-star' +
+                (c.starred ? " checked" : "") +
+                ' /><span class="key" style="margin:0">標為重點</span></label>' +
+                tnMoveSelectHtml_(c.id, c.topicId) +
+                '</div><div class="tn-inline-bar">' +
+                '<button type="button" class="btn btn-primary btn-sm" data-tn-inline-save>儲存</button>' +
+                '<button type="button" class="btn btn-ghost btn-sm" data-tn-inline-cancel>取消</button>' +
+                "</div></div></article>"
+              );
+            }
+            var prev = tnStripHtmlPreview_(c.back || "").slice(0, 200);
+            return (
+              '<article class="tn-study-card" data-tn-card="' +
+              escapeHtml(c.id) +
+              '"><div class="tn-study-card__inner"><div class="tn-study-card__body"><div class="tn-study-card__meta">' +
+              '<span class="tn-pill">' +
+              escapeHtml(tnTopicName_(c.topicId)) +
+              "</span>" +
+              (c.starred ? '<span class="tn-pill tn-pill--star" aria-label="重點">★ 重點</span>' : "") +
+              '</div><h3 class="tn-study-card__q">' +
+              escapeHtml(c.front) +
+              '</h3><p class="tn-study-card__hint">' +
+              escapeHtml(prev) +
+              (prev.length >= 200 ? "…" : "") +
+              '</p></div><div class="tn-study-card__aside">' +
+              tnMoveSelectHtml_(c.id, c.topicId) +
+              '<div class="tn-study-card__actions">' +
+              '<button type="button" class="btn btn-ghost btn-sm" data-tn-edit="' +
+              escapeHtml(c.id) +
+              '">編輯</button>' +
+              '<button type="button" class="btn btn-ghost btn-sm" data-tn-del="' +
+              escapeHtml(c.id) +
+              '">刪除</button></div></div></div></article>'
+            );
+          })
+          .join("");
+        if (tnInlineEditingId) {
+          var idFocus = tnInlineEditingId;
+          requestAnimationFrame(function () {
+            var listEl = document.getElementById("tnCardList");
+            if (!listEl) return;
+            var row = listEl.querySelector('[data-tn-card="' + idFocus + '"]');
+            if (!row) return;
+            row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            var ta = row.querySelector('[data-tn-inline-field="front"]');
+            if (ta) {
+              ta.focus();
+              try {
+                var L = ta.value.length;
+                ta.setSelectionRange(L, L);
+              } catch (eSel) {}
+            }
+          });
+        }
+      }
+
+      (function wireTradingStudyPanel_() {
+        var btn0 = document.getElementById("tnBtnAddTopic");
+        if (!btn0 || btn0._tnWired) return;
+        btn0._tnWired = true;
+        var host = document.getElementById("tnCardList");
+        if (!host) return;
+        document.getElementById("tnBtnAddTopic").addEventListener("click", function () {
+          var nm = (document.getElementById("tnNewTopicName").value || "").trim();
+          if (!nm) {
+            toast("請填主題名稱");
+            return;
+          }
+          var topics = tradingStudyState.topics || [];
+          var maxSort = 0;
+          for (var i = 0; i < topics.length; i++) {
+            if (topics[i].sort > maxSort) maxSort = topics[i].sort;
+          }
+          topics.push(
+            normalizeTradingStudyTopic({
+              name: nm,
+              sort: maxSort + 1,
+            })
+          );
+          tradingStudyState.topics = topics;
+          document.getElementById("tnNewTopicName").value = "";
+          saveTradingStudyState_();
+          renderTradingStudyPanel_();
+          toast("已新增主題");
+        });
+        var btnDelTop = document.getElementById("tnBtnDeleteTopic");
+        if (btnDelTop)
+          btnDelTop.addEventListener("click", function () {
+            var ts = document.getElementById("tnTopicSelect");
+            var delId = ts && ts.value ? ts.value : "";
+            if (!delId || delId === "__all__") {
+              toast("請揀一個要刪嘅主題（唔好揀「全部」）");
+              return;
+            }
+            var topics = tradingStudyState.topics || [];
+            var others = topics.filter(function (t) {
+              return t.id !== delId;
+            });
+            if (!others.length) {
+              toast("至少要留一個主題");
+              return;
+            }
+            others.sort(function (a, b) {
+              return a.sort - b.sort || String(a.name).localeCompare(String(b.name));
+            });
+            if (!confirm("會刪除此主題，該主題下所有卡會搬到「" + others[0].name + "」。確定？")) return;
+            var fb = others[0].id;
+            var now = Date.now();
+            for (var ci = 0; ci < (tradingStudyState.cards || []).length; ci++) {
+              var cc = tradingStudyState.cards[ci];
+              if (cc.topicId === delId) {
+                cc.topicId = fb;
+                cc.updatedAt = now;
+              }
+            }
+            tradingStudyState.topics = others;
+            recordSyncTombstone_("tradeStudyTopic", delId);
+            saveTradingStudyState_();
+            renderTradingStudyPanel_();
+            toast("已刪除主題；卡已搬到其他主題");
+          });
+        document.getElementById("tnTopicSelect").addEventListener("change", renderTradingStudyPanel_);
+        document.getElementById("tnCardFilter").addEventListener("input", renderTradingStudyPanel_);
+        document.getElementById("tnFilterStar").addEventListener("change", renderTradingStudyPanel_);
+        document.getElementById("tnBtnSaveCard").addEventListener("click", function () {
+          var topicSel = document.getElementById("tnTopicSelect");
+          var topicId = topicSel && topicSel.value && topicSel.value !== "__all__" ? topicSel.value : "";
+          if (!topicId) {
+            toast("請先揀一個具體主題（唔好揀「全部」）先儲存卡片");
+            return;
+          }
+          var front = (document.getElementById("tnCardFront").value || "").trim();
+          var back = (document.getElementById("tnCardBack").value || "").trim();
+          if (!front) {
+            toast("請填正面");
+            return;
+          }
+          var extra = (document.getElementById("tnCardExtra").value || "").trim();
+          var star = !!(document.getElementById("tnCardStar") && document.getElementById("tnCardStar").checked);
+          var eid = (document.getElementById("tnEditCardId").value || "").trim();
+          var now = Date.now();
+          if (eid) {
+            for (var i = 0; i < tradingStudyState.cards.length; i++) {
+              if (tradingStudyState.cards[i].id === eid) {
+                tradingStudyState.cards[i].topicId = topicId;
+                tradingStudyState.cards[i].front = front;
+                tradingStudyState.cards[i].back = back;
+                tradingStudyState.cards[i].extraNotes = extra;
+                tradingStudyState.cards[i].starred = star;
+                tradingStudyState.cards[i].updatedAt = now;
+                break;
+              }
+            }
+            toast("已更新卡片");
+          } else {
+            tradingStudyState.cards.push(
+              normalizeTradingStudyCard({
+                topicId: topicId,
+                front: front,
+                back: back,
+                extraNotes: extra,
+                starred: star,
+                source: "manual",
+              })
+            );
+            toast("已新增卡片");
+          }
+          document.getElementById("tnEditCardId").value = "";
+          document.getElementById("tnCardFront").value = "";
+          document.getElementById("tnCardBack").value = "";
+          document.getElementById("tnCardExtra").value = "";
+          if (document.getElementById("tnCardStar")) document.getElementById("tnCardStar").checked = false;
+          saveTradingStudyState_();
+          renderTradingStudyPanel_();
+        });
+        document.getElementById("tnBtnClearCardForm").addEventListener("click", function () {
+          document.getElementById("tnEditCardId").value = "";
+          document.getElementById("tnCardFront").value = "";
+          document.getElementById("tnCardBack").value = "";
+          document.getElementById("tnCardExtra").value = "";
+          if (document.getElementById("tnCardStar")) document.getElementById("tnCardStar").checked = false;
+        });
+        document.getElementById("tnBtnPickImport").addEventListener("click", function () {
+          document.getElementById("tnImportFile").click();
+        });
+        document.getElementById("tnImportFile").addEventListener("change", function (ev) {
+          var f = ev.target.files[0];
+          ev.target.value = "";
+          if (!f) return;
+          var topicId = (document.getElementById("tnImportTopicSelect").value || "").trim();
+          if (!topicId) {
+            toast("請揀匯入主題");
+            return;
+          }
+          var merge = !!(document.getElementById("tnImportMerge") && document.getElementById("tnImportMerge").checked);
+          var r = new FileReader();
+          r.onload = function () {
+            var text = String(r.result || "");
+            var parsed = tnParseAnkiTabImport_(text, topicId);
+            if (!parsed.length) {
+              toast("檔案冇有效嘅「正面<TAB>背面」行");
+              return;
+            }
+            if (!merge) {
+              tradingStudyState.cards = (tradingStudyState.cards || []).filter(function (c) {
+                return c.topicId !== topicId;
+              });
+            }
+            for (var i = 0; i < parsed.length; i++) {
+              tradingStudyState.cards.push(parsed[i]);
+            }
+            tnInlineEditingId = "";
+            saveTradingStudyState_();
+            renderTradingStudyPanel_();
+            toast("已匯入 " + parsed.length + " 張卡");
+          };
+          r.readAsText(f);
+        });
+        document.getElementById("tnBtnExportJson").addEventListener("click", function () {
+          var blob = new Blob([JSON.stringify(tradingStudyState, null, 2)], { type: "application/json" });
+          var a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = "tradeLog-trading-study-notes.json";
+          a.click();
+          URL.revokeObjectURL(a.href);
+          toast("已匯出 JSON");
+        });
+        document.getElementById("tnBtnStudy").addEventListener("click", function () {
+          var ts = document.getElementById("tnTopicSelect");
+          var all = ts && ts.value === "__all__";
+          tnOpenStudy_(all);
+        });
+        host.addEventListener("click", function (e) {
+          var saveB = e.target.closest("[data-tn-inline-save]");
+          if (saveB) {
+            var art = saveB.closest("[data-tn-card]");
+            if (!art) return;
+            var cid = art.getAttribute("data-tn-card");
+            var front = (art.querySelector('[data-tn-inline-field="front"]') || {}).value;
+            front = String(front || "").trim();
+            if (!front) {
+              toast("請填正面");
+              return;
+            }
+            var back = String((art.querySelector('[data-tn-inline-field="back"]') || {}).value || "").trim();
+            var extra = String((art.querySelector('[data-tn-inline-field="extra"]') || {}).value || "").trim();
+            var starEl = art.querySelector("[data-tn-inline-star]");
+            var star = !!(starEl && starEl.checked);
+            var topicSel = art.querySelector("[data-tn-move]");
+            var topicId = topicSel && topicSel.value ? String(topicSel.value).trim() : "";
+            if (!topicId) {
+              toast("請揀主題");
+              return;
+            }
+            var now = Date.now();
+            var found = false;
+            for (var si = 0; si < tradingStudyState.cards.length; si++) {
+              if (tradingStudyState.cards[si].id === cid) {
+                var merged = normalizeTradingStudyCard({
+                  id: cid,
+                  topicId: topicId,
+                  front: front,
+                  back: back,
+                  extraNotes: extra,
+                  starred: star,
+                  source: tradingStudyState.cards[si].source === "anki" ? "anki" : "manual",
+                  lastReviewedAt: tradingStudyState.cards[si].lastReviewedAt,
+                  reviewCount: tradingStudyState.cards[si].reviewCount,
+                  createdAt: tradingStudyState.cards[si].createdAt,
+                  updatedAt: now,
+                });
+                tradingStudyState.cards[si] = merged;
+                found = true;
+                break;
+              }
+            }
+            if (!found) return;
+            tnInlineEditingId = "";
+            saveTradingStudyState_();
+            renderTradingStudyPanel_();
+            toast("已儲存", "ok");
+            return;
+          }
+          var canB = e.target.closest("[data-tn-inline-cancel]");
+          if (canB) {
+            tnInlineEditingId = "";
+            renderTradingStudyPanel_();
+            return;
+          }
+          var ed = e.target.closest("[data-tn-edit]");
+          if (ed) {
+            tnInlineEditingId = ed.getAttribute("data-tn-edit") || "";
+            renderTradingStudyPanel_();
+            return;
+          }
+          var del = e.target.closest("[data-tn-del]");
+          if (del) {
+            var idd = del.getAttribute("data-tn-del");
+            if (idd === tnInlineEditingId) tnInlineEditingId = "";
+            recordSyncTombstone_("tradeStudyCard", idd);
+            tradingStudyState.cards = (tradingStudyState.cards || []).filter(function (c) {
+              return c.id !== idd;
+            });
+            saveTradingStudyState_();
+            renderTradingStudyPanel_();
+            toast("已刪除");
+          }
+        });
+        host.addEventListener("change", function (ev) {
+          var sel = ev.target;
+          if (!sel || !sel.getAttribute || sel.getAttribute("data-tn-move") == null) return;
+          var cid = sel.getAttribute("data-tn-move");
+          var newTid = (sel.value || "").trim();
+          if (!cid || !newTid) return;
+          var now = Date.now();
+          var moved = false;
+          for (var mi = 0; mi < (tradingStudyState.cards || []).length; mi++) {
+            if (tradingStudyState.cards[mi].id === cid) {
+              if (tradingStudyState.cards[mi].topicId !== newTid) {
+                tradingStudyState.cards[mi].topicId = newTid;
+                tradingStudyState.cards[mi].updatedAt = now;
+                moved = true;
+              }
+              break;
+            }
+          }
+          if (moved) {
+            saveTradingStudyState_();
+            renderTradingStudyPanel_();
+            toast("已搬主題");
+          }
+        });
+        document.getElementById("tnBtnFlashFlip").addEventListener("click", function () {
+          _tnStudy.revealed = !_tnStudy.revealed;
+          tnFlashRender_();
+        });
+        document.getElementById("tnBtnFlashNext").addEventListener("click", function () {
+          if (_tnStudy.idx < _tnStudy.order.length - 1) {
+            _tnStudy.idx++;
+            _tnStudy.revealed = false;
+            tnFlashRender_();
+            var cid = _tnStudy.order[_tnStudy.idx];
+            var now = Date.now();
+            for (var u = 0; u < tradingStudyState.cards.length; u++) {
+              if (tradingStudyState.cards[u].id === cid) {
+                tradingStudyState.cards[u].lastReviewedAt = now;
+                tradingStudyState.cards[u].reviewCount = (Number(tradingStudyState.cards[u].reviewCount) || 0) + 1;
+                tradingStudyState.cards[u].updatedAt = now;
+                break;
+              }
+            }
+            saveTradingStudyState_();
+          }
+        });
+        document.getElementById("tnBtnFlashPrev").addEventListener("click", function () {
+          if (_tnStudy.idx > 0) {
+            _tnStudy.idx--;
+            _tnStudy.revealed = false;
+            tnFlashRender_();
+          }
+        });
+        document.getElementById("tnBtnFlashClose").addEventListener("click", tnFlashClose_);
+        var ovTn = document.getElementById("tnFlashOverlay");
+        if (ovTn) {
+          ovTn.addEventListener("click", function (ev) {
+            if (ev.target === ovTn) tnFlashClose_();
+          });
+          ovTn.addEventListener("keydown", function (ev) {
+            if (ovTn.hidden) return;
+            if (ev.key === "Escape") {
+              ev.preventDefault();
+              tnFlashClose_();
+            }
+            if (ev.key === " " || ev.key === "Spacebar") {
+              ev.preventDefault();
+              _tnStudy.revealed = !_tnStudy.revealed;
+              tnFlashRender_();
+            }
+            if (ev.key === "ArrowRight" || ev.key === "Enter") {
+              ev.preventDefault();
+              if (_tnStudy.idx < _tnStudy.order.length - 1) {
+                _tnStudy.idx++;
+                _tnStudy.revealed = false;
+                tnFlashRender_();
+                var cid = _tnStudy.order[_tnStudy.idx];
+                var now = Date.now();
+                for (var u = 0; u < tradingStudyState.cards.length; u++) {
+                  if (tradingStudyState.cards[u].id === cid) {
+                    tradingStudyState.cards[u].lastReviewedAt = now;
+                    tradingStudyState.cards[u].reviewCount = (Number(tradingStudyState.cards[u].reviewCount) || 0) + 1;
+                    tradingStudyState.cards[u].updatedAt = now;
+                    break;
+                  }
+                }
+                saveTradingStudyState_();
+              }
+            }
+            if (ev.key === "ArrowLeft") {
+              ev.preventDefault();
+              if (_tnStudy.idx > 0) {
+                _tnStudy.idx--;
+                _tnStudy.revealed = false;
+                tnFlashRender_();
+              }
+            }
+          });
+        }
+      })();
+
       function normalizeDailyJournalEntry(e) {
         e = e || {};
         var mood = e.mood;
@@ -6649,6 +8095,7 @@
         daily: { title: "每日心情", sub: "今日一句 · 效應概念 · 心情日記" },
         psych: { title: "效應庫", sub: "心理學圖鑑 · 出處 · 閃卡複習" },
         tradeideas: { title: "交易思路", sub: "策略與 idea 筆記庫" },
+        tradnotes: { title: "交易筆記", sub: "Anki 式閃卡 · 主題整理 · 雲端同步" },
         goals: { title: "目標與進度", sub: "大目標 · 細步驟 · 心得 · 連住交易日誌" },
         routine: { title: "每週課表", sub: "本週格線 · 固定時段 · 打剔同步目標" },
         wallet: { title: "錢包", sub: "收支 · 預算 · 日限與預設扣減" },
@@ -6710,7 +8157,7 @@
       }
 
       function setTab(id, opts) {
-        var ids = ["dash", "new", "list", "analytics", "calendar", "goals", "reminders", "daily", "psych", "tradeideas", "routine", "wallet", "xau", "settings"];
+        var ids = ["dash", "new", "list", "analytics", "calendar", "goals", "reminders", "daily", "psych", "tradeideas", "tradnotes", "routine", "wallet", "xau", "settings"];
         ids.forEach(function (t) {
           var btn = document.getElementById("tab-" + t);
           var panel = document.getElementById("panel-" + t);
@@ -6735,6 +8182,7 @@
         if (id === "daily") renderDailyPanel();
         if (id === "psych") renderPsychPanel();
         if (id === "tradeideas") renderTradeIdeasPanel();
+        if (id === "tradnotes") renderTradingStudyPanel_();
         if (id === "routine") renderRoutinePanel();
         if (id === "wallet") renderWalletTab();
         if (id === "xau") initXauPanel();
@@ -6890,6 +8338,7 @@
           note: note,
           excludeFromDailyCap: !!(qEx && qEx.checked),
           createdAt: Date.now(),
+          monthlyFixedTemplateId: "",
         });
         saveRoutineWallet();
         document.getElementById("dailyQuickAmt").value = "";
@@ -7069,6 +8518,7 @@
           note: note,
           excludeFromDailyCap: exDaily,
           createdAt: Date.now(),
+          monthlyFixedTemplateId: "",
         });
         saveRoutineWallet();
         document.getElementById("walletEntryAmt").value = "";
@@ -7086,16 +8536,9 @@
       });
 
       document.getElementById("walletEntryType").addEventListener("change", function () {
-        var cat = document.getElementById("walletEntryCat");
-        if (!cat || !cat._inc) return;
-        var isInc = document.getElementById("walletEntryType").value === "income";
-        var opts = isInc ? cat._inc : cat._exp;
-        cat.innerHTML = opts
-          .map(function (c) {
-            return '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + "</option>";
-          })
-          .join("");
+        refreshWalletCategoryDropdowns_();
         var exWrap = document.getElementById("walletExcludeFromDailyWrap");
+        var isInc = document.getElementById("walletEntryType").value === "income";
         if (exWrap) exWrap.hidden = isInc;
         var exCb = document.getElementById("walletEntryExcludeDaily");
         if (exCb && isInc) exCb.checked = false;
@@ -7114,6 +8557,53 @@
         renderDashLifeSummary();
         bumpDailySpendIfVisible();
         toast("已刪除");
+      });
+
+      document.getElementById("btnWalletFixedAdd").addEventListener("click", function () {
+        var title = (document.getElementById("walletFixedTitle").value || "").trim();
+        var amt = parseNum(document.getElementById("walletFixedAmt").value);
+        var cat = (document.getElementById("walletFixedCat").value || "").trim() || "住屋";
+        var day = parseInt(String(document.getElementById("walletFixedDay").value || "1"), 10);
+        if (!title) {
+          toast("請填月費名稱");
+          return;
+        }
+        if (amt == null || amt <= 0) {
+          toast("請填正數金額");
+          return;
+        }
+        if (isNaN(day) || day < 1) day = 1;
+        if (day > 28) day = 28;
+        var ex = document.getElementById("walletFixedExcludeDaily");
+        routineState.wallet.monthlyFixedTemplates = routineState.wallet.monthlyFixedTemplates || [];
+        routineState.wallet.monthlyFixedTemplates.push({
+          id: lifeId("ft"),
+          title: title,
+          amount: amt,
+          category: cat,
+          billDay: day,
+          excludeFromDailyCap: !!(ex && ex.checked),
+        });
+        saveRoutineWallet();
+        document.getElementById("walletFixedTitle").value = "";
+        document.getElementById("walletFixedAmt").value = "";
+        if (ex) ex.checked = false;
+        renderWalletPanel();
+        renderDashLifeSummary();
+        bumpDailySpendIfVisible();
+        toast("已加入月費範本");
+      });
+
+      document.getElementById("walletFixedList").addEventListener("click", function (e) {
+        var b = e.target.closest("[data-wallet-fixed-del]");
+        if (!b) return;
+        var id = b.getAttribute("data-wallet-fixed-del");
+        routineState.wallet.monthlyFixedTemplates = (routineState.wallet.monthlyFixedTemplates || []).filter(function (t) {
+          return t.id !== id;
+        });
+        saveRoutineWallet();
+        renderWalletPanel();
+        toast("已刪月費範本");
       });
 
       document.getElementById("btnWalletExport").addEventListener("click", function () {
@@ -7176,7 +8666,7 @@
         var vision = (document.getElementById("lifeNewVision").value || "").trim();
         var cadEl = document.getElementById("lifeNewCadence");
         var cad = cadEl && cadEl.value ? cadEl.value : "once";
-        if (["once", "daily", "weekly", "monthly"].indexOf(cad) === -1) cad = "once";
+        if (["once", "daily", "weekdays", "weekends", "weekly", "monthly"].indexOf(cad) === -1) cad = "once";
         var g = normalizeLifeGoal({ title: title, area: area, vision: vision, cadence: cad, steps: [] });
         lifeState.goals.unshift(g);
         saveLife(lifeState);
@@ -8467,7 +9957,9 @@
           body: "健身／作息",
           other: "其他",
         };
-        return map[area] || map.other;
+        if (map[area]) return map[area];
+        var s = area != null ? String(area).trim() : "";
+        return s || map.other;
       }
 
       function parseHHMM(str) {
@@ -8555,6 +10047,41 @@
       function currentYmLocal() {
         var d = new Date();
         return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+      }
+
+      function ensureMonthlyFixedEntriesForYm_(ym) {
+        var templates = routineState.wallet.monthlyFixedTemplates || [];
+        if (!templates.length || !ym || String(ym).length < 7) return;
+        var added = false;
+        for (var ti = 0; ti < templates.length; ti++) {
+          var tpl = templates[ti];
+          if (!tpl || !tpl.id || !(Number(tpl.amount) > 0)) continue;
+          var exists = (routineState.wallet.entries || []).some(function (e) {
+            return (
+              e.type === "expense" &&
+              e.monthlyFixedTemplateId === tpl.id &&
+              (e.date || "").slice(0, 7) === ym
+            );
+          });
+          if (exists) continue;
+          var billDay = tpl.billDay != null ? parseInt(String(tpl.billDay), 10) : 1;
+          if (isNaN(billDay) || billDay < 1) billDay = 1;
+          billDay = Math.min(billDay, ymToLastDay(ym));
+          var targetDate = ym + "-" + String(billDay).padStart(2, "0");
+          routineState.wallet.entries.push({
+            id: lifeId("w"),
+            date: targetDate,
+            type: "expense",
+            amount: Math.abs(Number(tpl.amount) || 0),
+            category: (tpl.category || "住屋").trim() || "其他支出",
+            note: (tpl.title || "月費").trim(),
+            excludeFromDailyCap: !!tpl.excludeFromDailyCap,
+            createdAt: Date.now(),
+            monthlyFixedTemplateId: tpl.id,
+          });
+          added = true;
+        }
+        if (added) saveRoutineWallet();
       }
 
       function dailyPoolEndDay(ym) {
@@ -8728,15 +10255,7 @@
             : '<p class="field-hint">未有預設；用上面表單加入。</p>';
         }
         var qc = document.getElementById("dailyQuickCat");
-        if (qc && !qc._built) {
-          var expC = ["餐飲", "交通", "住屋", "訂閱", "娛樂", "醫療", "儲蓄／投資", "其他支出"];
-          qc.innerHTML = expC
-            .map(function (c) {
-              return '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + "</option>";
-            })
-            .join("");
-          qc._built = true;
-        }
+        if (qc) fillWalletCategorySelect_(qc, true);
       }
 
       function schedIsDone(blockId, iso) {
@@ -8882,6 +10401,7 @@
 
       function renderWalletPanel() {
         var ym = walletMonthKey();
+        ensureMonthlyFixedEntriesForYm_(ym);
         var entries = walletEntriesForMonth(ym);
         var inc = 0,
           exp = 0;
@@ -8978,29 +10498,33 @@
           if (!rows.length) listEl.innerHTML = '<p class="field-hint">呢個月未有紀錄。</p>';
         }
 
-        var cat = document.getElementById("walletEntryCat");
-        if (cat && !cat._built) {
-          var incC = ["工資", "兼職", "利息／回報", "其他收入"];
-          var expC = ["餐飲", "交通", "住屋", "訂閱", "娛樂", "醫療", "儲蓄／投資", "其他支出"];
-          cat.innerHTML = incC
-            .map(function (c) {
-              return '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + "</option>";
-            })
-            .join("");
-          cat._built = true;
-          cat._inc = incC;
-          cat._exp = expC;
+        var wfx = document.getElementById("walletFixedList");
+        if (wfx) {
+          var fxs = routineState.wallet.monthlyFixedTemplates || [];
+          wfx.innerHTML = fxs.length
+            ? fxs
+                .map(function (t) {
+                  return (
+                    '<div class="trade-row" style="cursor:default;margin-bottom:8px"><div><strong>' +
+                    escapeHtml(t.title) +
+                    '</strong><p class="field-hint" style="margin:4px 0 0">每月 ' +
+                    t.billDay +
+                    " 號 · " +
+                    escapeHtml(t.category) +
+                    " · " +
+                    t.amount.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
+                    (t.excludeFromDailyCap ? " · 唔計日限" : "") +
+                    "</p></div><div><button type=\"button\" class=\"btn btn-ghost btn-sm\" data-wallet-fixed-del=\"" +
+                    escapeHtml(t.id) +
+                    '">刪範本</button></div></div>'
+                  );
+                })
+                .join("")
+            : '<p class="field-hint">尚未設月費範本；設咗之後揀返呢個月睇流水會自動補一筆（若該月未有）。</p>';
         }
-        if (cat) {
-          var typ = document.getElementById("walletEntryType");
-          var isInc = typ && typ.value === "income";
-          var opts = (isInc ? cat._inc : cat._exp) || [];
-          cat.innerHTML = opts
-            .map(function (c) {
-              return '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + "</option>";
-            })
-            .join("");
-        }
+
+        refreshWalletCategoryDropdowns_();
+
         var de = document.getElementById("walletEntryDate");
         if (de && !de.value) de.value = todayISO();
         var exWrap2 = document.getElementById("walletExcludeFromDailyWrap");
@@ -9072,7 +10596,7 @@
               '"><h3><span style="flex:1;min-width:0;font-weight:700">' +
               escapeHtml(g.title) +
               '</span><span class="life-goal-head-right"><span class="life-area-tag ' +
-              escapeHtml(g.area) +
+              escapeHtml(lifeAreaTagClass(g.area)) +
               '">' +
               escapeHtml(lifeAreaLabel(g.area)) +
               "</span>" +
@@ -9116,10 +10640,17 @@
 
         var ab = document.getElementById("dashAreaBreakdown");
         if (ab) {
-          var areas = ["streaming", "cyber", "study", "trading", "body", "other"];
+          var areaSeen = {};
+          var areaOrder = [];
+          for (var gi2 = 0; gi2 < goals.length; gi2++) {
+            var ak = goals[gi2].area;
+            if (!ak || areaSeen[ak]) continue;
+            areaSeen[ak] = 1;
+            areaOrder.push(ak);
+          }
           var parts2 = [];
-          for (var ai = 0; ai < areas.length; ai++) {
-            var ar = areas[ai];
+          for (var ai = 0; ai < areaOrder.length; ai++) {
+            var ar = areaOrder[ai];
             var gsA = goals.filter(function (x) {
               return x.area === ar;
             });
@@ -9131,7 +10662,7 @@
             var av = Math.round(sumP / gsA.length);
             parts2.push(
               '<div style="margin-bottom:10px"><span class="life-area-tag ' +
-              escapeHtml(ar) +
+              escapeHtml(lifeAreaTagClass(ar)) +
               '">' +
               escapeHtml(lifeAreaLabel(ar)) +
               '</span> <span class="field-hint">' +
@@ -9221,6 +10752,7 @@
         var emptyHint = document.getElementById("lifeGoalsEmpty");
         var grid = document.getElementById("lifeGoalsGrid");
         if (!listV || !detV || !grid) return;
+        populateLifeNewAreaSelect_();
         if (lifeSelectedId) {
           var g = findLifeGoal(lifeSelectedId);
           if (!g) {
@@ -9233,7 +10765,7 @@
           document.getElementById("lifeDetailTitle").textContent = g.title;
           var ar = document.getElementById("lifeDetailArea");
           ar.textContent = lifeAreaLabel(g.area);
-          ar.className = "life-area-tag " + g.area;
+          ar.className = "life-area-tag " + lifeAreaTagClass(g.area);
           var vis = document.getElementById("lifeDetailVision");
           vis.textContent = g.vision || "（未填願景／衡量標準）";
           var pr = lifeGoalProgress(g);
@@ -9289,7 +10821,7 @@
               '"><h3><span style="flex:1;min-width:0;font-weight:700">' +
               escapeHtml(gg.title) +
               '</span><span class="life-goal-head-right"><span class="life-area-tag ' +
-              escapeHtml(gg.area) +
+              escapeHtml(lifeAreaTagClass(gg.area)) +
               '">' +
               escapeHtml(lifeAreaLabel(gg.area)) +
               "</span>" +
@@ -9519,7 +11051,6 @@
         }
         html += "</div>";
         var dows = ["日", "一", "二", "三", "四", "五", "六"];
-        var allowArea = { streaming: 1, cyber: 1, study: 1, trading: 1, body: 1, other: 1 };
         for (var c = 0; c < 7; c++) {
           var dt = new Date(start);
           dt.setDate(start.getDate() + c);
@@ -9554,7 +11085,7 @@
             var top = ((sm - slotStartMin) / slotMin) * slotPx;
             var hgt = Math.max(24, ((em - sm) / slotMin) * slotPx);
             var g = blk.goalId ? findLifeGoal(blk.goalId) : null;
-            var ac = g && allowArea[g.area] ? g.area : "";
+            var ac = g ? lifeAreaTagClass(g.area) : "";
             var extra = ac ? " " + ac : "";
             html +=
               '<div class="tt-block-cal' +
@@ -10117,6 +11648,13 @@
         if (ctok) ctok.value = localStorage.getItem(CLOUD_SYNC_TOKEN_KEY) || "";
         var autoCh = document.getElementById("settingsCloudAutoPush");
         if (autoCh) autoCh.checked = localStorage.getItem(CLOUD_AUTO_PUSH_KEY) === "1";
+        var wEx = document.getElementById("settingsWalletExpenseCats");
+        var wIn = document.getElementById("settingsWalletIncomeCats");
+        var lAr = document.getElementById("settingsLifeCustomAreas");
+        if (wEx) wEx.value = (state.settings.walletExpenseCategories || []).join("\n");
+        if (wIn) wIn.value = (state.settings.walletIncomeCategories || []).join("\n");
+        if (lAr) lAr.value = (state.settings.lifeCustomAreas || []).join("\n");
+        populateLifeNewAreaSelect_();
       }
 
       function getCloudSyncBaseUrl() {
@@ -10168,6 +11706,9 @@
         try {
           renderTradeIdeasPanel();
         } catch (eTi) {}
+        try {
+          renderTradingStudyPanel_();
+        } catch (eTn) {}
         try {
           renderRemindersPanel();
           renderQuickRemindersList_();
@@ -10221,6 +11762,10 @@
           tradeIdeasState = normalizeTradeIdeasState(parsed.tradeIdeas);
           persistTradeIdeasToStorage_();
         }
+        if (parsed.tradingStudy && typeof parsed.tradingStudy === "object") {
+          tradingStudyState = normalizeTradingStudyState(parsed.tradingStudy);
+          persistTradingStudyToStorage_();
+        }
         if (parsed.dailyPools && typeof parsed.dailyPools === "object") {
           dailyPoolsState = normalizeDailyPools(parsed.dailyPools);
           persistDailyPoolsToStorage_();
@@ -10229,7 +11774,7 @@
           persistQuickRemindersToStorage_(normalizeQuickRemindersState_(parsed.quickReminders));
         }
         refreshAllPanelsAfterFullDataApply_();
-        toast("已從雲端載入");
+        toast("已從雲端載入：交易、設定、生活、錢包、課表、工作日曆、心情日記、金句池、效應庫、思路、交易筆記閃卡、快速備忘、XAU 等已按備份更新本機");
       }
 
       function fetchCloudJournalJson() {
@@ -10347,6 +11892,9 @@
         else if (cl.defaultTradeFees != null && !isNaN(Number(cl.defaultTradeFees))) out.defaultTradeFees = cl.defaultTradeFees;
         out.tradeTimeAutoNow = lo.tradeTimeAutoNow !== false || cl.tradeTimeAutoNow !== false;
         out.playbookStrategyNotes = mergePlaybookStrategyNotesForSync_(lo.playbookStrategyNotes, cl.playbookStrategyNotes);
+        out.walletExpenseCategories = uniqStrArr((lo.walletExpenseCategories || []).concat(cl.walletExpenseCategories || []));
+        out.walletIncomeCategories = uniqStrArr((lo.walletIncomeCategories || []).concat(cl.walletIncomeCategories || []));
+        out.lifeCustomAreas = uniqStrArr((lo.lifeCustomAreas || []).concat(cl.lifeCustomAreas || []));
         return normalizeSettings(out);
       }
 
@@ -10479,6 +12027,9 @@
         function normBlock(b) {
           return normalizeRoutineWallet({ scheduleBlocks: [b] }).scheduleBlocks[0];
         }
+        function normFixedTpl(t) {
+          return normalizeRoutineWallet({ wallet: { monthlyFixedTemplates: [t] } }).wallet.monthlyFixedTemplates[0];
+        }
         var mergedEntries = mergeEntityByIdNewerCreated(lo.wallet.entries, cl.wallet.entries, normEntry).filter(function (x) {
           return !entityKilledByTombstone_("walletEntry", x.id, Number(x.createdAt) || 0);
         });
@@ -10487,6 +12038,11 @@
           .filter(function (p) {
             return !entityKilledByTombstone_("expensePreset", p.id, 0);
           });
+        var mergedFixed = mergeByBlockIdPreferFirst(
+          lo.wallet.monthlyFixedTemplates || [],
+          cl.wallet.monthlyFixedTemplates || [],
+          preferLo
+        ).map(normFixedTpl);
         var mergedBlocks = mergeByBlockIdPreferFirst(lo.scheduleBlocks, cl.scheduleBlocks, preferLo)
           .map(normBlock)
           .filter(function (b) {
@@ -10503,6 +12059,7 @@
             dailyExpenseCap: preferLo ? lo.wallet.dailyExpenseCap : cl.wallet.dailyExpenseCap,
             entries: mergedEntries,
             expensePresets: mergedPresets,
+            monthlyFixedTemplates: mergedFixed,
           },
           syncUpdatedAt: Math.max(loT, clT),
         };
@@ -10599,6 +12156,7 @@
           xauPaper: { open: xauPaper.open || null },
           psychBank: normalizePsychBank(JSON.parse(JSON.stringify(psychBankState))),
           tradeIdeas: normalizeTradeIdeasState(JSON.parse(JSON.stringify(tradeIdeasState))),
+          tradingStudy: normalizeTradingStudyState(JSON.parse(JSON.stringify(tradingStudyState))),
           dailyPools: normalizeDailyPools(JSON.parse(JSON.stringify(dailyPoolsState))),
           quickReminders: normalizeQuickRemindersState_(JSON.parse(JSON.stringify(loadQuickRemindersState_()))),
           tombstones: normalizeSyncTombstones(JSON.parse(JSON.stringify(syncTombstonesState))),
@@ -10640,6 +12198,10 @@
           tradeIdeasState = normalizeTradeIdeasState(dataExtra.tradeIdeas);
           persistTradeIdeasToStorage_();
         }
+        if (dataExtra && dataExtra.tradingStudy && typeof dataExtra.tradingStudy === "object") {
+          tradingStudyState = normalizeTradingStudyState(dataExtra.tradingStudy);
+          persistTradingStudyToStorage_();
+        }
         if (dataExtra && dataExtra.dailyPools && typeof dataExtra.dailyPools === "object") {
           dailyPoolsState = normalizeDailyPools(dataExtra.dailyPools);
           persistDailyPoolsToStorage_();
@@ -10672,6 +12234,37 @@
           });
       }
 
+      var journalAiHistory = [];
+
+      function postJournalAiChat_(question, priorContext) {
+        var url = buildCloudSyncUrlWithToken();
+        if (!url) return Promise.reject(new Error("no_url"));
+        var payload = {
+          __journalAiChat: true,
+          question: String(question || "").trim(),
+          priorContext: String(priorContext || "").trim().slice(0, 12000),
+        };
+        return fetch(url, {
+          method: "POST",
+          mode: "cors",
+          redirect: "follow",
+          cache: "no-store",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload),
+        })
+          .then(function (r) {
+            return r.text();
+          })
+          .then(function (text) {
+            var parsed = JSON.parse(text);
+            if (!parsed || parsed.ok !== true) {
+              var err = (parsed && (parsed.detail || parsed.error)) || "ai_failed";
+              throw new Error(typeof err === "string" ? err : JSON.stringify(err));
+            }
+            return String(parsed.reply || "").trim();
+          });
+      }
+
       function performCloudPushToServer_(silent) {
         var body = JSON.stringify(buildFullAppCloudPayload());
         return postJournalBodyToCloud_(body, silent);
@@ -10691,6 +12284,7 @@
             var mergedDailyJournal = mergeDailyJournalForSync(dailyJournalState, cloud.dailyJournal || null);
             var mergedPsychBank = mergePsychBankForSync(psychBankState, cloud.psychBank || null);
             var mergedTradeIdeas = mergeTradeIdeasForSync(tradeIdeasState, cloud.tradeIdeas || null);
+            var mergedTradingStudy = mergeTradingStudyForSync(tradingStudyState, cloud.tradingStudy || null);
             var mergedDailyPools = mergeDailyPoolsForSync(dailyPoolsState, cloud.dailyPools || null);
             var mergedQuickReminders = mergeQuickRemindersForSync(loadQuickRemindersState_(), cloud.quickReminders || null);
             var mergedTombs = normalizeSyncTombstones(syncTombstonesState);
@@ -10699,6 +12293,7 @@
             applyMergedFullAppToUi_(mergedTrades, mergedSettings, mergedLife, mergedRoutine, mergedXau, mergedWorkCal, mergedDailyJournal, null, {
               psychBank: mergedPsychBank,
               tradeIdeas: mergedTradeIdeas,
+              tradingStudy: mergedTradingStudy,
               dailyPools: mergedDailyPools,
               quickReminders: mergedQuickReminders,
               tombstones: mergedTombs,
@@ -10714,7 +12309,7 @@
                     nCloud +
                     " → 合併後 " +
                     nAfter +
-                    " 筆；生活／錢包／XAU／效應庫／交易思路已一併合併上傳（同 ID 以較新為準）"
+                    " 筆；生活目標／日誌、錢包流水／月費範本／每週課表、工作日曆、每日心情、自訂金句池、效應庫、交易思路、交易筆記閃卡、快速備忘、XAU 模擬倉等已一併合併並上傳（同 ID 以較新為準）"
                 );
               }
             });
@@ -10757,10 +12352,36 @@
         cur.tradeTimeAutoNow = !!document.getElementById("settingsTradeAutoTime").checked;
         var stratEl = document.getElementById("settingsPlaybookStrategies");
         cur.playbookStrategyNotes = stratEl ? parsePlaybookStrategiesEditorText_(stratEl.value) : cur.playbookStrategyNotes || {};
+        var wEx = document.getElementById("settingsWalletExpenseCats");
+        var wIn = document.getElementById("settingsWalletIncomeCats");
+        var lAr = document.getElementById("settingsLifeCustomAreas");
+        if (wEx)
+          cur.walletExpenseCategories = wEx.value
+            .split(/\n/)
+            .map(function (s) {
+              return s.trim();
+            })
+            .filter(Boolean);
+        if (wIn)
+          cur.walletIncomeCategories = wIn.value
+            .split(/\n/)
+            .map(function (s) {
+              return s.trim();
+            })
+            .filter(Boolean);
+        if (lAr)
+          cur.lifeCustomAreas = lAr.value
+            .split(/\n/)
+            .map(function (s) {
+              return s.trim();
+            })
+            .filter(Boolean);
         state.settings = cur;
         save(state);
         buildChips();
         applyTradeFormDefaults();
+        populateLifeNewAreaSelect_();
+        refreshWalletCategoryDropdowns_();
         toast("已儲存設定");
       });
 
@@ -10782,7 +12403,7 @@
             toast("請填 Web App URL 同 TOKEN");
             return;
           }
-          if (!window.confirm("會用雲端備份「完全取代」本機交易、設定及雲端檔內已有嘅欄位（例如生活／錢包／快速備忘等；舊備份冇嘅欄位會保留本機）。唔會同本機合併。確定？")) return;
+          if (!window.confirm("會用雲端備份「完全取代」本機：交易、設定、生活目標／日誌、錢包（含月費範本）／每週課表、工作日曆、每日心情、自訂金句池、效應庫、交易思路、交易筆記閃卡、快速備忘、XAU 模擬倉等（舊備份冇嘅欄位會保留本機）。唔會同本機合併。確定？")) return;
           fetch(url, { method: "GET", mode: "cors", redirect: "follow", cache: "no-store" })
             .then(function (r) {
               return r.text();
@@ -10804,7 +12425,7 @@
           }
           if (
             !window.confirm(
-              "會先下載雲端備份，再同本機按「交易 ID」合併（同一 ID 以較新建立時間為準），然後寫回本機並上傳合併結果。唔會單純用本機蓋晒雲端。確定？"
+              "會先下載雲端備份，再同本機合併：交易按 ID；生活、錢包（含月費範本與流水）、每週課表、工作日曆、每日心情、金句池、效應庫、交易思路、交易筆記閃卡、快速備忘、XAU 等按既定規則合併，然後寫回本機並上傳。唔會單純用本機蓋晒雲端。確定？"
             )
           )
             return;
@@ -10836,6 +12457,62 @@
               console.error(err);
               toast("上傳失敗：" + (err && err.message ? err.message : String(err)));
             });
+          });
+        }
+      })();
+
+      (function wireJournalAiChat() {
+        var send = document.getElementById("btnJournalAiSend");
+        var clr = document.getElementById("btnJournalAiClear");
+        var inp = document.getElementById("journalAiQuestion");
+        var log = document.getElementById("journalAiLog");
+        if (!send || !inp || !log) return;
+        function append(role, text) {
+          var d = document.createElement("div");
+          d.className = "journal-ai-msg " + role;
+          d.textContent = (role === "user" ? "你：\n" : "Gemini：\n") + text;
+          log.appendChild(d);
+          log.scrollTop = log.scrollHeight;
+        }
+        send.addEventListener("click", function () {
+          var q = String(inp.value || "").trim();
+          if (!q) {
+            toast("請輸入問題");
+            return;
+          }
+          if (!buildCloudSyncUrlWithToken()) {
+            toast("請先填 Web App URL 同 TOKEN");
+            return;
+          }
+          append("user", q);
+          inp.value = "";
+          send.disabled = true;
+          var prior = journalAiHistory
+            .map(function (h) {
+              return (h.role === "user" ? "用戶" : "助手") + "：\n" + h.text;
+            })
+            .join("\n\n");
+          if (prior.length > 10000) prior = prior.slice(-10000);
+          postJournalAiChat_(q, prior)
+            .then(function (reply) {
+              journalAiHistory.push({ role: "user", text: q });
+              journalAiHistory.push({ role: "assistant", text: reply });
+              if (journalAiHistory.length > 12) journalAiHistory.splice(0, journalAiHistory.length - 12);
+              append("assistant", reply);
+              toast("已收到回覆", "ok");
+            })
+            .catch(function (err) {
+              append("assistant", "【錯誤】" + (err && err.message ? err.message : String(err)));
+              toast("AI 請求失敗", "warn");
+            })
+            .finally(function () {
+              send.disabled = false;
+            });
+        });
+        if (clr) {
+          clr.addEventListener("click", function () {
+            journalAiHistory = [];
+            log.innerHTML = "";
           });
         }
       })();
@@ -12540,6 +14217,8 @@
       });
 
       renderDash();
+      populateLifeNewAreaSelect_();
+      refreshWalletCategoryDropdowns_();
     })();
   </script>
 </body>
