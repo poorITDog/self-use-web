@@ -469,6 +469,86 @@
       display: block;
     }
 
+    .routine-streak-table {
+      width: 100%;
+      margin-top: 14px;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+      table-layout: fixed;
+    }
+    .routine-streak-table th,
+    .routine-streak-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+      vertical-align: top;
+      word-break: break-word;
+    }
+    .routine-streak-table th {
+      text-align: left;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+    .routine-streak-table th.num,
+    .routine-streak-table td.num {
+      text-align: right;
+      width: 14%;
+    }
+    .routine-streak-table th.goal {
+      width: 30%;
+    }
+    .routine-streak-table td.goal strong {
+      display: block;
+      line-height: 1.35;
+    }
+
+    .ux-advanced-details > summary {
+      list-style-position: outside;
+    }
+    .ux-advanced-details[open] > summary {
+      margin-bottom: 2px;
+    }
+
+    .rpg-xpbar {
+      margin-top: 10px;
+      border-radius: 999px;
+      height: 12px;
+      background: rgba(0, 0, 0, 0.25);
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+    }
+    .rpg-xpbar > i {
+      display: block;
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #38bdf8, #a78bfa);
+      transition: width 0.35s ease;
+    }
+    .rpg-catbar-row {
+      margin-top: 10px;
+    }
+    .rpg-catbar-row .lab {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.82rem;
+      margin-bottom: 4px;
+      color: #cbd5e1;
+    }
+    .rpg-catbar {
+      height: 10px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.22);
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+    .rpg-catbar > i {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.85), rgba(34, 211, 238, 0.75));
+    }
+
     @keyframes fadeIn {
       from {
         opacity: 0;
@@ -1306,7 +1386,8 @@
     }
 
     #panel-routine.active,
-    #panel-wallet.active {
+    #panel-wallet.active,
+    #panel-character.active {
       display: flex;
       flex-direction: column;
       gap: 18px;
@@ -2894,6 +2975,7 @@
           <button type="button" data-tab="tradnotes" id="tab-tradnotes" aria-current="false" aria-controls="panel-tradnotes"><span class="ico">≣</span>交易筆記</button>
           <button type="button" data-tab="routine" id="tab-routine" aria-current="false" aria-controls="panel-routine"><span class="ico">▥</span>每週課表</button>
           <button type="button" data-tab="wallet" id="tab-wallet" aria-current="false" aria-controls="panel-wallet"><span class="ico">$</span>錢包</button>
+          <button type="button" data-tab="character" id="tab-character" aria-current="false" aria-controls="panel-character"><span class="ico">★</span>角色</button>
         </div>
         <div class="side-nav-group">
           <div class="side-nav-label">工具</div>
@@ -3794,9 +3876,13 @@
       <div id="routinePaneSchedule">
         <div class="card">
           <h2>每週時間表 <span class="badge">Schedule</span></h2>
-          <p class="lead">時間、標題、重複方式；可綁目標，打剔完成會寫入該目標心得。</p>
+          <p class="lead">時間、標題、重複；可綁目標，打剔完成會寫入該目標心得。多數人<strong>唔使</strong>填「進階」技能／分區。</p>
           <div class="sched-dow-row" id="schedDowTabs" aria-label="選星期"></div>
           <div id="schedBlockList"></div>
+          <div class="card" style="margin-top: 16px; background: rgba(0,0,0,0.12); border-style: dashed">
+            <h2 style="margin: 0 0 8px; font-size: 1rem">綁目標完成 · Streak</h2>
+            <div id="routineGoalStreakBox" aria-live="polite"></div>
+          </div>
           <div class="card" style="margin-top: 16px; background: rgba(0,0,0,0.15); border-style: dashed">
             <h3 style="margin: 0 0 12px; font-size: 0.95rem">新增時段</h3>
             <div class="form-grid">
@@ -3834,6 +3920,10 @@
                 <span class="key">結束（HH:MM）</span>
                 <input type="text" id="schedNewEnd" placeholder="07:00" maxlength="5" />
               </label>
+              <label class="field">
+                <span class="key">預估時長（分鐘，可選）</span>
+                <input type="number" id="schedNewEstMin" min="0" max="1440" step="5" placeholder="留空＝用開始至結束推算" />
+              </label>
               <label class="field" style="grid-column: 1 / -1">
                 <span class="key">做咩</span>
                 <input type="text" id="schedNewTitle" placeholder="例：晨跑／溫書／開台準備" maxlength="120" />
@@ -3843,7 +3933,26 @@
                 <select id="schedNewGoalId">
                   <option value="">— 唔綁定 —</option>
                 </select>
+                <span class="field-hint" style="display: block; margin-top: 6px">有綁目標就會計角色／技能 XP；多數情況唔使再揀下面「技能／分區」。</span>
               </label>
+              <details class="card ux-advanced-details" style="grid-column: 1 / -1; margin-top: 4px; padding: 12px 14px; background: rgba(0,0,0,0.08); border-style: dashed">
+                <summary class="ux-advanced-summary" style="cursor: pointer; font-weight: 600; font-size: 0.92rem; user-select: none">進階：指定技能／分區（可唔填）</summary>
+                <p class="field-hint" style="margin: 10px 0 8px">留空＝跟目標自動配第一個技能；分區留空＝只加技能／角色 XP，唔加分區條。</p>
+                <div class="form-grid">
+                  <label class="field" style="grid-column: 1 / -1">
+                    <span class="key">計 XP 用嘅技能（可選，要先揀目標）</span>
+                    <select id="schedNewRpgSkill">
+                      <option value="">— 自動：同目標第一個匹配技能 —</option>
+                    </select>
+                  </label>
+                  <label class="field" style="grid-column: 1 / -1">
+                    <span class="key">技能分區（可選；完成呢格＋1 分區點）</span>
+                    <select id="schedNewRpgCategory">
+                      <option value="">— 唔加分區點 —</option>
+                    </select>
+                  </label>
+                </div>
+              </details>
             </div>
             <div class="form-actions" style="border: none; padding-top: 12px; margin-top: 0">
               <button type="button" class="btn btn-primary" id="btnSchedAdd">加入時段</button>
@@ -3876,6 +3985,18 @@
             <label class="field">
               <span class="key">本月儲蓄目標（可選）</span>
               <input type="number" id="walletSaveGoal" min="0" step="100" placeholder="想存幾多" />
+            </label>
+            <label class="field">
+              <span class="key">手填總資產（與帳本結餘獨立）</span>
+              <input type="number" id="walletTotalAssets" min="0" step="100" placeholder="例如投資戶口＋現金" />
+            </label>
+            <label class="field">
+              <span class="key">手填總負債</span>
+              <input type="number" id="walletTotalDebt" min="0" step="100" placeholder="例如卡數、按揭餘額" />
+            </label>
+            <label class="field" style="grid-column: 1 / -1">
+              <span class="key">持有資產／負債備註（純文字）</span>
+              <textarea id="walletOwnedAssets" rows="3" style="min-height: 72px; resize: vertical" placeholder="例：美股 ETF、物業地址、借貸合約編號…"></textarea>
             </label>
           </div>
           <div class="wallet-grid" id="walletStats"></div>
@@ -4123,6 +4244,103 @@
       </div>
     </section>
 
+    <section id="panel-character" class="panel" role="tabpanel" hidden aria-labelledby="tab-character">
+      <div class="card">
+        <h2>角色卡 <span class="badge">RPG</span></h2>
+        <p class="lead">完成<strong>有綁目標嘅課表</strong>同<strong>目標細步驟</strong>會加角色 XP（預設 Lv.0，最高 Lv.999）。</p>
+        <details class="ux-advanced-details" style="margin-bottom: 10px">
+          <summary class="ux-advanced-summary" style="cursor: pointer; font-weight: 600; font-size: 0.88rem; user-select: none; opacity: 0.95">角色 XP vs 技能等級？（可展開）</summary>
+          <p class="field-hint" style="margin: 8px 0 0">
+            技能等級<strong>獨立</strong>計，唔會加埋做角色等級；課表「進階」揀技能／分區會影響技能／分區條，唔影響「有冇」角色 XP 嘅基本獎勵邏輯（仍要綁目標）。
+          </p>
+        </details>
+        <div class="form-grid">
+          <label class="field">
+            <span class="key">角色名</span>
+            <input type="text" id="charFieldName" maxlength="80" placeholder="未命名" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span class="key">體重（kg，可選）</span>
+            <input type="number" id="charFieldWeight" min="0" step="0.1" placeholder="—" />
+          </label>
+          <label class="field">
+            <span class="key">身高（cm，可選）</span>
+            <input type="number" id="charFieldHeight" min="0" step="0.5" placeholder="—" />
+          </label>
+          <div class="field" style="grid-column: 1 / -1">
+            <span class="key">角色相片（本機，唔上傳第三方）</span>
+            <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; margin-top: 8px">
+              <img id="charPhotoPreview" alt="" width="96" height="96" style="border-radius: 12px; object-fit: cover; background: rgba(0,0,0,0.2); display: none" hidden />
+              <div style="flex: 1; min-width: 200px">
+                <input type="file" id="charPhotoFile" accept="image/*" class="sr-only" />
+                <button type="button" class="btn btn-ghost" id="btnCharPickPhoto">揀相…</button>
+                <div id="charCharacterXpBlock" style="margin-top: 12px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="form-actions" style="border: none; padding-top: 14px; margin-top: 0; flex-wrap: wrap; gap: 10px">
+          <button type="button" class="btn btn-primary" id="btnCharSaveAll">儲存角色資料</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>技能面板 <span class="badge">Skills</span></h2>
+        <p class="lead">每個技能綁一個<strong>生活目標</strong>，預設 <strong>Lv.0</strong>；完成有綁目標嘅課表就會加 XP。</p>
+        <details class="ux-advanced-details" style="margin-bottom: 12px">
+          <summary class="ux-advanced-summary" style="cursor: pointer; font-weight: 600; font-size: 0.88rem; user-select: none; opacity: 0.95">點解有「分區條」？（可展開睇）</summary>
+          <p class="field-hint" style="margin: 8px 0 0">
+            <strong>分區條</strong>由完成課表時（進階揀咗分區）累積；可選<strong>自動分區：近30日交易單數</strong>跟「記一單」計，唔使手改數值。
+          </p>
+        </details>
+        <label class="field" style="max-width: 360px">
+          <span class="key">揀技能</span>
+          <select id="charSkillSelect"></select>
+        </label>
+        <div id="charSkillDetailBlock" style="margin-top: 14px"></div>
+        <div class="form-actions" style="border: none; padding-top: 12px; margin-top: 0; flex-wrap: wrap; gap: 10px">
+          <button type="button" class="btn btn-primary" id="btnCharSaveSkill">儲存技能名／綁定目標</button>
+          <button type="button" class="btn btn-ghost" id="btnCharDelSkill">刪除此技能</button>
+        </div>
+        <div class="card" style="margin-top: 18px; background: rgba(0,0,0,0.12); border-style: dashed">
+          <h3 style="margin: 0 0 10px; font-size: 0.95rem">新增技能</h3>
+          <div class="form-grid">
+            <label class="field" style="grid-column: 1 / -1">
+              <span class="key">名稱</span>
+              <input type="text" id="charNewSkillName" maxlength="80" placeholder="例：日文、交易操練" />
+            </label>
+            <label class="field" style="grid-column: 1 / -1">
+              <span class="key">綁定目標</span>
+              <select id="charNewSkillGoal"></select>
+              <span class="field-hint" style="display: block; margin-top: 6px">可先唔填分區，遲啲喺「進階」加都得。</span>
+            </label>
+            <details class="card ux-advanced-details" style="grid-column: 1 / -1; padding: 12px 14px; background: rgba(0,0,0,0.06); border-style: dashed">
+              <summary class="ux-advanced-summary" style="cursor: pointer; font-weight: 600; font-size: 0.92rem; user-select: none">進階：分區名稱／交易自動分區（可唔填）</summary>
+              <label class="field" style="grid-column: 1 / -1; margin-top: 10px">
+                <span class="key">分區名稱（每行一個，例：文法、生字、會話、閱讀）</span>
+                <textarea id="charNewSkillCats" rows="4" style="min-height: 88px; resize: vertical" spellcheck="false" placeholder="文法&#10;生字&#10;會話&#10;閱讀"></textarea>
+              </label>
+              <label class="field" style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px">
+                <input type="checkbox" id="charNewSkillBindTrades" class="ux-chk" />
+                <span class="key" style="margin: 0">加入<strong>自動分區</strong>：近 30 日已記交易單數（跟「記一單」資料）</span>
+              </label>
+            </details>
+          </div>
+          <div class="form-actions" style="border: none; padding-top: 10px; margin-top: 0">
+            <button type="button" class="btn btn-accent" id="btnCharAddSkill">加入技能</button>
+          </div>
+        </div>
+        <details class="card ux-advanced-details" style="margin-top: 14px; background: rgba(0,0,0,0.1); border-style: dashed; padding: 12px 14px">
+          <summary class="ux-advanced-summary" style="cursor: pointer; font-weight: 600; font-size: 0.92rem; user-select: none">進階：為已選技能再加新分區</summary>
+          <p class="field-hint" style="margin: 10px 0 8px">只加名稱，點數由完成課表時自動加；自動分區唔可以手加。</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+            <input type="text" id="charSkillNewCatName" maxlength="40" placeholder="例：聽力" style="flex: 1; min-width: 160px" />
+            <button type="button" class="btn btn-ghost" id="btnCharSkillAddCat">加入分區</button>
+          </div>
+        </details>
+      </div>
+    </section>
+
     <section id="panel-settings" class="panel" role="tabpanel" hidden>
       <div class="card">
         <h2>Playbook 標籤庫</h2>
@@ -4187,12 +4405,9 @@
         <p class="field-hint" style="margin-top: 8px">
           建議用 <code>http://localhost</code> 開本頁再做雲端 fetch；<code>file://</code> 有機會被瀏覽器擋跨網域請求。
         </p>
-        <label class="field" style="display: flex; align-items: flex-start; gap: 10px; margin-top: 14px">
-          <input type="checkbox" id="settingsCloudAutoPush" class="ux-chk" style="margin-top: 4px" />
-          <span class="key" style="margin: 0"
-            ><strong>改動後自動合併同步</strong>（儲存後約 5 秒：先拉雲端再合併再上傳；離線會略過。多部機輪流用「雲端合併同步」即可疊加紀錄）</span
-          >
-        </label>
+        <p class="field-hint" style="margin-top: 10px; padding: 10px 12px; border-radius: var(--radius-sm); background: rgba(0,0,0,0.12); border: 1px dashed rgba(148,163,184,0.35)">
+          <strong>關於「自動合併同步」：</strong>舊版曾可喺此處剔選，喺你儲存資料後約 5 秒<strong>自動</strong>呼叫「雲端合併同步」（拉雲端 → 合併 → 上傳）。目前功能已<strong>暫停</strong>，避免以為有背景同步但實際冇做嘢；請繼續用下面<strong>手動「雲端合併同步」</strong>。
+        </p>
         <div class="form-actions" style="margin-top: 12px; flex-wrap: wrap; gap: 10px">
           <button type="button" class="btn btn-ghost" id="btnCloudSyncSaveMeta">儲存 URL／Token（本機）</button>
           <button type="button" class="btn btn-primary" id="btnCloudMergeSync">雲端合併同步</button>
@@ -4478,6 +4693,8 @@
       var CLOUD_SYNC_URL_KEY = "tradeLogCloudSyncUrl";
       var CLOUD_SYNC_TOKEN_KEY = "tradeLogCloudSyncToken";
       var CLOUD_AUTO_PUSH_KEY = "tradeLogCloudAutoPush";
+      /** 後台曾支援「改動後自動合併同步」；暫停功能並隱藏 UI，避免誤以為有背景同步。手動「雲端合併同步」仍可用。 */
+      var CLOUD_AUTO_MERGE_ENABLED = false;
 
       function defaultSettings() {
         return {
@@ -5087,6 +5304,9 @@
           wallet: {
             monthlyExpenseBudget: null,
             monthlySaveGoal: null,
+            totalAssets: null,
+            totalDebt: null,
+            ownedAssetsNote: "",
             entries: [],
             dailyExpenseCap: null,
             expensePresets: [],
@@ -5106,6 +5326,8 @@
               var md = b.monthDay != null ? parseInt(String(b.monthDay), 10) : null;
               if (isNaN(md) || md < 1 || md > 31) md = null;
               if (rep !== "monthly") md = null;
+              var estMin = b.estMin != null && b.estMin !== "" ? parseInt(String(b.estMin), 10) : null;
+              if (estMin == null || isNaN(estMin) || estMin < 0) estMin = null;
               return {
                 id: b.id || lifeId("b"),
                 dow: typeof b.dow === "number" ? b.dow : parseInt(String(b.dow), 10) || 0,
@@ -5113,6 +5335,9 @@
                 endMin: typeof b.endMin === "number" ? b.endMin : 0,
                 title: (b.title || "").trim() || "未命名",
                 goalId: b.goalId ? String(b.goalId) : "",
+                rpgSkillId: b.rpgSkillId ? String(b.rpgSkillId) : "",
+                rpgCategoryId: b.rpgCategoryId ? String(b.rpgCategoryId) : "",
+                estMin: estMin,
                 repeat: rep,
                 monthDay: md,
               };
@@ -5129,6 +5354,13 @@
           d.wallet.monthlySaveGoal != null && d.wallet.monthlySaveGoal !== "" ? Number(d.wallet.monthlySaveGoal) : null;
         if (isNaN(d.wallet.monthlyExpenseBudget)) d.wallet.monthlyExpenseBudget = null;
         if (isNaN(d.wallet.monthlySaveGoal)) d.wallet.monthlySaveGoal = null;
+        d.wallet.totalAssets =
+          d.wallet.totalAssets != null && d.wallet.totalAssets !== "" ? Number(d.wallet.totalAssets) : null;
+        d.wallet.totalDebt =
+          d.wallet.totalDebt != null && d.wallet.totalDebt !== "" ? Number(d.wallet.totalDebt) : null;
+        if (isNaN(d.wallet.totalAssets) || d.wallet.totalAssets < 0) d.wallet.totalAssets = null;
+        if (isNaN(d.wallet.totalDebt) || d.wallet.totalDebt < 0) d.wallet.totalDebt = null;
+        d.wallet.ownedAssetsNote = String(d.wallet.ownedAssetsNote || "").trim().slice(0, 4000);
         d.wallet.dailyExpenseCap =
           d.wallet.dailyExpenseCap != null && d.wallet.dailyExpenseCap !== "" ? Number(d.wallet.dailyExpenseCap) : null;
         if (isNaN(d.wallet.dailyExpenseCap) || d.wallet.dailyExpenseCap < 0) d.wallet.dailyExpenseCap = null;
@@ -5296,7 +5528,225 @@
         persistRoutineWalletToStorage_();
       }
 
+      var CHARACTER_RPG_KEY = "tradeLogCharacterRpgV1";
+      var RPG_MAX_LEVEL = 999;
+      var RPG_XP_PER_LEVEL = 100;
+
+      function defaultCharacterRpg() {
+        return {
+          version: 2,
+          syncUpdatedAt: 0,
+          xpGrantKeys: {},
+          character: {
+            name: "",
+            photoDataUrl: "",
+            weightKg: null,
+            heightCm: null,
+            xp: 0,
+          },
+          skills: [],
+        };
+      }
+
+      function normalizeRpgSkillCategory(c) {
+        c = c || {};
+        var src = c.source === "trades30d" ? "trades30d" : "manual";
+        return {
+          id: c.id || lifeId("cat"),
+          name: String(c.name || "")
+            .trim()
+            .slice(0, 40) || "分區",
+          progress: Math.max(0, Math.floor(Number(c.progress) || 0)),
+          source: src,
+        };
+      }
+
+      function normalizeRpgSkill(s) {
+        s = s || {};
+        var cats = [];
+        if (Array.isArray(s.categories)) {
+          cats = s.categories.map(normalizeRpgSkillCategory).filter(function (x) {
+            return x.name;
+          });
+        }
+        if (!cats.length && Array.isArray(s.hexLabels)) {
+          for (var hi = 0; hi < s.hexLabels.length && hi < 8; hi++) {
+            var nm = String(s.hexLabels[hi] || "")
+              .trim()
+              .slice(0, 40);
+            if (nm) cats.push({ id: lifeId("cat"), name: nm, progress: 0, source: "manual" });
+          }
+        }
+        return {
+          id: s.id || lifeId("sk"),
+          name: String(s.name || "").trim().slice(0, 80) || "技能",
+          goalId: s.goalId ? String(s.goalId) : "",
+          xp: Math.max(0, Number(s.xp) || 0),
+          categories: cats,
+        };
+      }
+
+      function normalizeCharacterRpg(d) {
+        d = d || {};
+        d.version = 2;
+        d.syncUpdatedAt = typeof d.syncUpdatedAt === "number" && !isNaN(d.syncUpdatedAt) ? d.syncUpdatedAt : 0;
+        d.xpGrantKeys =
+          d.xpGrantKeys && typeof d.xpGrantKeys === "object" && !Array.isArray(d.xpGrantKeys) ? d.xpGrantKeys : {};
+        var ch = d.character || {};
+        d.character = {
+          name: String(ch.name || "").trim().slice(0, 80),
+          photoDataUrl: String(ch.photoDataUrl || "").slice(0, 600000),
+          weightKg: ch.weightKg != null && ch.weightKg !== "" ? Number(ch.weightKg) : null,
+          heightCm: ch.heightCm != null && ch.heightCm !== "" ? Number(ch.heightCm) : null,
+          xp: Math.max(0, Number(ch.xp) || 0),
+        };
+        if (isNaN(d.character.weightKg) || d.character.weightKg <= 0) d.character.weightKg = null;
+        if (isNaN(d.character.heightCm) || d.character.heightCm <= 0) d.character.heightCm = null;
+        d.skills = Array.isArray(d.skills) ? d.skills.map(normalizeRpgSkill) : [];
+        delete d.hexCharacter;
+        return d;
+      }
+
+      function rpgLevelFromXp_(xp) {
+        xp = Math.max(0, Number(xp) || 0);
+        return Math.min(RPG_MAX_LEVEL, Math.floor(xp / RPG_XP_PER_LEVEL));
+      }
+
+      function rpgXpIntoLevel_(xp) {
+        xp = Math.max(0, Number(xp) || 0);
+        var lv = rpgLevelFromXp_(xp);
+        if (lv >= RPG_MAX_LEVEL) {
+          return { level: RPG_MAX_LEVEL, inLevel: 0, need: 0, pct: 100 };
+        }
+        var base = lv * RPG_XP_PER_LEVEL;
+        var inLevel = xp - base;
+        var need = RPG_XP_PER_LEVEL - inLevel;
+        return { level: lv, inLevel: inLevel, need: need, pct: (inLevel / RPG_XP_PER_LEVEL) * 100 };
+      }
+
+      function rpgXpBarHtml_(pct) {
+        var p = Math.max(0, Math.min(100, Number(pct) || 0));
+        return '<div class="rpg-xpbar" aria-hidden="true"><i style="width:' + p.toFixed(1) + '%"></i></div>';
+      }
+
+      function countTradesLastDays_(days) {
+        days = Math.max(1, Math.min(366, Number(days) || 30));
+        var cutoff = new Date();
+        cutoff.setHours(12, 0, 0, 0);
+        cutoff.setDate(cutoff.getDate() - days);
+        var n = 0;
+        (state.trades || []).forEach(function (t) {
+          var d = parseISOToDateUtc_(String(t.date || "").trim().slice(0, 10));
+          if (d && !isNaN(d.getTime()) && d >= cutoff) n++;
+        });
+        return n;
+      }
+
+      function resolvedCategoryProgress_(c) {
+        if (c && c.source === "trades30d") return countTradesLastDays_(30);
+        return Math.max(0, Math.floor(Number(c && c.progress) || 0));
+      }
+
+      function findRpgSkillById_(id) {
+        if (!id) return null;
+        var sks = characterRpgState.skills || [];
+        for (var i = 0; i < sks.length; i++) {
+          if (String(sks[i].id) === String(id)) return sks[i];
+        }
+        return null;
+      }
+
+      function findFirstRpgSkillForGoal_(gid) {
+        if (!gid) return null;
+        var sks = characterRpgState.skills || [];
+        for (var j = 0; j < sks.length; j++) {
+          if (String(sks[j].goalId || "") === String(gid)) return sks[j];
+        }
+        return null;
+      }
+
+      function bumpSkillCategoryById_(sk, catId, delta) {
+        if (!sk || !catId) return;
+        delta = Math.max(0, Math.floor(Number(delta) || 0));
+        if (!delta) return;
+        sk.categories = sk.categories || [];
+        for (var i = 0; i < sk.categories.length; i++) {
+          if (String(sk.categories[i].id) === String(catId)) {
+            if (sk.categories[i].source === "trades30d") return;
+            sk.categories[i].progress = Math.max(0, Math.floor(Number(sk.categories[i].progress) || 0) + delta);
+            return;
+          }
+        }
+      }
+
+      function rpgMarkGrantKey_(key) {
+        if (!key || characterRpgState.xpGrantKeys[key]) return false;
+        characterRpgState.xpGrantKeys[key] = true;
+        return true;
+      }
+
+      function grantRpgOnScheduleComplete_(iso, bid, blk) {
+        if (!blk || !blk.goalId) return;
+        var key = "sched:" + iso + ":" + bid;
+        if (!rpgMarkGrantKey_(key)) return;
+        characterRpgState.character.xp = Math.max(0, Number(characterRpgState.character.xp) || 0) + 15;
+        var sk = null;
+        if (blk.rpgSkillId) sk = findRpgSkillById_(blk.rpgSkillId);
+        if (!sk) sk = findFirstRpgSkillForGoal_(blk.goalId);
+        if (sk) {
+          sk.xp = Math.max(0, Number(sk.xp) || 0) + 22;
+          if (blk.rpgCategoryId) bumpSkillCategoryById_(sk, blk.rpgCategoryId, 1);
+        }
+        saveCharacterRpg();
+      }
+
+      function grantRpgOnLifeStepComplete_(goalId, stepId) {
+        if (!goalId) return;
+        var key = "step:" + todayISO() + ":" + goalId + ":" + stepId;
+        if (!rpgMarkGrantKey_(key)) return;
+        characterRpgState.character.xp = Math.max(0, Number(characterRpgState.character.xp) || 0) + 12;
+        var sk = findFirstRpgSkillForGoal_(goalId);
+        if (sk) sk.xp = Math.max(0, Number(sk.xp) || 0) + 18;
+        saveCharacterRpg();
+      }
+
+      function persistCharacterRpgToStorage_() {
+        characterRpgState.version = 2;
+        if (typeof characterRpgState.syncUpdatedAt !== "number" || isNaN(characterRpgState.syncUpdatedAt)) {
+          characterRpgState.syncUpdatedAt = 0;
+        }
+        try {
+          localStorage.setItem(CHARACTER_RPG_KEY, JSON.stringify(characterRpgState));
+        } catch (e) {}
+      }
+
+      function saveCharacterRpg() {
+        characterRpgState.syncUpdatedAt = Date.now();
+        persistCharacterRpgToStorage_();
+      }
+
+      function loadCharacterRpg() {
+        try {
+          var raw = localStorage.getItem(CHARACTER_RPG_KEY);
+          if (raw) {
+            var d = JSON.parse(raw);
+            if (d) return normalizeCharacterRpg(d);
+          }
+        } catch (e) {}
+        return normalizeCharacterRpg(defaultCharacterRpg());
+      }
+
+      function mergeCharacterRpgForSync(lo, cl) {
+        lo = normalizeCharacterRpg(lo || {});
+        cl = normalizeCharacterRpg(cl || {});
+        var loT = Number(lo.syncUpdatedAt) || 0;
+        var clT = Number(cl.syncUpdatedAt) || 0;
+        if (loT >= clT) return normalizeCharacterRpg(lo);
+        return normalizeCharacterRpg(cl);
+      }
+
       var routineState = loadRoutineWallet();
+      var characterRpgState = loadCharacterRpg();
       var walletSubtab = "ledger";
       var schedSelectedDow = new Date().getDay();
 
@@ -8241,7 +8691,8 @@
         tradnotes: { title: "交易筆記", sub: "Anki 式閃卡 · 主題整理 · 雲端同步" },
         goals: { title: "目標與進度", sub: "大目標 · 細步驟 · 心得 · 連住交易日誌" },
         routine: { title: "每週課表", sub: "本週格線 · 固定時段 · 打剔同步目標" },
-        wallet: { title: "錢包", sub: "收支 · 預算 · 日限與預設扣減" },
+        wallet: { title: "錢包", sub: "收支 · 預算 · 日限與預設扣減 · 資產負債概覽" },
+        character: { title: "角色與技能", sub: "XP／等級 · 六角雷達 · 綁目標技能 · 同錢包資產聯動" },
         reminders: { title: "待辦・提醒", sub: "課表 · 目標 · 錢包" },
         xau: { title: "XAU 練習", sub: "限價／止損 · 美金風險 · 模擬平倉寫日誌" },
         settings: { title: "設定", sub: "標籤庫" },
@@ -8300,7 +8751,7 @@
       }
 
       function setTab(id, opts) {
-        var ids = ["dash", "new", "list", "analytics", "calendar", "goals", "reminders", "daily", "psych", "tradeideas", "tradnotes", "routine", "wallet", "xau", "settings"];
+        var ids = ["dash", "new", "list", "analytics", "calendar", "goals", "reminders", "daily", "psych", "tradeideas", "tradnotes", "routine", "wallet", "character", "xau", "settings"];
         ids.forEach(function (t) {
           var btn = document.getElementById("tab-" + t);
           var panel = document.getElementById("panel-" + t);
@@ -8328,6 +8779,7 @@
         if (id === "tradnotes") renderTradingStudyPanel_();
         if (id === "routine") renderRoutinePanel();
         if (id === "wallet") renderWalletTab();
+        if (id === "character") renderCharacterPanel_();
         if (id === "xau") initXauPanel();
         if (opts && opts.focusTitle) {
           requestAnimationFrame(function () {
@@ -8554,6 +9006,9 @@
               saveLife(lifeState);
               saveRoutineWallet();
             }
+            if (blk && blk.goalId) {
+              grantRpgOnScheduleComplete_(iso, bid, blk);
+            }
           } else {
             var key2 = iso + "_" + bid;
             delete routineState.doneLogSent[key2];
@@ -8562,6 +9017,10 @@
           renderSchedulePanel();
           renderLifePanel();
           renderDashLifeSummary();
+          try {
+            var pch = document.getElementById("panel-character");
+            if (pch && !pch.hidden) renderCharacterPanel_();
+          } catch (eCr) {}
           if (on) toast("完成！已更新日程同生活軌跡", "ok");
         }
         var dDone = uxMotionDelayMs_(420);
@@ -8597,6 +9056,14 @@
           }
         } else monthDay = null;
         var gid = (document.getElementById("schedNewGoalId").value || "").trim();
+        var rs = (document.getElementById("schedNewRpgSkill") || {}).value || "";
+        var rc = (document.getElementById("schedNewRpgCategory") || {}).value || "";
+        if ((rs || rc) && !gid) {
+          toast("要用技能／分區計 XP，請先揀「綁定目標」");
+          return;
+        }
+        var estRaw = parseInt(String((document.getElementById("schedNewEstMin") || {}).value || ""), 10);
+        var estMin = !isNaN(estRaw) && estRaw >= 0 ? estRaw : null;
         routineState.scheduleBlocks.push({
           id: lifeId("b"),
           dow: dow,
@@ -8604,6 +9071,9 @@
           endMin: em,
           title: title,
           goalId: gid,
+          rpgSkillId: rs ? String(rs).trim() : "",
+          rpgCategoryId: rc ? String(rc).trim() : "",
+          estMin: estMin,
           repeat: rep,
           monthDay: monthDay,
         });
@@ -8632,13 +9102,34 @@
         sync();
       })();
 
+      (function bindSchedRpgLinkage_() {
+        var g = document.getElementById("schedNewGoalId");
+        var s = document.getElementById("schedNewRpgSkill");
+        var c = document.getElementById("schedNewRpgCategory");
+        if (!g || g._rpgBound) return;
+        g._rpgBound = true;
+        g.addEventListener("change", function () {
+          fillSchedRpgSkillDropdown_();
+        });
+        if (s && !s._rpgBound) {
+          s._rpgBound = true;
+          s.addEventListener("change", function () {
+            fillSchedRpgCategoryDropdown_();
+          });
+        }
+        fillSchedRpgSkillDropdown_();
+      })();
+
       document.getElementById("btnWalletSaveMeta").addEventListener("click", function () {
         routineState.wallet.monthlyExpenseBudget = parseNum(document.getElementById("walletBudget").value);
         routineState.wallet.monthlySaveGoal = parseNum(document.getElementById("walletSaveGoal").value);
+        routineState.wallet.totalAssets = parseNum(document.getElementById("walletTotalAssets").value);
+        routineState.wallet.totalDebt = parseNum(document.getElementById("walletTotalDebt").value);
+        routineState.wallet.ownedAssetsNote = (document.getElementById("walletOwnedAssets").value || "").trim().slice(0, 4000);
         saveRoutineWallet();
         renderWalletPanel();
         renderDashLifeSummary();
-        toast("已儲存預算");
+        toast("已儲存預算同資產欄位");
       });
 
       document.getElementById("btnWalletAddEntry").addEventListener("click", function () {
@@ -8986,8 +9477,15 @@
           }
         }
         saveLife(lifeState);
+        if (inp.checked && lifeSelectedId) {
+          grantRpgOnLifeStepComplete_(lifeSelectedId, sid);
+        }
         renderLifePanel();
         renderDashLifeSummary();
+        try {
+          var pch2 = document.getElementById("panel-character");
+          if (pch2 && !pch2.hidden) renderCharacterPanel_();
+        } catch (eCr2) {}
       });
 
       document.getElementById("btnLifeAddStep").addEventListener("click", function () {
@@ -10563,6 +11061,194 @@
         else delete routineState.scheduleDone[iso][blockId];
       }
 
+      function parseISOToDateUtc_(iso) {
+        var p = String(iso || "")
+          .trim()
+          .split("-");
+        if (p.length < 3) return null;
+        var y = parseInt(p[0], 10),
+          m = parseInt(p[1], 10) - 1,
+          d = parseInt(p[2], 10);
+        if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
+        return new Date(Date.UTC(y, m, d));
+      }
+
+      function isoAddDays_(iso, delta) {
+        var dt = parseISOToDateUtc_(iso);
+        if (!dt) return String(iso);
+        dt.setUTCDate(dt.getUTCDate() + delta);
+        var mo = String(dt.getUTCMonth() + 1).padStart(2, "0");
+        var da = String(dt.getUTCDate()).padStart(2, "0");
+        return dt.getUTCFullYear() + "-" + mo + "-" + da;
+      }
+
+      function isoDiffDays_(a, b) {
+        var da = parseISOToDateUtc_(a),
+          db = parseISOToDateUtc_(b);
+        if (!da || !db) return NaN;
+        return Math.round((da - db) / 864e5);
+      }
+
+      function blockDurationMin_(b) {
+        if (!b) return 0;
+        if (b.estMin != null && !isNaN(b.estMin) && b.estMin >= 0) return b.estMin;
+        var d = (b.endMin || 0) - (b.startMin || 0);
+        return Math.max(0, d);
+      }
+
+      /** 只計有綁 goalId 嘅課表完成日；goalId 傳空字串即「任一綁目標」 */
+      function collectGoalBoundScheduleDatesAsc_(goalId) {
+        var want = goalId ? String(goalId) : "";
+        var byIso = {};
+        var done = routineState.scheduleDone || {};
+        var blocks = routineState.scheduleBlocks || [];
+        var byBid = {};
+        for (var bi = 0; bi < blocks.length; bi++) byBid[blocks[bi].id] = blocks[bi];
+        Object.keys(done).forEach(function (iso) {
+          var mp = done[iso];
+          if (!mp || typeof mp !== "object") return;
+          Object.keys(mp).forEach(function (bid) {
+            if (!mp[bid]) return;
+            var blk = byBid[bid];
+            if (!blk || !blk.goalId) return;
+            if (want && String(blk.goalId) !== want) return;
+            byIso[iso] = true;
+          });
+        });
+        return Object.keys(byIso).sort();
+      }
+
+      function streakCurrentFromIsoSet_(datesAsc, todayIso) {
+        var set = {};
+        for (var i = 0; i < datesAsc.length; i++) set[datesAsc[i]] = true;
+        var anchor = todayIso;
+        if (!set[anchor]) anchor = isoAddDays_(todayIso, -1);
+        if (!set[anchor]) return 0;
+        var c = 0;
+        var cur = anchor;
+        while (set[cur]) {
+          c++;
+          cur = isoAddDays_(cur, -1);
+        }
+        return c;
+      }
+
+      function longestConsecutiveIsoRun_(datesAsc) {
+        if (!datesAsc.length) return 0;
+        var best = 1,
+          run = 1;
+        for (var j = 1; j < datesAsc.length; j++) {
+          if (isoDiffDays_(datesAsc[j], datesAsc[j - 1]) === 1) run++;
+          else run = 1;
+          if (run > best) best = run;
+        }
+        return best;
+      }
+
+      function goalBoundTimeTotals_() {
+        var done = routineState.scheduleDone || {};
+        var blocks = routineState.scheduleBlocks || [];
+        var byBid = {};
+        for (var bi = 0; bi < blocks.length; bi++) byBid[blocks[bi].id] = blocks[bi];
+        var byGoal = {};
+        var anyDays = {};
+        var anyMin = 0;
+        Object.keys(done).forEach(function (iso) {
+          var mp = done[iso];
+          if (!mp) return;
+          Object.keys(mp).forEach(function (bid) {
+            if (!mp[bid]) return;
+            var blk = byBid[bid];
+            if (!blk || !blk.goalId) return;
+            var gid = String(blk.goalId);
+            if (!byGoal[gid]) byGoal[gid] = { days: {}, totalMin: 0 };
+            byGoal[gid].days[iso] = true;
+            byGoal[gid].totalMin += blockDurationMin_(blk);
+            anyDays[iso] = true;
+            anyMin += blockDurationMin_(blk);
+          });
+        });
+        return { byGoal: byGoal, anyDistinctDays: Object.keys(anyDays).length, anyTotalMin: anyMin };
+      }
+
+      function collectTradeLogDatesAsc_() {
+        var dset = {};
+        (state.trades || []).forEach(function (t) {
+          var d = String(t.date || "")
+            .trim()
+            .slice(0, 10);
+          if (/^\d{4}-\d{2}-\d{2}$/.test(d)) dset[d] = true;
+        });
+        return Object.keys(dset).sort();
+      }
+
+      function renderRoutineStreakCard_() {
+        var host = document.getElementById("routineGoalStreakBox");
+        if (!host) return;
+        var todayIso = todayISO();
+        var datesAny = collectGoalBoundScheduleDatesAsc_("");
+        var curAny = streakCurrentFromIsoSet_(datesAny, todayIso);
+        var longAny = longestConsecutiveIsoRun_(datesAny);
+        var tt = goalBoundTimeTotals_();
+        var hAny = Math.floor(tt.anyTotalMin / 60);
+        var mAny = tt.anyTotalMin % 60;
+        var goals = lifeState.goals || [];
+        var rows = goals
+          .map(function (g) {
+            var da = collectGoalBoundScheduleDatesAsc_(g.id);
+            var tg = tt.byGoal[g.id] || { days: {}, totalMin: 0 };
+            var nd = Object.keys(tg.days).length;
+            if (!da.length && !nd) return "";
+            var cur = streakCurrentFromIsoSet_(da, todayIso);
+            var lon = longestConsecutiveIsoRun_(da);
+            var hm = Math.floor(tg.totalMin / 60),
+              mm = tg.totalMin % 60;
+            return (
+              "<tr><td class=\"goal\"><strong>" +
+              escapeHtml(g.title) +
+              "</strong></td><td class=\"num\">" +
+              cur +
+              ' 日</td><td class="num">' +
+              lon +
+              ' 日</td><td class="num">' +
+              nd +
+              ' 日</td><td class="num">' +
+              hm +
+              " 小時 " +
+              mm +
+              " 分</td></tr>"
+            );
+          })
+          .filter(Boolean)
+          .join("");
+        var tradeDates = collectTradeLogDatesAsc_();
+        var curTr = streakCurrentFromIsoSet_(tradeDates, todayIso);
+        var longTr = longestConsecutiveIsoRun_(tradeDates);
+        host.innerHTML =
+          '<details class="ux-advanced-details" style="margin-top:0"><summary class="ux-advanced-summary" style="cursor:pointer;font-weight:600;font-size:0.88rem;user-select:none;opacity:0.95">點樣計 Streak？（可展開）</summary><p class="field-hint" style="margin:8px 0 0"><strong>綁目標課表</strong>：只計「每週課表」打剔、而且有綁生活目標嘅時段；唔同目標各自統計。<strong>交易日誌</strong>係另一條（有記錄交易嘅曆日）。</p></details>' +
+          '<div class="wallet-grid" style="margin-top:10px">' +
+          '<div class="wallet-stat"><div class="wk">綁目標（綜合）</div><div class="wv good">連續 ' +
+          curAny +
+          " 日 · 最長 " +
+          longAny +
+          ' 日</div></div><div class="wallet-stat"><div class="wk">累積（綁目標）</div><div class="wv">' +
+          tt.anyDistinctDays +
+          " 個唔同日 · 約 " +
+          hAny +
+          " 小時 " +
+          mAny +
+          ' 分</div></div><div class="wallet-stat"><div class="wk">交易日誌</div><div class="wv">連續 ' +
+          curTr +
+          " 日 · 最長 " +
+          longTr +
+          " 日</div></div></div>" +
+          (rows
+            ? '<details class="ux-advanced-details routine-streak-details" style="margin-top:12px"><summary class="ux-advanced-summary" style="cursor:pointer;font-weight:600;font-size:0.92rem;user-select:none">睇每個目標詳細統計（表）</summary><table class="routine-streak-table" style="margin-top:10px"><thead><tr><th class="goal">目標</th><th class="num">連續日數<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">（未斷）</span></th><th class="num">歷史最長<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">連續</span></th><th class="num">有完成<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">日數</span></th><th class="num">累計估計<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">時長</span></th></tr></thead><tbody>' +
+              rows +
+              "</tbody></table></details>"
+            : '<p class="field-hint" style="margin-top:12px">尚未有綁目標完成紀錄。</p>');
+      }
+
       function fillSchedGoalDropdown(selectEl) {
         if (!selectEl) return;
         var goals = lifeState.goals || [];
@@ -10574,6 +11260,43 @@
             })
             .join("");
         selectEl.innerHTML = opts;
+      }
+
+      function fillSchedRpgSkillDropdown_() {
+        var gEl = document.getElementById("schedNewGoalId");
+        var sEl = document.getElementById("schedNewRpgSkill");
+        if (!sEl) return;
+        var gid = gEl ? String(gEl.value || "").trim() : "";
+        var sks = characterRpgState.skills || [];
+        var opts = '<option value="">— 自動：同目標第一個匹配技能 —</option>';
+        for (var i = 0; i < sks.length; i++) {
+          if (!gid || String(sks[i].goalId || "") === gid) {
+            opts += '<option value="' + escapeHtml(sks[i].id) + '">' + escapeHtml(sks[i].name) + "</option>";
+          }
+        }
+        var prev = sEl.value;
+        sEl.innerHTML = opts;
+        if (prev && sEl.querySelector('option[value="' + prev + '"]')) sEl.value = prev;
+        fillSchedRpgCategoryDropdown_();
+      }
+
+      function fillSchedRpgCategoryDropdown_() {
+        var sEl = document.getElementById("schedNewRpgSkill");
+        var cEl = document.getElementById("schedNewRpgCategory");
+        if (!cEl) return;
+        var sid = sEl && sEl.value ? String(sEl.value).trim() : "";
+        var sk = sid ? findRpgSkillById_(sid) : null;
+        var opts = '<option value="">— 唔加分區點 —</option>';
+        if (sk && sk.categories) {
+          for (var i = 0; i < sk.categories.length; i++) {
+            var c = sk.categories[i];
+            if (c.source === "trades30d") continue;
+            opts += '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(c.name) + "</option>";
+          }
+        }
+        var prev = cEl.value;
+        cEl.innerHTML = opts;
+        if (prev && cEl.querySelector('option[value="' + prev + '"]')) cEl.value = prev;
       }
 
       function renderWalletTab() {
@@ -10615,6 +11338,20 @@
               routineState.wallet.monthlySaveGoal != null && !isNaN(routineState.wallet.monthlySaveGoal)
                 ? String(routineState.wallet.monthlySaveGoal)
                 : "";
+          var wta = document.getElementById("walletTotalAssets");
+          var wtd = document.getElementById("walletTotalDebt");
+          var won = document.getElementById("walletOwnedAssets");
+          if (wta)
+            wta.value =
+              routineState.wallet.totalAssets != null && !isNaN(routineState.wallet.totalAssets)
+                ? String(routineState.wallet.totalAssets)
+                : "";
+          if (wtd)
+            wtd.value =
+              routineState.wallet.totalDebt != null && !isNaN(routineState.wallet.totalDebt)
+                ? String(routineState.wallet.totalDebt)
+                : "";
+          if (won) won.value = routineState.wallet.ownedAssetsNote || "";
           renderWalletPanel();
         }
       }
@@ -10624,8 +11361,140 @@
         if (!ps) return;
         ps.hidden = false;
         fillSchedGoalDropdown(document.getElementById("schedNewGoalId"));
+        fillSchedRpgSkillDropdown_();
         renderSchedulePanel();
         renderRoutineWeekTimetable();
+        renderRoutineStreakCard_();
+      }
+
+      function buildRpgXpSummaryHtml_(xp) {
+        xp = Math.max(0, Number(xp) || 0);
+        var pr = rpgXpIntoLevel_(xp);
+        var lv = rpgLevelFromXp_(xp);
+        var line =
+          "Lv." +
+          lv +
+          " · 累積 XP " +
+          xp +
+          (lv >= RPG_MAX_LEVEL
+            ? "（已達上限 Lv." + RPG_MAX_LEVEL + "）"
+            : " · 升去 Lv." +
+              (lv + 1) +
+              " 仲要 <strong>" +
+              pr.need +
+              "</strong> XP（本級進度 " +
+              Math.round(pr.pct) +
+              "%）");
+        return '<p class="field-hint" style="margin:0;line-height:1.55">' + line + "</p>" + rpgXpBarHtml_(pr.pct);
+      }
+
+      function buildSkillCategoryBarsHtml_(sk) {
+        var cats = (sk && sk.categories) || [];
+        if (!cats.length)
+          return '<p class="field-hint" style="margin:0">未有分區；可用下面「加入分區」或新增技能時每行寫一個名。</p>';
+        var vals = cats.map(function (c) {
+          return resolvedCategoryProgress_(c);
+        });
+        var mx = 1;
+        for (var z = 0; z < vals.length; z++) mx = Math.max(mx, vals[z]);
+        return cats
+          .map(function (c, idx) {
+            var v = vals[idx];
+            var pct = mx ? (v / mx) * 100 : 0;
+            var auto = c.source === "trades30d" ? ' <span class="pill" style="font-size:0.68rem">自動·交易</span>' : "";
+            return (
+              '<div class="rpg-catbar-row"><div class="lab"><span>' +
+              escapeHtml(c.name) +
+              auto +
+              '</span><span>' +
+              v +
+              "</span></div>" +
+              '<div class="rpg-catbar"><i style="width:' +
+              Math.min(100, pct).toFixed(1) +
+              '%"></i></div></div>'
+            );
+          })
+          .join("");
+      }
+
+      function renderCharacterPanel_() {
+        var panel = document.getElementById("panel-character");
+        if (!panel || panel.hidden) return;
+        var st = characterRpgState;
+        var ch = st.character || {};
+        var nm = document.getElementById("charFieldName");
+        if (nm) nm.value = ch.name || "";
+        var w = document.getElementById("charFieldWeight");
+        if (w) w.value = ch.weightKg != null && !isNaN(ch.weightKg) ? String(ch.weightKg) : "";
+        var h = document.getElementById("charFieldHeight");
+        if (h) h.value = ch.heightCm != null && !isNaN(ch.heightCm) ? String(ch.heightCm) : "";
+        var cxb = document.getElementById("charCharacterXpBlock");
+        if (cxb) cxb.innerHTML = buildRpgXpSummaryHtml_(ch.xp || 0);
+        var pv = document.getElementById("charPhotoPreview");
+        if (pv) {
+          if (ch.photoDataUrl) {
+            pv.src = ch.photoDataUrl;
+            pv.hidden = false;
+          } else {
+            pv.removeAttribute("src");
+            pv.hidden = true;
+          }
+        }
+        var sel = document.getElementById("charSkillSelect");
+        var sks = st.skills || [];
+        if (sel) {
+          sel.innerHTML =
+            '<option value="">— 揀一個技能 —</option>' +
+            sks
+              .map(function (s) {
+                return '<option value="' + escapeHtml(s.id) + '">' + escapeHtml(s.name) + "</option>";
+              })
+              .join("");
+          if (sks.length) {
+            var has = false;
+            for (var si = 0; si < sks.length; si++) {
+              if (sks[si].id === sel.value) {
+                has = true;
+                break;
+              }
+            }
+            if (!has) sel.value = sks[0].id;
+          }
+        }
+        var ng = document.getElementById("charNewSkillGoal");
+        if (ng) fillSchedGoalDropdown(ng);
+        var curId = sel && sel.value ? sel.value : "";
+        var sk = null;
+        for (var i = 0; i < sks.length; i++) {
+          if (sks[i].id === curId) {
+            sk = sks[i];
+            break;
+          }
+        }
+        var det = document.getElementById("charSkillDetailBlock");
+        if (det) {
+          if (!sk) {
+            det.innerHTML = '<p class="field-hint" style="margin:0">尚未建立技能；用下面「新增技能」。</p>';
+          } else {
+            det.innerHTML =
+              '<div class="form-grid" style="margin-bottom:12px">' +
+              '<label class="field" style="grid-column:1/-1"><span class="key">技能名稱</span><input type="text" id="charSkillNameEdit" maxlength="80" value="' +
+              escapeHtml(sk.name) +
+              '" /></label>' +
+              '<label class="field" style="grid-column:1/-1"><span class="key">綁定目標</span><select id="charSkillGoalEdit"></select></label>' +
+              "</div>" +
+              "<h3 style=\"margin:12px 0 6px;font-size:0.92rem\">技能等級同 XP</h3>" +
+              buildRpgXpSummaryHtml_(sk.xp || 0) +
+              '<h3 style="margin:16px 0 6px;font-size:0.92rem">分區進度（條形圖）</h3>' +
+              buildSkillCategoryBarsHtml_(sk);
+            var sg = document.getElementById("charSkillGoalEdit");
+            if (sg) {
+              fillSchedGoalDropdown(sg);
+              if (sk.goalId) sg.value = sk.goalId;
+              else sg.value = "";
+            }
+          }
+        }
       }
 
       function renderSchedulePanel() {
@@ -10662,6 +11531,24 @@
             var g = b.goalId ? findLifeGoal(b.goalId) : null;
             var gtag = g ? " · 綁「" + escapeHtml(g.title) + "」" : "";
             var rlab = '<span class="pill" style="margin-left:6px">' + escapeHtml(schedRepeatLabel(b)) + "</span>";
+            var dm = blockDurationMin_(b);
+            var durTxt =
+              b.estMin != null ? "自填時長約 " + dm + " 分鐘" : "由開始至結束約 " + dm + " 分鐘";
+            var rpgHint = "";
+            if (b.goalId && (b.rpgSkillId || b.rpgCategoryId)) {
+              var skz = b.rpgSkillId ? findRpgSkillById_(b.rpgSkillId) : findFirstRpgSkillForGoal_(b.goalId);
+              var bits = [];
+              if (skz) bits.push(skz.name);
+              if (b.rpgCategoryId && skz && skz.categories) {
+                for (var ri = 0; ri < skz.categories.length; ri++) {
+                  if (String(skz.categories[ri].id) === String(b.rpgCategoryId)) {
+                    bits.push(skz.categories[ri].name);
+                    break;
+                  }
+                }
+              }
+              rpgHint = ' · <span class="pill" style="font-size:0.68rem">' + escapeHtml(bits.join(" › ")) + "</span>";
+            }
             return (
               '<div class="sched-block' +
               (done ? " done" : "") +
@@ -10676,6 +11563,9 @@
               '<p class="field-hint" style="margin:4px 0 0">' +
               escapeHtml(g ? lifeAreaLabel(g.area) : "日程") +
               gtag +
+              " · " +
+              escapeHtml(durTxt) +
+              rpgHint +
               "</p></div><div>" +
               (isToday
                 ? '<label class="ux-check-row"><input type="checkbox" class="ux-chk" data-sched-done="' +
@@ -10738,6 +11628,11 @@
         var leftSpend =
           budget != null && !isNaN(budget) ? budget - exp : null;
         var saveGoal = routineState.wallet.monthlySaveGoal;
+        var ta = routineState.wallet.totalAssets,
+          td = routineState.wallet.totalDebt;
+        var taOk = ta != null && !isNaN(ta),
+          tdOk = td != null && !isNaN(td);
+        var netWorth = taOk || tdOk ? (taOk ? ta : 0) - (tdOk ? td : 0) : null;
 
         var grid = document.getElementById("walletStats");
         if (grid) {
@@ -10753,6 +11648,19 @@
             '">' +
             (net >= 0 ? "+" : "") +
             net.toLocaleString("zh-HK", { maximumFractionDigits: 0 }) +
+            "</div></div>" +
+            '<div class="wallet-stat"><div class="wk">手填總資產</div><div class="wv good">' +
+            (taOk ? ta.toLocaleString("zh-HK", { maximumFractionDigits: 0 }) : "—") +
+            "</div></div>" +
+            '<div class="wallet-stat"><div class="wk">手填總負債</div><div class="wv bad">' +
+            (tdOk ? td.toLocaleString("zh-HK", { maximumFractionDigits: 0 }) : "—") +
+            "</div></div>" +
+            '<div class="wallet-stat"><div class="wk">淨資產（資−負）</div><div class="wv ' +
+            (netWorth != null && netWorth >= 0 ? "good" : "bad") +
+            '">' +
+            (netWorth != null
+              ? (netWorth >= 0 ? "+" : "") + netWorth.toLocaleString("zh-HK", { maximumFractionDigits: 0 })
+              : "—") +
             "</div></div>" +
             (leftSpend != null
               ? '<div class="wallet-stat"><div class="wk">花費預算內尚可花</div><div class="wv ' +
@@ -12003,8 +12911,6 @@
         var ctok = document.getElementById("settingsCloudSyncToken");
         if (curl) curl.value = localStorage.getItem(CLOUD_SYNC_URL_KEY) || "";
         if (ctok) ctok.value = localStorage.getItem(CLOUD_SYNC_TOKEN_KEY) || "";
-        var autoCh = document.getElementById("settingsCloudAutoPush");
-        if (autoCh) autoCh.checked = localStorage.getItem(CLOUD_AUTO_PUSH_KEY) === "1";
         var wEx = document.getElementById("settingsWalletExpenseCats");
         var wIn = document.getElementById("settingsWalletIncomeCats");
         var lAr = document.getElementById("settingsLifeCustomAreas");
@@ -12070,6 +12976,9 @@
           renderRemindersPanel();
           renderQuickRemindersList_();
         } catch (eQr) {}
+        try {
+          renderCharacterPanel_();
+        } catch (eCh) {}
         var pl = document.getElementById("panel-list");
         if (pl && pl.classList.contains("active")) renderList();
         var pa = document.getElementById("panel-analytics");
@@ -12129,6 +13038,10 @@
         }
         if (parsed.quickReminders && typeof parsed.quickReminders === "object" && Array.isArray(parsed.quickReminders.items)) {
           persistQuickRemindersToStorage_(normalizeQuickRemindersState_(parsed.quickReminders));
+        }
+        if (parsed.characterRpg && typeof parsed.characterRpg === "object") {
+          characterRpgState = normalizeCharacterRpg(parsed.characterRpg);
+          persistCharacterRpgToStorage_();
         }
         refreshAllPanelsAfterFullDataApply_();
         toast("已從雲端載入：交易、設定、生活、錢包、課表、工作日曆、心情日記、金句池、效應庫、思路、交易筆記閃卡、快速備忘、XAU 等已按備份更新本機");
@@ -12421,6 +13334,9 @@
           wallet: {
             monthlyExpenseBudget: preferLo ? lo.wallet.monthlyExpenseBudget : cl.wallet.monthlyExpenseBudget,
             monthlySaveGoal: preferLo ? lo.wallet.monthlySaveGoal : cl.wallet.monthlySaveGoal,
+            totalAssets: preferLo ? lo.wallet.totalAssets : cl.wallet.totalAssets,
+            totalDebt: preferLo ? lo.wallet.totalDebt : cl.wallet.totalDebt,
+            ownedAssetsNote: preferLo ? lo.wallet.ownedAssetsNote : cl.wallet.ownedAssetsNote,
             dailyExpenseCap: preferLo ? lo.wallet.dailyExpenseCap : cl.wallet.dailyExpenseCap,
             entries: mergedEntries,
             expensePresets: mergedPresets,
@@ -12526,6 +13442,7 @@
           dailyPools: normalizeDailyPools(JSON.parse(JSON.stringify(dailyPoolsState))),
           quickReminders: normalizeQuickRemindersState_(JSON.parse(JSON.stringify(loadQuickRemindersState_()))),
           tombstones: normalizeSyncTombstones(JSON.parse(JSON.stringify(syncTombstonesState))),
+          characterRpg: normalizeCharacterRpg(JSON.parse(JSON.stringify(characterRpgState))),
         };
       }
 
@@ -12574,6 +13491,10 @@
         }
         if (dataExtra && dataExtra.quickReminders && typeof dataExtra.quickReminders === "object") {
           persistQuickRemindersToStorage_(dataExtra.quickReminders);
+        }
+        if (dataExtra && dataExtra.characterRpg && typeof dataExtra.characterRpg === "object") {
+          characterRpgState = normalizeCharacterRpg(dataExtra.characterRpg);
+          persistCharacterRpgToStorage_();
         }
         refreshAllPanelsAfterFullDataApply_();
         if (toastMsg) toast(toastMsg);
@@ -12653,6 +13574,7 @@
             var mergedTradingStudy = mergeTradingStudyForSync(tradingStudyState, cloud.tradingStudy || null);
             var mergedDailyPools = mergeDailyPoolsForSync(dailyPoolsState, cloud.dailyPools || null);
             var mergedQuickReminders = mergeQuickRemindersForSync(loadQuickRemindersState_(), cloud.quickReminders || null);
+            var mergedCharacterRpg = mergeCharacterRpgForSync(characterRpgState, cloud.characterRpg || null);
             var mergedTombs = normalizeSyncTombstones(syncTombstonesState);
             var nBefore = (state.trades && state.trades.length) || 0;
             var nCloud = (cloud.trades && cloud.trades.length) || 0;
@@ -12663,6 +13585,7 @@
               dailyPools: mergedDailyPools,
               quickReminders: mergedQuickReminders,
               tombstones: mergedTombs,
+              characterRpg: mergedCharacterRpg,
             });
             var nAfter = state.trades.length;
             var body = JSON.stringify(buildFullAppCloudPayload());
@@ -12684,6 +13607,7 @@
 
       var _cloudAutoPushTimer = null;
       function scheduleDebouncedCloudAutoPush_() {
+        if (!CLOUD_AUTO_MERGE_ENABLED) return;
         if (localStorage.getItem(CLOUD_AUTO_PUSH_KEY) !== "1") return;
         if (!buildCloudSyncUrlWithToken()) return;
         clearTimeout(_cloudAutoPushTimer);
@@ -12759,8 +13683,11 @@
         bSave.addEventListener("click", function () {
           localStorage.setItem(CLOUD_SYNC_URL_KEY, getCloudSyncBaseUrl());
           localStorage.setItem(CLOUD_SYNC_TOKEN_KEY, getCloudSyncToken());
-          var autoEl = document.getElementById("settingsCloudAutoPush");
-          if (autoEl) localStorage.setItem(CLOUD_AUTO_PUSH_KEY, autoEl.checked ? "1" : "0");
+          localStorage.setItem(CLOUD_AUTO_PUSH_KEY, "0");
+          try {
+            clearTimeout(_cloudAutoPushTimer);
+          } catch (eT) {}
+          _cloudAutoPushTimer = null;
           toast("已儲存雲端設定（本機）");
         });
         bPull.addEventListener("click", function () {
@@ -12823,6 +13750,181 @@
               console.error(err);
               toast("上傳失敗：" + (err && err.message ? err.message : String(err)));
             });
+          });
+        }
+      })();
+
+      (function wireCharacterRpgPanel_() {
+        var pf = document.getElementById("charPhotoFile");
+        if (pf && !pf._bound) {
+          pf._bound = true;
+          pf.addEventListener("change", function () {
+            var f = pf.files && pf.files[0];
+            if (!f || !f.type || f.type.indexOf("image") !== 0) return;
+            var fr = new FileReader();
+            fr.onload = function () {
+              var u = String(fr.result || "");
+              if (u.length > 500000) u = u.slice(0, 500000);
+              characterRpgState.character.photoDataUrl = u;
+              saveCharacterRpg();
+              renderCharacterPanel_();
+              toast("已更新角色相片（本機）", "ok");
+            };
+            fr.readAsDataURL(f);
+            pf.value = "";
+          });
+        }
+        var bp = document.getElementById("btnCharPickPhoto");
+        if (bp && !bp._bound) {
+          bp._bound = true;
+          bp.addEventListener("click", function () {
+            if (pf) pf.click();
+          });
+        }
+        var bAll = document.getElementById("btnCharSaveAll");
+        if (bAll && !bAll._bound) {
+          bAll._bound = true;
+          bAll.addEventListener("click", function () {
+            var nm = (document.getElementById("charFieldName").value || "").trim().slice(0, 80);
+            characterRpgState.character.name = nm;
+            characterRpgState.character.weightKg = parseNum(document.getElementById("charFieldWeight").value);
+            characterRpgState.character.heightCm = parseNum(document.getElementById("charFieldHeight").value);
+            saveCharacterRpg();
+            renderCharacterPanel_();
+            fillSchedRpgSkillDropdown_();
+            scheduleDebouncedCloudAutoPush_();
+            toast("已儲存角色資料", "ok");
+          });
+        }
+        var sel = document.getElementById("charSkillSelect");
+        if (sel && !sel._bound) {
+          sel._bound = true;
+          sel.addEventListener("change", function () {
+            renderCharacterPanel_();
+          });
+        }
+        var bSk = document.getElementById("btnCharSaveSkill");
+        if (bSk && !bSk._bound) {
+          bSk._bound = true;
+          bSk.addEventListener("click", function () {
+            var sid = (document.getElementById("charSkillSelect").value || "").trim();
+            if (!sid) {
+              toast("請先揀技能");
+              return;
+            }
+            var sks = characterRpgState.skills || [];
+            var sk = null;
+            for (var i = 0; i < sks.length; i++) {
+              if (sks[i].id === sid) {
+                sk = sks[i];
+                break;
+              }
+            }
+            if (!sk) return;
+            var ne = document.getElementById("charSkillNameEdit");
+            var ge = document.getElementById("charSkillGoalEdit");
+            if (ne) sk.name = (ne.value || "").trim().slice(0, 80) || sk.name;
+            if (ge) sk.goalId = (ge.value || "").trim();
+            characterRpgState = normalizeCharacterRpg(characterRpgState);
+            saveCharacterRpg();
+            renderCharacterPanel_();
+            fillSchedRpgSkillDropdown_();
+            scheduleDebouncedCloudAutoPush_();
+            toast("已儲存技能", "ok");
+          });
+        }
+        var bAdd = document.getElementById("btnCharAddSkill");
+        if (bAdd && !bAdd._bound) {
+          bAdd._bound = true;
+          bAdd.addEventListener("click", function () {
+            var nm = (document.getElementById("charNewSkillName").value || "").trim();
+            if (!nm) {
+              toast("請填技能名");
+              return;
+            }
+            var gid = (document.getElementById("charNewSkillGoal").value || "").trim();
+            if (!gid) {
+              toast("請綁一個生活目標");
+              return;
+            }
+            var catTxt = (document.getElementById("charNewSkillCats").value || "").trim();
+            var lines = catTxt
+              ? catTxt
+                  .split(/\n/)
+                  .map(function (s) {
+                    return s.trim();
+                  })
+                  .filter(Boolean)
+              : [];
+            var cats = lines.map(function (ln) {
+              return normalizeRpgSkillCategory({ id: lifeId("cat"), name: ln, progress: 0, source: "manual" });
+            });
+            if (document.getElementById("charNewSkillBindTrades").checked) {
+              cats.push(
+                normalizeRpgSkillCategory({
+                  id: lifeId("cat"),
+                  name: "近30日交易（自動）",
+                  progress: 0,
+                  source: "trades30d",
+                })
+              );
+            }
+            characterRpgState.skills.push(
+              normalizeRpgSkill({
+                id: lifeId("sk"),
+                name: nm,
+                goalId: gid,
+                xp: 0,
+                categories: cats,
+              })
+            );
+            characterRpgState = normalizeCharacterRpg(characterRpgState);
+            document.getElementById("charNewSkillName").value = "";
+            document.getElementById("charNewSkillCats").value = "";
+            document.getElementById("charNewSkillBindTrades").checked = false;
+            saveCharacterRpg();
+            renderCharacterPanel_();
+            fillSchedRpgSkillDropdown_();
+            scheduleDebouncedCloudAutoPush_();
+            toast("已加入技能（Lv.0）", "ok");
+          });
+        }
+        var bAddCat = document.getElementById("btnCharSkillAddCat");
+        if (bAddCat && !bAddCat._bound) {
+          bAddCat._bound = true;
+          bAddCat.addEventListener("click", function () {
+            var sid = (document.getElementById("charSkillSelect").value || "").trim();
+            var raw = (document.getElementById("charSkillNewCatName").value || "").trim().slice(0, 40);
+            if (!sid || !raw) {
+              toast("請揀技能並填新分區名");
+              return;
+            }
+            var sk = findRpgSkillById_(sid);
+            if (!sk) return;
+            sk.categories = sk.categories || [];
+            sk.categories.push(normalizeRpgSkillCategory({ id: lifeId("cat"), name: raw, progress: 0, source: "manual" }));
+            document.getElementById("charSkillNewCatName").value = "";
+            saveCharacterRpg();
+            renderCharacterPanel_();
+            fillSchedRpgSkillDropdown_();
+            scheduleDebouncedCloudAutoPush_();
+            toast("已加分區", "ok");
+          });
+        }
+        var bDel = document.getElementById("btnCharDelSkill");
+        if (bDel && !bDel._bound) {
+          bDel._bound = true;
+          bDel.addEventListener("click", function () {
+            var sid = (document.getElementById("charSkillSelect").value || "").trim();
+            if (!sid || !window.confirm("確定刪除此技能？")) return;
+            characterRpgState.skills = (characterRpgState.skills || []).filter(function (s) {
+              return s.id !== sid;
+            });
+            saveCharacterRpg();
+            renderCharacterPanel_();
+            fillSchedRpgSkillDropdown_();
+            scheduleDebouncedCloudAutoPush_();
+            toast("已刪除技能", "ok");
           });
         }
       })();
@@ -14585,6 +15687,9 @@
       renderDash();
       populateLifeNewAreaSelect_();
       refreshWalletCategoryDropdowns_();
+      try {
+        renderRoutineStreakCard_();
+      } catch (eSt0) {}
     })();
   </script>
 </body>
