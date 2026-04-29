@@ -1829,6 +1829,85 @@
       background: rgba(8, 12, 18, 0.35);
     }
 
+    #panel-tradnotes.tn-page .tn-long-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      margin-bottom: 14px;
+    }
+
+    #panel-tradnotes.tn-page .tn-long-note {
+      border-radius: var(--radius);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(8, 12, 18, 0.55);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    #panel-tradnotes.tn-page .tn-long-note > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 12px 14px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+      font-weight: 700;
+      color: #e2e8f0;
+      user-select: none;
+    }
+
+    #panel-tradnotes.tn-page .tn-long-note > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    #panel-tradnotes.tn-page .tn-long-note > summary::before {
+      content: "▸";
+      display: inline-block;
+      width: 1em;
+      color: #38bdf8;
+      transition: transform 0.15s ease;
+    }
+
+    #panel-tradnotes.tn-page .tn-long-note[open] > summary::before {
+      transform: rotate(90deg);
+    }
+
+    #panel-tradnotes.tn-page .tn-long-note__meta {
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      flex: 1 1 100%;
+      margin-left: 1.15em;
+    }
+
+    #panel-tradnotes.tn-page .tn-long-note__body {
+      padding: 0 14px 14px 2.25rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    #panel-tradnotes.tn-page .tn-long-pre {
+      margin: 0;
+      padding: 12px 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: var(--font);
+      font-size: 0.86rem;
+      line-height: 1.65;
+      color: var(--text);
+      max-height: min(70vh, 520px);
+      overflow: auto;
+    }
+
+    #panel-tradnotes.tn-page .tn-long-note__bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: flex-end;
+      padding: 0 14px 12px 2.25rem;
+    }
+
     .analytics-table {
       width: 100%;
       border-collapse: collapse;
@@ -3630,9 +3709,9 @@
 
     <section id="panel-tradnotes" class="panel tn-page" role="tabpanel" hidden aria-labelledby="tab-tradnotes">
       <div class="card tn-hero">
-        <h2>交易筆記 · 閃卡溫習 <span class="badge">本機 + 雲端</span></h2>
+        <h2>交易筆記 · 閃卡＋長文 <span class="badge">本機 + 雲端</span></h2>
         <p class="lead">
-          將你嘅<strong>交易學習卡</strong>（例如 Anki 匯出）按<strong>主題</strong>整理；溫習翻面記憶。資料跟<strong>雲端合併同步</strong>寫入備份 JSON（以
+          <strong>閃卡</strong>（例如 Anki）用嚟溫習翻面；<strong>長篇筆記</strong>用摺疊段落記靈感、複盤、大段諗法（同主題／搜尋／匯出 JSON 一齊備份）。資料跟<strong>雲端合併同步</strong>（以
           <code>updatedAt</code> 合併）。<strong>唔係額外加密</strong>：靠私密網址、TOKEN、唔分享連結；無權限就睇唔到。
         </p>
       </div>
@@ -3709,6 +3788,55 @@
           <button type="button" class="btn btn-primary" id="tnBtnSaveCard">儲存新卡片</button>
           <button type="button" class="btn btn-ghost" id="tnBtnClearCardForm">清空表單</button>
         </div>
+      </div>
+      <div class="card">
+        <div class="tn-section-title">
+          <h2 style="margin: 0">長篇筆記 · 靈感／複盤</h2>
+          <span class="badge">Notes</span>
+        </div>
+        <p class="field-hint" style="margin-top: 4px">
+          每條用<strong>摺疊（撳標題展開）</strong>收好長文；可<strong>釘選</strong>置頂、<strong>複製全文</strong>、跟上面<strong>主題下拉</strong>篩選（揀「全部」會列出所有筆記）。
+        </p>
+        <input type="hidden" id="tnLongEditId" value="" />
+        <div class="form-grid">
+          <label class="field" style="grid-column: 1 / -1">
+            <span class="key">標題</span>
+            <input type="text" id="tnLongTitle" maxlength="200" placeholder="例：本週 EURUSD 諗法、風控原則草稿…" autocomplete="off" />
+          </label>
+          <label class="field" style="min-width: 200px">
+            <span class="key">主題</span>
+            <select id="tnLongTopic"></select>
+          </label>
+          <label class="field" style="flex: 1; min-width: 200px">
+            <span class="key">標籤（逗號分隔，可選）</span>
+            <input type="text" id="tnLongTags" maxlength="500" placeholder="例：複盤, 心態, 週記" autocomplete="off" />
+          </label>
+          <label class="field" style="display: flex; align-items: center; gap: 10px">
+            <input type="checkbox" id="tnLongPinned" class="ux-chk" />
+            <span class="key" style="margin: 0">釘選置頂</span>
+          </label>
+          <label class="field" style="display: flex; align-items: center; gap: 10px">
+            <input type="checkbox" id="tnLongStartOpen" class="ux-chk" />
+            <span class="key" style="margin: 0">預設展開（每次重新整理後）</span>
+          </label>
+          <label class="field" style="grid-column: 1 / -1">
+            <span class="key">內容（純文字，可寫長段落）</span>
+            <textarea id="tnLongBody" rows="10" maxlength="120000" placeholder="自由寫：策略諗法、錯誤反省、摘抄、待驗證假設…"></textarea>
+          </label>
+        </div>
+        <div class="form-actions" style="border: none; padding-top: 10px; margin-top: 0; flex-wrap: wrap; gap: 10px">
+          <button type="button" class="btn btn-primary" id="tnBtnLongSave">儲存筆記</button>
+          <button type="button" class="btn btn-ghost" id="tnBtnLongClearForm">清空表單</button>
+        </div>
+        <div class="tn-long-toolbar" style="margin-top: 18px">
+          <label class="field" style="flex: 1; min-width: 200px; margin: 0">
+            <span class="key">搜尋長筆記</span>
+            <input type="search" id="tnLongFilter" maxlength="200" placeholder="標題、內文、標籤…" autocomplete="off" />
+          </label>
+          <button type="button" class="btn btn-ghost btn-sm" id="tnBtnLongExpandAll">全部展開</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="tnBtnLongCollapseAll">全部收起</button>
+        </div>
+        <div id="tnLongNoteList" class="tn-card-list" style="margin-top: 8px" aria-live="polite"></div>
       </div>
       <div class="card">
         <div class="tn-section-title">
@@ -7204,11 +7332,27 @@
         };
       }
 
+      function normalizeTradingStudyLongNote(n) {
+        n = n || {};
+        return {
+          id: n.id || lifeId("tnln"),
+          topicId: String(n.topicId || "").trim(),
+          title: String(n.title || "").trim().slice(0, 200) || "未命名筆記",
+          body: String(n.body || "").slice(0, 120000),
+          tags: String(n.tags || "").trim().slice(0, 500),
+          pinned: !!n.pinned,
+          startOpen: !!n.startOpen,
+          createdAt: n.createdAt != null ? Number(n.createdAt) : Date.now(),
+          updatedAt: n.updatedAt != null ? Number(n.updatedAt) : Date.now(),
+        };
+      }
+
       function normalizeTradingStudyState(s) {
         s = s || {};
         s.version = 1;
         s.topics = Array.isArray(s.topics) ? s.topics.map(normalizeTradingStudyTopic) : [];
         s.cards = Array.isArray(s.cards) ? s.cards.map(normalizeTradingStudyCard) : [];
+        s.longNotes = Array.isArray(s.longNotes) ? s.longNotes.map(normalizeTradingStudyLongNote) : [];
         if (typeof s.syncUpdatedAt !== "number" || isNaN(s.syncUpdatedAt)) s.syncUpdatedAt = 0;
         return s;
       }
@@ -7310,10 +7454,34 @@
             if (!tidSet[c.topicId]) return false;
             return !entityKilledByTombstone_("tradeStudyCard", c.id, Number(c.updatedAt) || 0);
           });
+        var nmap = {};
+        function addLongNote(n) {
+          n = normalizeTradingStudyLongNote(n);
+          if (!n.id || !String(n.body || "").trim()) return;
+          var ex = nmap[n.id];
+          if (!ex) {
+            nmap[n.id] = n;
+            return;
+          }
+          var ua = Number(ex.updatedAt) || 0;
+          var ub = Number(n.updatedAt) || 0;
+          nmap[n.id] = ub >= ua ? n : ex;
+        }
+        (lo.longNotes || []).forEach(addLongNote);
+        (cl.longNotes || []).forEach(addLongNote);
+        var longNotes = Object.keys(nmap)
+          .map(function (k) {
+            return nmap[k];
+          })
+          .filter(function (n) {
+            if (!tidSet[n.topicId]) return false;
+            return !entityKilledByTombstone_("tradeStudyLongNote", n.id, Number(n.updatedAt) || 0);
+          });
         return normalizeTradingStudyState({
           version: 1,
           topics: topics,
           cards: cards,
+          longNotes: longNotes,
           syncUpdatedAt: Math.max(Number(lo.syncUpdatedAt) || 0, Number(cl.syncUpdatedAt) || 0),
         });
       }
@@ -7905,6 +8073,121 @@
           if (prevIm && topics.some(function (t) { return t.id === prevIm; })) im.value = prevIm;
           else if (topics[0]) im.value = topics[0].id;
         }
+        var lt = document.getElementById("tnLongTopic");
+        var prevLt = lt ? lt.value : "";
+        if (lt) {
+          lt.innerHTML = optsHtml(false);
+          if (prevLt && topics.some(function (t) { return t.id === prevLt; })) lt.value = prevLt;
+          else if (topics[0]) lt.value = topics[0].id;
+        }
+      }
+
+      function tnCopyPlainTextFallback_(text) {
+        var ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "readonly");
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand("copy");
+        } catch (eCp) {}
+        document.body.removeChild(ta);
+      }
+
+      function tnCopyPlainText_(label, text) {
+        text = String(text || "");
+        if (!text.trim()) {
+          toast("冇內容");
+          return;
+        }
+        function done() {
+          toast(label || "已複製");
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done).catch(function () {
+            tnCopyPlainTextFallback_(text);
+            done();
+          });
+        } else {
+          tnCopyPlainTextFallback_(text);
+          done();
+        }
+      }
+
+      function renderTradingStudyLongNotes_() {
+        var host = document.getElementById("tnLongNoteList");
+        if (!host) return;
+        tradingStudyState.longNotes = tradingStudyState.longNotes || [];
+        var topicSel = document.getElementById("tnTopicSelect");
+        var tid = topicSel && topicSel.value ? topicSel.value : "";
+        var fq = document.getElementById("tnLongFilter");
+        var q = fq ? String(fq.value || "").trim().toLowerCase() : "";
+        var notes = tradingStudyState.longNotes.slice().sort(function (a, b) {
+          if (!!b.pinned !== !!a.pinned) return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+          return (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0);
+        });
+        if (tid && tid !== "__all__") {
+          notes = notes.filter(function (n) {
+            return n.topicId === tid;
+          });
+        }
+        if (q) {
+          notes = notes.filter(function (n) {
+            var blob = ((n.title || "") + " " + (n.body || "") + " " + (n.tags || "")).toLowerCase();
+            return blob.indexOf(q) !== -1;
+          });
+        }
+        if (!notes.length) {
+          host.innerHTML = '<p class="tn-empty">未有長篇筆記，或者無符合篩選。用上面表單新增。</p>';
+          return;
+        }
+        host.innerHTML = notes
+          .map(function (n) {
+            var wc = (n.body || "").length;
+            var tagStr = (n.tags || "").trim();
+            var dt = new Date(Number(n.updatedAt) || 0);
+            var dtStr = isNaN(dt.getTime()) ? "—" : dt.toLocaleString("zh-HK", { dateStyle: "medium", timeStyle: "short" });
+            var sumLine =
+              escapeHtml(tnTopicName_(n.topicId)) +
+              " · " +
+              dtStr +
+              " · " +
+              wc.toLocaleString("zh-HK") +
+              " 字元" +
+              (tagStr ? " · 標籤：" + escapeHtml(tagStr.length > 48 ? tagStr.slice(0, 48) + "…" : tagStr) : "");
+            return (
+              '<details class="tn-long-note"' +
+              (n.startOpen ? " open" : "") +
+              ' data-tn-long="' +
+              escapeHtml(n.id) +
+              '"><summary class="tn-long-note__sum">' +
+              (n.pinned ? '<span class="tn-pill tn-pill--star" style="margin-right:6px">釘</span>' : "") +
+              escapeHtml(n.title || "未命名筆記") +
+              '<span class="tn-long-note__meta">' +
+              sumLine +
+              "</span></summary>" +
+              '<div class="tn-long-note__body"><pre class="tn-long-pre">' +
+              escapeHtml(n.body || "") +
+              '</pre></div><div class="tn-long-note__bar">' +
+              '<button type="button" class="btn btn-ghost btn-sm" data-tn-long-edit="' +
+              escapeHtml(n.id) +
+              '">編輯</button>' +
+              '<button type="button" class="btn btn-ghost btn-sm" data-tn-long-pin="' +
+              escapeHtml(n.id) +
+              '">' +
+              (n.pinned ? "取消釘選" : "釘選") +
+              "</button>" +
+              '<button type="button" class="btn btn-ghost btn-sm" data-tn-long-copy="' +
+              escapeHtml(n.id) +
+              '">複製全文</button>' +
+              '<button type="button" class="btn btn-ghost btn-sm" data-tn-long-del="' +
+              escapeHtml(n.id) +
+              '">刪除</button></div></details>'
+            );
+          })
+          .join("");
       }
 
       function tnParseAnkiTabImport_(text, topicId) {
@@ -8048,6 +8331,7 @@
       function renderTradingStudyPanel_() {
         tradingStudyState = ensureTradingStudyDefaultTopic_(normalizeTradingStudyState(tradingStudyState));
         tnFillTopicSelects_();
+        renderTradingStudyLongNotes_();
         var host = document.getElementById("tnCardList");
         if (!host) return;
         var topicSel = document.getElementById("tnTopicSelect");
@@ -8242,6 +8526,13 @@
                 cc.updatedAt = now;
               }
             }
+            for (var li = 0; li < (tradingStudyState.longNotes || []).length; li++) {
+              var ln = tradingStudyState.longNotes[li];
+              if (ln.topicId === delId) {
+                ln.topicId = fb;
+                ln.updatedAt = now;
+              }
+            }
             tradingStudyState.topics = others;
             recordSyncTombstone_("tradeStudyTopic", delId);
             saveTradingStudyState_();
@@ -8251,6 +8542,192 @@
         document.getElementById("tnTopicSelect").addEventListener("change", renderTradingStudyPanel_);
         document.getElementById("tnCardFilter").addEventListener("input", renderTradingStudyPanel_);
         document.getElementById("tnFilterStar").addEventListener("change", renderTradingStudyPanel_);
+        var tnLongFil = document.getElementById("tnLongFilter");
+        if (tnLongFil) tnLongFil.addEventListener("input", renderTradingStudyPanel_);
+        var tnBtnLongSv = document.getElementById("tnBtnLongSave");
+        if (tnBtnLongSv) {
+          tnBtnLongSv.addEventListener("click", function () {
+            var topicId = String((document.getElementById("tnLongTopic") || {}).value || "").trim();
+            if (!topicId) {
+              toast("請揀主題");
+              return;
+            }
+            var body = String((document.getElementById("tnLongBody") || {}).value || "");
+            if (!String(body).trim()) {
+              toast("請寫內容（至少一段）");
+              return;
+            }
+            var titleIn = String((document.getElementById("tnLongTitle") || {}).value || "").trim();
+            var t0 = body.replace(/\s+/g, " ").trim().slice(0, 100);
+            var title = titleIn || (t0.length >= 100 ? t0 + "…" : t0) || "未命名筆記";
+            var tags = String((document.getElementById("tnLongTags") || {}).value || "").trim();
+            var pinned = !!(document.getElementById("tnLongPinned") && document.getElementById("tnLongPinned").checked);
+            var startOpen = !!(document.getElementById("tnLongStartOpen") && document.getElementById("tnLongStartOpen").checked);
+            var eid = String((document.getElementById("tnLongEditId") || {}).value || "").trim();
+            var now = Date.now();
+            tradingStudyState.longNotes = tradingStudyState.longNotes || [];
+            if (eid) {
+              var got = false;
+              for (var zi = 0; zi < tradingStudyState.longNotes.length; zi++) {
+                if (tradingStudyState.longNotes[zi].id === eid) {
+                  tradingStudyState.longNotes[zi] = normalizeTradingStudyLongNote({
+                    id: eid,
+                    topicId: topicId,
+                    title: title,
+                    body: body,
+                    tags: tags,
+                    pinned: pinned,
+                    startOpen: startOpen,
+                    createdAt: tradingStudyState.longNotes[zi].createdAt,
+                    updatedAt: now,
+                  });
+                  got = true;
+                  break;
+                }
+              }
+              if (!got) {
+                toast("搵唔到該筆記");
+                return;
+              }
+              toast("已更新筆記");
+            } else {
+              tradingStudyState.longNotes.push(
+                normalizeTradingStudyLongNote({
+                  topicId: topicId,
+                  title: title,
+                  body: body,
+                  tags: tags,
+                  pinned: pinned,
+                  startOpen: startOpen,
+                  createdAt: now,
+                  updatedAt: now,
+                })
+              );
+              toast("已新增筆記");
+            }
+            document.getElementById("tnLongEditId").value = "";
+            document.getElementById("tnLongTitle").value = "";
+            document.getElementById("tnLongBody").value = "";
+            document.getElementById("tnLongTags").value = "";
+            if (document.getElementById("tnLongPinned")) document.getElementById("tnLongPinned").checked = false;
+            if (document.getElementById("tnLongStartOpen")) document.getElementById("tnLongStartOpen").checked = false;
+            saveTradingStudyState_();
+            renderTradingStudyPanel_();
+          });
+        }
+        var tnBtnLongClr = document.getElementById("tnBtnLongClearForm");
+        if (tnBtnLongClr) {
+          tnBtnLongClr.addEventListener("click", function () {
+            document.getElementById("tnLongEditId").value = "";
+            document.getElementById("tnLongTitle").value = "";
+            document.getElementById("tnLongBody").value = "";
+            document.getElementById("tnLongTags").value = "";
+            if (document.getElementById("tnLongPinned")) document.getElementById("tnLongPinned").checked = false;
+            if (document.getElementById("tnLongStartOpen")) document.getElementById("tnLongStartOpen").checked = false;
+            toast("已清空表單");
+          });
+        }
+        var tnExp = document.getElementById("tnBtnLongExpandAll");
+        if (tnExp) {
+          tnExp.addEventListener("click", function () {
+            var nodes = document.querySelectorAll("#tnLongNoteList details.tn-long-note");
+            for (var ei = 0; ei < nodes.length; ei++) nodes[ei].open = true;
+          });
+        }
+        var tnCol = document.getElementById("tnBtnLongCollapseAll");
+        if (tnCol) {
+          tnCol.addEventListener("click", function () {
+            var nodes2 = document.querySelectorAll("#tnLongNoteList details.tn-long-note");
+            for (var ci2 = 0; ci2 < nodes2.length; ci2++) nodes2[ci2].open = false;
+          });
+        }
+        var longHost = document.getElementById("tnLongNoteList");
+        if (longHost) {
+          longHost.addEventListener("click", function (e) {
+            var edL = e.target.closest("[data-tn-long-edit]");
+            if (edL) {
+              var ide = edL.getAttribute("data-tn-long-edit");
+              var noteE = null;
+              for (var je = 0; je < (tradingStudyState.longNotes || []).length; je++) {
+                if (tradingStudyState.longNotes[je].id === ide) {
+                  noteE = tradingStudyState.longNotes[je];
+                  break;
+                }
+              }
+              if (!noteE) return;
+              document.getElementById("tnLongEditId").value = noteE.id;
+              document.getElementById("tnLongTitle").value = noteE.title || "";
+              document.getElementById("tnLongBody").value = noteE.body || "";
+              document.getElementById("tnLongTags").value = noteE.tags || "";
+              if (document.getElementById("tnLongPinned")) document.getElementById("tnLongPinned").checked = !!noteE.pinned;
+              if (document.getElementById("tnLongStartOpen")) document.getElementById("tnLongStartOpen").checked = !!noteE.startOpen;
+              var ltEl = document.getElementById("tnLongTopic");
+              if (ltEl && noteE.topicId) ltEl.value = noteE.topicId;
+              var tTit = document.getElementById("tnLongTitle");
+              if (tTit) {
+                tTit.focus();
+                try {
+                  tTit.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                } catch (eSc) {}
+              }
+              toast("已載入編輯；改完撳「儲存筆記」");
+              return;
+            }
+            var pinB = e.target.closest("[data-tn-long-pin]");
+            if (pinB) {
+              var idp = pinB.getAttribute("data-tn-long-pin");
+              var nowP = Date.now();
+              for (var jp = 0; jp < (tradingStudyState.longNotes || []).length; jp++) {
+                if (tradingStudyState.longNotes[jp].id === idp) {
+                  tradingStudyState.longNotes[jp].pinned = !tradingStudyState.longNotes[jp].pinned;
+                  tradingStudyState.longNotes[jp].updatedAt = nowP;
+                  break;
+                }
+              }
+              saveTradingStudyState_();
+              renderTradingStudyPanel_();
+              toast("已切換釘選");
+              return;
+            }
+            var cp = e.target.closest("[data-tn-long-copy]");
+            if (cp) {
+              var idc = cp.getAttribute("data-tn-long-copy");
+              var noteC = null;
+              for (var jc = 0; jc < (tradingStudyState.longNotes || []).length; jc++) {
+                if (tradingStudyState.longNotes[jc].id === idc) {
+                  noteC = tradingStudyState.longNotes[jc];
+                  break;
+                }
+              }
+              if (!noteC) return;
+              var tagC = (noteC.tags || "").trim();
+              var blobC =
+                (noteC.title || "") + "\n——\n" + (tagC ? "標籤：" + tagC + "\n——\n" : "") + (noteC.body || "");
+              tnCopyPlainText_("已複製全文", blobC);
+              return;
+            }
+            var delL = e.target.closest("[data-tn-long-del]");
+            if (delL) {
+              var iddL = delL.getAttribute("data-tn-long-del");
+              if (!window.confirm("確定刪除此長篇筆記？")) return;
+              recordSyncTombstone_("tradeStudyLongNote", iddL);
+              tradingStudyState.longNotes = (tradingStudyState.longNotes || []).filter(function (x) {
+                return x.id !== iddL;
+              });
+              if (String((document.getElementById("tnLongEditId") || {}).value || "") === iddL) {
+                document.getElementById("tnLongEditId").value = "";
+                document.getElementById("tnLongTitle").value = "";
+                document.getElementById("tnLongBody").value = "";
+                document.getElementById("tnLongTags").value = "";
+                if (document.getElementById("tnLongPinned")) document.getElementById("tnLongPinned").checked = false;
+                if (document.getElementById("tnLongStartOpen")) document.getElementById("tnLongStartOpen").checked = false;
+              }
+              saveTradingStudyState_();
+              renderTradingStudyPanel_();
+              toast("已刪除");
+            }
+          });
+        }
         document.getElementById("tnBtnSaveCard").addEventListener("click", function () {
           var topicSel = document.getElementById("tnTopicSelect");
           var topicId = topicSel && topicSel.value && topicSel.value !== "__all__" ? topicSel.value : "";
@@ -8860,7 +9337,7 @@
         daily: { title: "每日心情", sub: "今日一句 · 效應概念 · 心情日記" },
         psych: { title: "效應庫", sub: "心理學圖鑑 · 出處 · 閃卡複習" },
         tradeideas: { title: "交易思路", sub: "策略與 idea 筆記庫" },
-        tradnotes: { title: "交易筆記", sub: "Anki 式閃卡 · 主題整理 · 雲端同步" },
+        tradnotes: { title: "交易筆記", sub: "閃卡溫習 · 長篇摺疊筆記 · 主題 · 雲端同步" },
         goals: { title: "目標與進度", sub: "大目標 · 細步驟 · 心得 · 連住交易日誌" },
         routine: { title: "每週課表", sub: "本週格線 · 固定時段 · 打剔同步目標" },
         wallet: { title: "錢包", sub: "收支 · 預算 · 日限與預設扣減 · 資產負債概覽" },
