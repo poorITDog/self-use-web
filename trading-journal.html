@@ -3979,8 +3979,9 @@
           </label>
           <div class="form-grid" style="margin-top: 14px">
             <label class="field">
-              <span class="key">本月花費預算（USD／HKD 自訂單位一致）</span>
-              <input type="number" id="walletBudget" min="0" step="100" placeholder="例 8000" />
+              <span class="key">本月花費預算／月支出上限池（USD／HKD 自訂單位一致）</span>
+              <input type="number" id="walletBudget" min="0" step="100" placeholder="例 3100" />
+              <span class="field-hint" style="display: block; margin-top: 6px">「本月已用」由下面帳本<strong>支出加總</strong>自動計，唔使手填；改月份或加記錄後撳儲存預算或切頁即會更新顯示。</span>
             </label>
             <label class="field">
               <span class="key">本月儲蓄目標（可選）</span>
@@ -4146,7 +4147,7 @@
         <div class="card">
           <h2>每日開支上限 <span class="badge">Cap</span></h2>
           <p class="lead">
-            例如設<strong>100</strong>：今日手動支出 +「預設扣減」合計<strong>50</strong>，就會顯示<strong>仲可用 50</strong>。單位請同生活錢包一致（HKD／USD 自己統一）。喺錢包記帳時剔<strong>唔計入每日開支上限</strong>嘅支出（例如水電月費）<strong>唔會</strong>計入呢度。
+            例如設<strong>日上限 100</strong>：今日使費（手動＋預設扣減）會同<strong>日初 buffer</strong>一齊計「今日可用」；buffer 每日<strong>日尾</strong>先更新，可以負數（之後幾日要「填返」）。剔<strong>唔計日限</strong>嘅支出唔計入呢度。
           </p>
           <label class="field" style="max-width: 280px">
             <span class="key">一日最多使（留空＝唔啟用日限）</span>
@@ -4161,10 +4162,10 @@
           <div id="dailySpendTodayBox"></div>
         </div>
         <div class="card">
-          <h2>本月「日限結餘」累積 <span class="badge">Pool</span></h2>
+          <h2>日限 buffer 池（日尾結算）<span class="badge">Pool</span></h2>
           <p class="field-hint" style="margin-top: 0">
-            每日結餘 = max(0, 日上限 − 當日總支出)。總支出 = <strong>生活錢包</strong>內該日<strong>支出</strong>加總 +
-            <strong>預設支出</strong>喺該日適用嘅金額。未來日子唔計入；睇緊過去月就計足全月。
+            每日<strong>日尾</strong>計：<code>buffer</code> 連續累積 <code>前一日 buffer +（日上限 − 當日總支出）</code>，可以<strong>負數</strong>（即係要之後「填返」）。當日總支出 = 錢包該日支出（計日限）+
+            預設扣減。每月<strong>初一</strong> buffer 由 0 重新計。下面「月上限池」跟帳本<strong>本月花費預算</strong>同<strong>本月已用</strong>連動，每次加記錄自動更新。
           </p>
           <label class="field" style="max-width: 220px">
             <span class="key">計算月份</span>
@@ -10884,22 +10885,54 @@
         return Math.min(dim, new Date().getDate());
       }
 
-      function computeMonthlyDailySavings(ym) {
+      function computeDailyCapBufferRollup_(ym) {
         var cap = routineState.wallet.dailyExpenseCap;
         if (cap == null || isNaN(cap) || cap <= 0) return null;
         var end = dailyPoolEndDay(ym);
-        var total = 0;
+        if (end < 1) return { rows: [], finalBuffer: 0, cap: cap };
+        var running = 0;
         var rows = [];
         for (var day = 1; day <= end; day++) {
           var iso = ym + "-" + String(day).padStart(2, "0");
           var man = walletExpenseSumOnDate(iso);
           var pre = presetExpenseSumOnDate(iso);
           var tot = man + pre;
-          var left = Math.max(0, cap - tot);
-          total += left;
-          rows.push({ iso: iso, man: man, pre: pre, tot: tot, left: left });
+          var dailyDelta = cap - tot;
+          running += dailyDelta;
+          rows.push({
+            iso: iso,
+            man: man,
+            pre: pre,
+            tot: tot,
+            cap: cap,
+            dailyDelta: dailyDelta,
+            bufferEod: running,
+          });
         }
-        return { total: total, rows: rows };
+        return { rows: rows, finalBuffer: running, cap: cap };
+      }
+
+      /** 該曆日開始時（即前一日日尾之後）嘅 buffer；每月 1 號或跨月為 0 */
+      function dailyCapBufferOpeningForIso_(iso) {
+        if (!iso || String(iso).length < 10) return 0;
+        var ym = iso.slice(0, 7);
+        var prev = isoAddDays_(iso, -1);
+        if (prev.slice(0, 7) !== ym) return 0;
+        var roll = computeDailyCapBufferRollup_(ym);
+        if (!roll || !roll.rows.length) return 0;
+        for (var i = 0; i < roll.rows.length; i++) {
+          if (roll.rows[i].iso === prev) return roll.rows[i].bufferEod;
+        }
+        return 0;
+      }
+
+      function walletMonthExpenseTotal_(ym) {
+        var exp = 0;
+        var list = walletEntriesForMonth(ym) || [];
+        for (var i = 0; i < list.length; i++) {
+          if (list[i].type === "expense") exp += list[i].amount;
+        }
+        return exp;
       }
 
       function presetRepeatLabel(p) {
@@ -10940,12 +10973,13 @@
         var manT = walletExpenseSumOnDate(today);
         var preT = presetExpenseSumOnDate(today);
         var totT = manT + preT;
-        var remT = cap != null && !isNaN(cap) && cap > 0 ? Math.max(0, cap - totT) : null;
+        var openingBuf = dailyCapBufferOpeningForIso_(today);
+        var headroomT = cap != null && !isNaN(cap) && cap > 0 ? cap + openingBuf - totT : null;
         var tb = document.getElementById("dailySpendTodayBox");
         if (tb) {
           if (cap == null || isNaN(cap) || cap <= 0) {
             tb.innerHTML =
-              '<p class="field-hint">你未設定「每日開支上限」。設咗之後，呢度會顯示今日仲可用幾多。</p>' +
+              '<p class="field-hint">你未設定「每日開支上限」。設咗之後，呢度會顯示今日仲可用幾多（連 buffer）。</p>' +
               "<p class=\"field-hint\" style=\"margin-top:8px\">今日手動支出（錢包）：<strong>" +
               manT.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
               "</strong> · 預設扣減：<strong>" +
@@ -10954,9 +10988,16 @@
               totT.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
               "</strong></p>";
           } else {
-            var over = totT > cap;
+            var overDay = totT > cap;
+            var overHead = headroomT != null && headroomT < 0;
             tb.innerHTML =
               '<div class="wallet-grid">' +
+              '<div class="wallet-stat"><div class="wk">日初 buffer<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">（昨日日尾）</span></div><div class="wv ' +
+              (openingBuf >= 0 ? "good" : "bad") +
+              '">' +
+              (openingBuf >= 0 ? "+" : "") +
+              openingBuf.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
+              "</div></div>" +
               '<div class="wallet-stat"><div class="wk">日上限</div><div class="wv">' +
               cap.toLocaleString("zh-HK", { maximumFractionDigits: 0 }) +
               "</div></div>" +
@@ -10967,41 +11008,71 @@
               preT.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
               "</div></div>" +
               '<div class="wallet-stat"><div class="wk">今日合計</div><div class="wv ' +
-              (over ? "bad" : "") +
+              (overDay ? "bad" : "") +
               '">' +
               totT.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
               "</div></div>" +
-              '<div class="wallet-stat"><div class="wk">' +
-              (over ? "已超日上限" : "今日仲可用") +
-              '</div><div class="wv ' +
-              (over ? "bad" : "good") +
+              '<div class="wallet-stat"><div class="wk">今日可用<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">日限+日初buffer−今已用</span></div><div class="wv ' +
+              (overHead ? "bad" : "good") +
               '">' +
-              (over
-                ? "超出 " + (totT - cap).toLocaleString("zh-HK", { maximumFractionDigits: 2 })
-                : remT.toLocaleString("zh-HK", { maximumFractionDigits: 2 })) +
+              (headroomT.toLocaleString("zh-HK", { maximumFractionDigits: 2 })) +
+              "</div></div>" +
+              '<div class="wallet-stat"><div class="wk">淨超日限<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">max(0,今使−日限)</span></div><div class="wv ' +
+              (overDay ? "bad" : "") +
+              '">' +
+              (overDay ? (totT - cap).toLocaleString("zh-HK", { maximumFractionDigits: 2 }) : "0") +
               "</div></div></div>" +
               '<p class="field-hint" style="margin-top:10px">日期：<strong>' +
               escapeHtml(today) +
-              "</strong> · 去「生活錢包」可改其他日子嘅流水。</p>";
+              "</strong> · buffer 以<strong>日尾</strong>結算；上面「今日可用」係而家時刻嘅即時數。去「生活錢包」可改其他日子嘅流水。</p>";
           }
         }
         var mb = document.getElementById("dailySpendMonthBox");
         if (mb) {
-          var pool = computeMonthlyDailySavings(ymPick);
-          if (!pool) {
-            mb.innerHTML =
-              '<p class="field-hint">未設定每日上限，或所選月份係未來月份（結餘池由 0 日開始計）。</p>';
-          } else {
-            var tail = pool.rows.slice(-10).reverse();
-            mb.innerHTML =
-              '<div class="wallet-stat" style="max-width:420px;margin-bottom:12px"><div class="wk">本月累積「日限結餘」（' +
-              escapeHtml(ymPick) +
-              '）</div><div class="wv good" style="font-size:1.35rem">+' +
-              pool.total.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
+          var roll = computeDailyCapBufferRollup_(ymPick);
+          var monthBud = routineState.wallet.monthlyExpenseBudget;
+          var monthExp = walletMonthExpenseTotal_(ymPick);
+          var monthLeft =
+            monthBud != null && !isNaN(monthBud) && monthBud >= 0 ? monthBud - monthExp : null;
+          var poolHtml = "";
+          if (monthLeft != null) {
+            poolHtml +=
+              '<div class="wallet-grid" style="margin-bottom:14px">' +
+              '<div class="wallet-stat"><div class="wk">月支出上限池<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">（本月花費預算）</span></div><div class="wv">' +
+              monthBud.toLocaleString("zh-HK", { maximumFractionDigits: 0 }) +
               "</div></div>" +
-              "<p class=\"field-hint\" style=\"margin-bottom:8px\">即係：每日 <code>max(0, 日上限−當日總支出)</code> 加埋（只計已過去／今日嘅日數）。</p>" +
-              '<div style="max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:var(--radius-sm)">' +
-              '<table class="analytics-table" style="margin:0"><thead><tr><th>日期</th><th>手動</th><th>預設</th><th>合計</th><th>當日結餘</th></tr></thead><tbody>' +
+              '<div class="wallet-stat"><div class="wk">本月已用<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">帳本支出加總</span></div><div class="wv bad">' +
+              monthExp.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
+              "</div></div>" +
+              '<div class="wallet-stat"><div class="wk">月池尚餘</div><div class="wv ' +
+              (monthLeft >= 0 ? "good" : "bad") +
+              '">' +
+              monthLeft.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
+              "</div></div></div>";
+          } else {
+            poolHtml +=
+              '<p class="field-hint" style="margin-bottom:10px">未設「本月花費預算」— 去<strong>收支帳本</strong>填月上限池後，呢度會顯示已用／尚餘（跟帳本自動同步）。</p>';
+          }
+          if (!roll) {
+            mb.innerHTML =
+              poolHtml +
+              '<p class="field-hint">未設定每日上限，或所選月份係未來月份（日限 buffer 由 0 日開始計）。</p>';
+          } else {
+            var tail = roll.rows.slice(-10).reverse();
+            var fin = roll.finalBuffer;
+            mb.innerHTML =
+              poolHtml +
+              '<div class="wallet-stat" style="max-width:480px;margin-bottom:12px"><div class="wk">截至 ' +
+              escapeHtml(ymPick) +
+              " 最後計過嘅日 · <strong>日尾 buffer</strong></div><div class=\"wv " +
+              (fin >= 0 ? "good" : "bad") +
+              '" style="font-size:1.25rem">' +
+              (fin >= 0 ? "+" : "") +
+              fin.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
+              "</div></div>" +
+              '<p class="field-hint" style="margin-bottom:8px">每日 <code>日尾 buffer = 前一日 buffer +（日上限 − 當日合計使費）</code>；表內「當日淨額」= 日上限 − 合計。</p>' +
+              '<div style="max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:var(--radius-sm)">' +
+              '<table class="analytics-table" style="margin:0;font-size:0.86rem"><thead><tr><th>日期</th><th>手動</th><th>預設</th><th>合計</th><th>當日淨額</th><th>日尾 buffer</th></tr></thead><tbody>' +
               tail
                 .map(function (r) {
                   return (
@@ -11013,15 +11084,18 @@
                     r.pre.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
                     "</td><td>" +
                     r.tot.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
-                    '</td><td style="font-weight:700">' +
-                    r.left.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
+                    "</td><td>" +
+                    r.dailyDelta.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
+                    '</td><td style="font-weight:700;white-space:nowrap">' +
+                    (r.bufferEod >= 0 ? "+" : "") +
+                    r.bufferEod.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
                     "</td></tr>"
                   );
                 })
                 .join("") +
               "</tbody></table></div>" +
               '<p class="field-hint" style="margin-top:8px">表尾顯示最近 10 個已計日；全月共 ' +
-              pool.rows.length +
+              roll.rows.length +
               " 日。</p>";
           }
         }
@@ -11663,7 +11737,7 @@
               : "—") +
             "</div></div>" +
             (leftSpend != null
-              ? '<div class="wallet-stat"><div class="wk">花費預算內尚可花</div><div class="wv ' +
+              ? '<div class="wallet-stat"><div class="wk">月池尚餘<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">預算−本月支出（自動）</span></div><div class="wv ' +
                 (leftSpend >= 0 ? "good" : "bad") +
                 '">' +
                 leftSpend.toLocaleString("zh-HK", { maximumFractionDigits: 0 }) +
