@@ -3933,8 +3933,8 @@
         <div class="card">
           <h2>每月固定支出 <span class="badge">月費</span></h2>
           <p class="lead">
-            例如<strong>租金、健身房月費、訂閱</strong>：設好範本後，每當你喺上面揀某個<strong>檢視月份</strong>而該月尚未有對應一筆，系統會<strong>自動加一筆支出</strong>到流水（可單月刪除，唔會刪走範本）。每月幾號建議填
-            <strong>1–28</strong>避免 2 月無該日。
+            例如<strong>租金、健身房月費、訂閱</strong>：揀<strong>檢視月份</strong>時若該月尚未有對應一筆，會<strong>自動加支出</strong>（金額跟<strong>範本嘅「分段金額」</strong>：幾多錢由邊個月起）。<strong>已經寫入流水嘅舊月唔會被程式改數</strong>；要改舊月請單筆刪除再揀返該月觸發補帳，或手動改流水。每月幾號建議
+            <strong>1–28</strong>。
           </p>
           <div class="form-grid">
             <label class="field" style="grid-column: 1 / -1">
@@ -3962,6 +3962,57 @@
             <button type="button" class="btn btn-primary" id="btnWalletFixedAdd">加入月費範本</button>
           </div>
           <div id="walletFixedList" style="margin-top: 14px" aria-live="polite"></div>
+          <div id="walletTplAmtEditPanel" style="margin-top: 16px; padding-top: 14px; border-top: 1px dashed rgba(255, 255, 255, 0.15)" hidden>
+            <h3 style="margin: 0 0 8px; font-size: 1rem">調整範本「分段金額」</h3>
+            <p class="field-hint" style="margin-top: 0">
+              適用於<strong>月費／固定收入</strong>：填<strong>新金額</strong>同<strong>生效月份</strong>（含該月）後，之後<strong>首次自動補帳</strong>會用新段；舊月已存在嘅流水<strong>唔會自動改</strong>。例：租三月仍 4000、四月起 5000 → 新金額填 5000、生效月填 2025-04。
+            </p>
+            <input type="hidden" id="walletTplAmtEditKind" value="" />
+            <input type="hidden" id="walletTplAmtEditId" value="" />
+            <div class="form-grid">
+              <label class="field">
+                <span class="key">新金額</span>
+                <input type="number" id="walletTplAmtEditNew" min="0" step="0.01" />
+              </label>
+              <label class="field">
+                <span class="key">生效月份（含）</span>
+                <input type="month" id="walletTplAmtEditFromYm" />
+              </label>
+            </div>
+            <div class="form-actions" style="border: none; padding-top: 10px; margin-top: 0; flex-wrap: wrap; gap: 10px">
+              <button type="button" class="btn btn-primary" id="btnWalletTplAmtApply">套用分段</button>
+              <button type="button" class="btn btn-ghost" id="btnWalletTplAmtCancel">取消</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>每月固定收入 <span class="badge">入帳</span></h2>
+          <p class="lead">
+            例如<strong>出糧、固定股息</strong>：揀月份檢視時若該月未有一筆會<strong>自動加收入</strong>。金額邏輯同月費（分段、唔改寫舊月流水）。
+          </p>
+          <div class="form-grid">
+            <label class="field" style="grid-column: 1 / -1">
+              <span class="key">名稱（會寫入備註）</span>
+              <input type="text" id="walletIncFixedTitle" placeholder="例：出糧" maxlength="80" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span class="key">金額</span>
+              <input type="number" id="walletIncFixedAmt" min="0" step="0.01" placeholder="30000" />
+            </label>
+            <label class="field">
+              <span class="key">收入分類</span>
+              <select id="walletIncFixedCat"></select>
+            </label>
+            <label class="field">
+              <span class="key">每月幾號入帳（1–28）</span>
+              <input type="number" id="walletIncFixedDay" min="1" max="28" value="1" />
+            </label>
+          </div>
+          <div class="form-actions" style="border: none; padding-top: 12px; margin-top: 0; flex-wrap: wrap; gap: 10px">
+            <button type="button" class="btn btn-primary" id="btnWalletIncFixedAdd">加入固定收入範本</button>
+          </div>
+          <div id="walletIncFixedList" style="margin-top: 14px" aria-live="polite"></div>
         </div>
 
         <div class="card">
@@ -4594,6 +4645,8 @@
             .join("");
         }
         if (wf) fillWalletCategorySelect_(wf, true);
+        var wic = document.getElementById("walletIncFixedCat");
+        if (wic) fillWalletCategorySelect_(wic, false);
       }
 
       function parsePlaybookStrategiesBlocks_(text) {
@@ -5038,6 +5091,7 @@
             dailyExpenseCap: null,
             expensePresets: [],
             monthlyFixedTemplates: [],
+            monthlyIncomeTemplates: [],
           },
         };
       }
@@ -5090,6 +5144,7 @@
                 excludeFromDailyCap: !!(e.type === "expense" && e.excludeFromDailyCap),
                 createdAt: e.createdAt != null ? Number(e.createdAt) : Date.now(),
                 monthlyFixedTemplateId: e.monthlyFixedTemplateId ? String(e.monthlyFixedTemplateId) : "",
+                monthlyIncomeTemplateId: e.monthlyIncomeTemplateId ? String(e.monthlyIncomeTemplateId) : "",
               };
             })
           : [];
@@ -5114,21 +5169,109 @@
           : [];
         d.wallet.monthlyFixedTemplates = Array.isArray(d.wallet.monthlyFixedTemplates)
           ? d.wallet.monthlyFixedTemplates.map(function (t) {
-              var billDay = t.billDay != null ? parseInt(String(t.billDay), 10) : 1;
-              if (isNaN(billDay) || billDay < 1) billDay = 1;
-              if (billDay > 28) billDay = 28;
-              return {
-                id: t.id || lifeId("ft"),
-                title: (t.title || "").trim() || "月費",
-                amount: Math.max(0, Math.abs(Number(t.amount) || 0)),
-                category: (t.category || "住屋").trim() || "其他支出",
-                billDay: billDay,
-                excludeFromDailyCap: !!t.excludeFromDailyCap,
-              };
+              return normalizeWalletMonthlyExpenseTemplate_(t);
+            })
+          : [];
+        d.wallet.monthlyIncomeTemplates = Array.isArray(d.wallet.monthlyIncomeTemplates)
+          ? d.wallet.monthlyIncomeTemplates.map(function (t) {
+              return normalizeWalletMonthlyIncomeTemplate_(t);
             })
           : [];
         if (typeof d.syncUpdatedAt !== "number" || isNaN(d.syncUpdatedAt)) d.syncUpdatedAt = 0;
         return d;
+      }
+
+      function walletYmKey_(s) {
+        if (!s) return "";
+        var x = String(s).trim().slice(0, 7);
+        return /^\d{4}-\d{2}$/.test(x) ? x : "";
+      }
+
+      function walletNormalizeAmountBrackets_(raw, fallbackAmount) {
+        var fb = Math.max(0, Math.abs(Number(fallbackAmount) || 0));
+        if (!Array.isArray(raw) || !raw.length) return [{ fromYm: null, amount: fb }];
+        var out = [];
+        for (var i = 0; i < raw.length; i++) {
+          var b = raw[i] || {};
+          var fy = b.fromYm != null && String(b.fromYm).trim() !== "" ? walletYmKey_(b.fromYm) : null;
+          if (fy === "") fy = null;
+          var am = Math.max(0, Math.abs(Number(b.amount) || 0));
+          out.push({ fromYm: fy, amount: am });
+        }
+        if (!out.length) return [{ fromYm: null, amount: fb }];
+        out.sort(function (a, b) {
+          if (!a.fromYm && !b.fromYm) return 0;
+          if (!a.fromYm) return -1;
+          if (!b.fromYm) return 1;
+          return String(a.fromYm).localeCompare(String(b.fromYm));
+        });
+        return out;
+      }
+
+      function walletDedupeAmountBrackets_(arr) {
+        var norm = Array.isArray(arr) ? arr : [];
+        var map = {};
+        for (var i = 0; i < norm.length; i++) {
+          var b = norm[i] || {};
+          var k = b.fromYm && String(b.fromYm).length >= 7 ? walletYmKey_(b.fromYm) : "__";
+          map[k] = Math.max(0, Math.abs(Number(b.amount) || 0));
+        }
+        var out2 = [];
+        if (Object.prototype.hasOwnProperty.call(map, "__")) out2.push({ fromYm: null, amount: map["__"] });
+        Object.keys(map)
+          .filter(function (k) {
+            return k !== "__";
+          })
+          .sort()
+          .forEach(function (k) {
+            out2.push({ fromYm: k, amount: map[k] });
+          });
+        return out2.length ? out2 : [{ fromYm: null, amount: 0 }];
+      }
+
+      function walletResolveBracketAmountForYm_(brackets, ym) {
+        ym = walletYmKey_(ym);
+        if (!ym) return 0;
+        var bs = walletNormalizeAmountBrackets_(brackets, 0);
+        var chosen = 0;
+        for (var i = 0; i < bs.length; i++) {
+          var from = bs[i].fromYm;
+          if (!from || ym >= from) chosen = Math.max(0, Number(bs[i].amount) || 0);
+        }
+        return chosen;
+      }
+
+      function normalizeWalletMonthlyExpenseTemplate_(t) {
+        t = t || {};
+        var billDay = t.billDay != null ? parseInt(String(t.billDay), 10) : 1;
+        if (isNaN(billDay) || billDay < 1) billDay = 1;
+        if (billDay > 28) billDay = 28;
+        var legacyAmt = Math.max(0, Math.abs(Number(t.amount) || 0));
+        var brackets = walletNormalizeAmountBrackets_(t.amountBrackets, legacyAmt);
+        return {
+          id: t.id || lifeId("ft"),
+          title: (t.title || "").trim() || "月費",
+          amountBrackets: brackets,
+          category: (t.category || "住屋").trim() || "其他支出",
+          billDay: billDay,
+          excludeFromDailyCap: !!t.excludeFromDailyCap,
+        };
+      }
+
+      function normalizeWalletMonthlyIncomeTemplate_(t) {
+        t = t || {};
+        var payDay = t.payDay != null ? parseInt(String(t.payDay), 10) : t.billDay != null ? parseInt(String(t.billDay), 10) : 1;
+        if (isNaN(payDay) || payDay < 1) payDay = 1;
+        if (payDay > 28) payDay = 28;
+        var legacyAmt = Math.max(0, Math.abs(Number(t.amount) || 0));
+        var brackets = walletNormalizeAmountBrackets_(t.amountBrackets, legacyAmt);
+        return {
+          id: t.id || lifeId("it"),
+          title: (t.title || "").trim() || "固定收入",
+          amountBrackets: brackets,
+          category: (t.category || "薪資").trim() || "其他收入",
+          payDay: payDay,
+        };
       }
 
       function loadRoutineWallet() {
@@ -8339,6 +8482,7 @@
           excludeFromDailyCap: !!(qEx && qEx.checked),
           createdAt: Date.now(),
           monthlyFixedTemplateId: "",
+          monthlyIncomeTemplateId: "",
         });
         saveRoutineWallet();
         document.getElementById("dailyQuickAmt").value = "";
@@ -8519,6 +8663,7 @@
           excludeFromDailyCap: exDaily,
           createdAt: Date.now(),
           monthlyFixedTemplateId: "",
+          monthlyIncomeTemplateId: "",
         });
         saveRoutineWallet();
         document.getElementById("walletEntryAmt").value = "";
@@ -8576,14 +8721,15 @@
         if (day > 28) day = 28;
         var ex = document.getElementById("walletFixedExcludeDaily");
         routineState.wallet.monthlyFixedTemplates = routineState.wallet.monthlyFixedTemplates || [];
-        routineState.wallet.monthlyFixedTemplates.push({
-          id: lifeId("ft"),
-          title: title,
-          amount: amt,
-          category: cat,
-          billDay: day,
-          excludeFromDailyCap: !!(ex && ex.checked),
-        });
+        routineState.wallet.monthlyFixedTemplates.push(
+          normalizeWalletMonthlyExpenseTemplate_({
+            title: title,
+            amount: amt,
+            category: cat,
+            billDay: day,
+            excludeFromDailyCap: !!(ex && ex.checked),
+          })
+        );
         saveRoutineWallet();
         document.getElementById("walletFixedTitle").value = "";
         document.getElementById("walletFixedAmt").value = "";
@@ -8595,6 +8741,12 @@
       });
 
       document.getElementById("walletFixedList").addEventListener("click", function (e) {
+        var ba = e.target.closest("[data-wallet-fixed-amt]");
+        if (ba) {
+          var iid = ba.getAttribute("data-wallet-fixed-id");
+          if (iid) walletOpenTplAmtEditor_("exp", iid);
+          return;
+        }
         var b = e.target.closest("[data-wallet-fixed-del]");
         if (!b) return;
         var id = b.getAttribute("data-wallet-fixed-del");
@@ -8604,6 +8756,107 @@
         saveRoutineWallet();
         renderWalletPanel();
         toast("已刪月費範本");
+      });
+
+      document.getElementById("btnWalletIncFixedAdd").addEventListener("click", function () {
+        var title = (document.getElementById("walletIncFixedTitle").value || "").trim();
+        var amt = parseNum(document.getElementById("walletIncFixedAmt").value);
+        var cat = (document.getElementById("walletIncFixedCat").value || "").trim() || "薪資";
+        var day = parseInt(String(document.getElementById("walletIncFixedDay").value || "1"), 10);
+        if (!title) {
+          toast("請填名稱");
+          return;
+        }
+        if (amt == null || amt <= 0) {
+          toast("請填正數金額");
+          return;
+        }
+        if (isNaN(day) || day < 1) day = 1;
+        if (day > 28) day = 28;
+        routineState.wallet.monthlyIncomeTemplates = routineState.wallet.monthlyIncomeTemplates || [];
+        routineState.wallet.monthlyIncomeTemplates.push(
+          normalizeWalletMonthlyIncomeTemplate_({
+            title: title,
+            amount: amt,
+            category: cat,
+            payDay: day,
+          })
+        );
+        saveRoutineWallet();
+        document.getElementById("walletIncFixedTitle").value = "";
+        document.getElementById("walletIncFixedAmt").value = "";
+        renderWalletPanel();
+        renderDashLifeSummary();
+        bumpDailySpendIfVisible();
+        toast("已加入固定收入範本");
+      });
+
+      document.getElementById("walletIncFixedList").addEventListener("click", function (e) {
+        var ba = e.target.closest("[data-wallet-inc-amt]");
+        if (ba) {
+          var iid = ba.getAttribute("data-wallet-inc-id");
+          if (iid) walletOpenTplAmtEditor_("inc", iid);
+          return;
+        }
+        var b = e.target.closest("[data-wallet-inc-del]");
+        if (!b) return;
+        var id = b.getAttribute("data-wallet-inc-del");
+        routineState.wallet.monthlyIncomeTemplates = (routineState.wallet.monthlyIncomeTemplates || []).filter(function (t) {
+          return t.id !== id;
+        });
+        saveRoutineWallet();
+        renderWalletPanel();
+        toast("已刪固定收入範本");
+      });
+
+      document.getElementById("btnWalletTplAmtApply").addEventListener("click", function () {
+        var kind = (document.getElementById("walletTplAmtEditKind").value || "").trim();
+        var id = (document.getElementById("walletTplAmtEditId").value || "").trim();
+        var newAmt = parseNum(document.getElementById("walletTplAmtEditNew").value);
+        var fromYm = walletYmKey_(document.getElementById("walletTplAmtEditFromYm").value);
+        if (!id || (kind !== "exp" && kind !== "inc")) {
+          toast("資料不完整");
+          return;
+        }
+        if (newAmt == null || newAmt <= 0) {
+          toast("請填正數新金額");
+          return;
+        }
+        if (!fromYm) {
+          toast("請揀生效月份");
+          return;
+        }
+        var arr =
+          kind === "inc" ? routineState.wallet.monthlyIncomeTemplates || [] : routineState.wallet.monthlyFixedTemplates || [];
+        var tpl = null;
+        var ix = -1;
+        for (var i = 0; i < arr.length; i++) {
+          if (arr[i].id === id) {
+            tpl = arr[i];
+            ix = i;
+            break;
+          }
+        }
+        if (!tpl || ix < 0) return;
+        var merged = walletDedupeAmountBrackets_((tpl.amountBrackets || []).concat([{ fromYm: fromYm, amount: newAmt }]));
+        tpl.amountBrackets = merged;
+        if (kind === "inc") {
+          routineState.wallet.monthlyIncomeTemplates[ix] = normalizeWalletMonthlyIncomeTemplate_(tpl);
+        } else {
+          routineState.wallet.monthlyFixedTemplates[ix] = normalizeWalletMonthlyExpenseTemplate_(tpl);
+        }
+        var pan = document.getElementById("walletTplAmtEditPanel");
+        if (pan) pan.hidden = true;
+        saveRoutineWallet();
+        renderWalletPanel();
+        renderDashLifeSummary();
+        bumpDailySpendIfVisible();
+        toast("已更新金額分段（舊月已入帳嘅流水唔會自動改）", "ok");
+      });
+
+      document.getElementById("btnWalletTplAmtCancel").addEventListener("click", function () {
+        var pan = document.getElementById("walletTplAmtEditPanel");
+        if (pan) pan.hidden = true;
       });
 
       document.getElementById("btnWalletExport").addEventListener("click", function () {
@@ -10055,7 +10308,9 @@
         var added = false;
         for (var ti = 0; ti < templates.length; ti++) {
           var tpl = templates[ti];
-          if (!tpl || !tpl.id || !(Number(tpl.amount) > 0)) continue;
+          if (!tpl || !tpl.id) continue;
+          var amt0 = walletResolveBracketAmountForYm_(tpl.amountBrackets, ym);
+          if (!(Number(amt0) > 0)) continue;
           var exists = (routineState.wallet.entries || []).some(function (e) {
             return (
               e.type === "expense" &&
@@ -10072,12 +10327,51 @@
             id: lifeId("w"),
             date: targetDate,
             type: "expense",
-            amount: Math.abs(Number(tpl.amount) || 0),
+            amount: Math.abs(Number(amt0) || 0),
             category: (tpl.category || "住屋").trim() || "其他支出",
             note: (tpl.title || "月費").trim(),
             excludeFromDailyCap: !!tpl.excludeFromDailyCap,
             createdAt: Date.now(),
             monthlyFixedTemplateId: tpl.id,
+            monthlyIncomeTemplateId: "",
+          });
+          added = true;
+        }
+        if (added) saveRoutineWallet();
+      }
+
+      function ensureMonthlyIncomeEntriesForYm_(ym) {
+        var templates = routineState.wallet.monthlyIncomeTemplates || [];
+        if (!templates.length || !ym || String(ym).length < 7) return;
+        var added = false;
+        for (var ti = 0; ti < templates.length; ti++) {
+          var tpl = templates[ti];
+          if (!tpl || !tpl.id) continue;
+          var amt0 = walletResolveBracketAmountForYm_(tpl.amountBrackets, ym);
+          if (!(Number(amt0) > 0)) continue;
+          var exists = (routineState.wallet.entries || []).some(function (e) {
+            return (
+              e.type === "income" &&
+              e.monthlyIncomeTemplateId === tpl.id &&
+              (e.date || "").slice(0, 7) === ym
+            );
+          });
+          if (exists) continue;
+          var payDay = tpl.payDay != null ? parseInt(String(tpl.payDay), 10) : 1;
+          if (isNaN(payDay) || payDay < 1) payDay = 1;
+          payDay = Math.min(payDay, ymToLastDay(ym));
+          var targetDate = ym + "-" + String(payDay).padStart(2, "0");
+          routineState.wallet.entries.push({
+            id: lifeId("w"),
+            date: targetDate,
+            type: "income",
+            amount: Math.abs(Number(amt0) || 0),
+            category: (tpl.category || "薪資").trim() || "其他收入",
+            note: (tpl.title || "固定收入").trim(),
+            excludeFromDailyCap: false,
+            createdAt: Date.now(),
+            monthlyFixedTemplateId: "",
+            monthlyIncomeTemplateId: tpl.id,
           });
           added = true;
         }
@@ -10399,9 +10693,39 @@
         if (!blocks.length) list.innerHTML = '<p class="field-hint">呢日未有加時段，用下面表單新增。</p>';
       }
 
+      function walletOpenTplAmtEditor_(kind, id) {
+        var arr =
+          kind === "inc"
+            ? routineState.wallet.monthlyIncomeTemplates || []
+            : routineState.wallet.monthlyFixedTemplates || [];
+        var tpl = null;
+        for (var wi = 0; wi < arr.length; wi++) {
+          if (arr[wi].id === id) {
+            tpl = arr[wi];
+            break;
+          }
+        }
+        if (!tpl) return;
+        var panel = document.getElementById("walletTplAmtEditPanel");
+        if (!panel) return;
+        var kEl = document.getElementById("walletTplAmtEditKind");
+        var idEl = document.getElementById("walletTplAmtEditId");
+        var newEl = document.getElementById("walletTplAmtEditNew");
+        var fy = document.getElementById("walletTplAmtEditFromYm");
+        if (kEl) kEl.value = kind;
+        if (idEl) idEl.value = id;
+        var ym = walletMonthKey();
+        if (newEl) newEl.value = String(walletResolveBracketAmountForYm_(tpl.amountBrackets, ym));
+        if (fy) fy.value = ym || currentYmLocal();
+        panel.hidden = false;
+      }
+
       function renderWalletPanel() {
+        var hidePan = document.getElementById("walletTplAmtEditPanel");
+        if (hidePan) hidePan.hidden = true;
         var ym = walletMonthKey();
         ensureMonthlyFixedEntriesForYm_(ym);
+        ensureMonthlyIncomeEntriesForYm_(ym);
         var entries = walletEntriesForMonth(ym);
         var inc = 0,
           exp = 0;
@@ -10504,6 +10828,7 @@
           wfx.innerHTML = fxs.length
             ? fxs
                 .map(function (t) {
+                  var amtYm = walletResolveBracketAmountForYm_(t.amountBrackets, ym);
                   return (
                     '<div class="trade-row" style="cursor:default;margin-bottom:8px"><div><strong>' +
                     escapeHtml(t.title) +
@@ -10511,16 +10836,48 @@
                     t.billDay +
                     " 號 · " +
                     escapeHtml(t.category) +
-                    " · " +
-                    t.amount.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
+                    " · 此檢視月自動金額 <strong>" +
+                    amtYm.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
+                    "</strong>" +
                     (t.excludeFromDailyCap ? " · 唔計日限" : "") +
-                    "</p></div><div><button type=\"button\" class=\"btn btn-ghost btn-sm\" data-wallet-fixed-del=\"" +
+                    "</p></div><div style=\"display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end\">" +
+                    '<button type="button" class="btn btn-ghost btn-sm" data-wallet-fixed-amt="1" data-wallet-fixed-id="' +
+                    escapeHtml(t.id) +
+                    '">改金額分段</button><button type="button" class="btn btn-ghost btn-sm" data-wallet-fixed-del="' +
                     escapeHtml(t.id) +
                     '">刪範本</button></div></div>'
                   );
                 })
                 .join("")
             : '<p class="field-hint">尚未設月費範本；設咗之後揀返呢個月睇流水會自動補一筆（若該月未有）。</p>';
+        }
+
+        var wix = document.getElementById("walletIncFixedList");
+        if (wix) {
+          var ixs = routineState.wallet.monthlyIncomeTemplates || [];
+          wix.innerHTML = ixs.length
+            ? ixs
+                .map(function (t) {
+                  var amtYm = walletResolveBracketAmountForYm_(t.amountBrackets, ym);
+                  return (
+                    '<div class="trade-row" style="cursor:default;margin-bottom:8px"><div><strong>' +
+                    escapeHtml(t.title) +
+                    '</strong><p class="field-hint" style="margin:4px 0 0">每月 ' +
+                    t.payDay +
+                    " 號 · " +
+                    escapeHtml(t.category) +
+                    " · 此檢視月自動金額 <strong>" +
+                    amtYm.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
+                    "</strong></p></div><div style=\"display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end\">" +
+                    '<button type="button" class="btn btn-ghost btn-sm" data-wallet-inc-amt="1" data-wallet-inc-id="' +
+                    escapeHtml(t.id) +
+                    '">改金額分段</button><button type="button" class="btn btn-ghost btn-sm" data-wallet-inc-del="' +
+                    escapeHtml(t.id) +
+                    '">刪範本</button></div></div>'
+                  );
+                })
+                .join("")
+            : '<p class="field-hint">尚未設固定收入範本。</p>';
         }
 
         refreshWalletCategoryDropdowns_();
@@ -12043,6 +12400,14 @@
           cl.wallet.monthlyFixedTemplates || [],
           preferLo
         ).map(normFixedTpl);
+        function normIncTpl(t) {
+          return normalizeRoutineWallet({ wallet: { monthlyIncomeTemplates: [t] } }).wallet.monthlyIncomeTemplates[0];
+        }
+        var mergedIncFixed = mergeByBlockIdPreferFirst(
+          lo.wallet.monthlyIncomeTemplates || [],
+          cl.wallet.monthlyIncomeTemplates || [],
+          preferLo
+        ).map(normIncTpl);
         var mergedBlocks = mergeByBlockIdPreferFirst(lo.scheduleBlocks, cl.scheduleBlocks, preferLo)
           .map(normBlock)
           .filter(function (b) {
@@ -12060,6 +12425,7 @@
             entries: mergedEntries,
             expensePresets: mergedPresets,
             monthlyFixedTemplates: mergedFixed,
+            monthlyIncomeTemplates: mergedIncFixed,
           },
           syncUpdatedAt: Math.max(loT, clT),
         };
