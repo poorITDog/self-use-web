@@ -1304,6 +1304,29 @@
       color: #fcd34d;
     }
 
+    .work-cal-cell.work-cal-cell--wallet-skip {
+      border-color: rgba(56, 189, 248, 0.5);
+      box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.18);
+    }
+
+    .work-cal-skip-btn {
+      font-size: 0.58rem;
+      line-height: 1.2;
+      padding: 3px 5px;
+      margin-top: 3px;
+      align-self: flex-end;
+      border-radius: 5px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: rgba(0, 0, 0, 0.28);
+      color: #e2e8f0;
+      cursor: pointer;
+    }
+
+    .work-cal-skip-btn.on {
+      border-color: rgba(45, 212, 191, 0.65);
+      color: #5eead4;
+    }
+
     .work-cal-chip {
       font-size: 0.55rem;
       line-height: 1.2;
@@ -3300,7 +3323,9 @@
 
       <div class="card cal-work-card">
         <h2>假期 · 記念日 <span class="badge">月曆</span></h2>
-        <p class="lead">與上面交易月曆<strong>同一套格仔尺寸</strong>；黃＝公眾假期、青＝自訂。月份跟上面 ←／→。</p>
+        <p class="lead">
+          與上面交易月曆<strong>同一套格仔尺寸</strong>；黃＝公眾假期、青＝自訂。月份跟上面 ←／→。每格底<strong>「設放假／✓放假」</strong>會同步錢包<strong>預設支出跳過日</strong>（同「錢包 → 日限／預設」連住）。
+        </p>
         <div class="heatmap-head">
           <span class="field-hint" style="margin: 0">今日日期金色高亮</span>
         </div>
@@ -3981,7 +4006,7 @@
             <label class="field">
               <span class="key">本月花費預算／月支出上限池（USD／HKD 自訂單位一致）</span>
               <input type="number" id="walletBudget" min="0" step="100" placeholder="例 3100" />
-              <span class="field-hint" style="display: block; margin-top: 6px">「本月已用」由下面帳本<strong>支出加總</strong>自動計，唔使手填；改月份或加記錄後撳儲存預算或切頁即會更新顯示。</span>
+              <span class="field-hint" style="display: block; margin-top: 6px">「本月已用」= 帳本支出 <strong>＋</strong>「預設日扣」自動加總（同錢包總覽一致）；唔使手填。</span>
             </label>
             <label class="field">
               <span class="key">本月儲蓄目標（可選）</span>
@@ -4018,6 +4043,9 @@
 
         <div class="card">
           <h2>記一筆 <span class="badge">Entry</span></h2>
+          <p class="field-hint" style="margin-top: 0; margin-bottom: 10px">
+            記錯可以喺下面列表撳<strong>刪</strong>走，或者撳<strong>改</strong>更正名／分類／金額。唔想嗰日計「預設交通」：去<strong>日限／預設 → 放假跳過日</strong>，或者去<strong>交易</strong>頁上面月份嘅<strong>生活日曆</strong>格撳「設放假」。
+          </p>
           <div class="form-grid">
             <label class="field">
               <span class="key">日期</span>
@@ -4047,8 +4075,9 @@
               <span class="key" style="margin: 0"><strong>唔計入每日開支上限</strong>（例如水費、電費等月費，或一大筆非日常使費）</span>
             </label>
           </div>
-          <div class="form-actions" style="border: none; padding-top: 12px; margin-top: 0">
+          <div class="form-actions" style="border: none; padding-top: 12px; margin-top: 0; flex-wrap: wrap; gap: 10px">
             <button type="button" class="btn btn-accent" id="btnWalletAddEntry">加入紀錄</button>
+            <button type="button" class="btn btn-ghost" id="btnWalletEntryEditCancel" hidden>取消編輯</button>
           </div>
         </div>
 
@@ -4139,7 +4168,13 @@
 
         <div class="card">
           <h2>本月流水 <span class="badge">List</span></h2>
+          <p class="field-hint" style="margin-top: 0">
+            <strong>手動登記</strong>同上<strong>預設日扣</strong>一齊計「本月支出」；預設唔會重複做另一筆流水，下面「預設日扣」表俾你對數。
+          </p>
+          <h3 style="margin: 12px 0 8px; font-size: 0.95rem">手動登記</h3>
           <div id="walletEntryList"></div>
+          <h3 style="margin: 18px 0 8px; font-size: 0.95rem">預設日扣（自動）</h3>
+          <div id="walletPresetFlowList" aria-live="polite"></div>
         </div>
       </div>
 
@@ -4216,6 +4251,20 @@
             <button type="button" class="btn btn-accent" id="btnDailyPresetAdd">加入預設</button>
           </div>
           <div id="dailyPresetList" style="margin-top: 14px"></div>
+        </div>
+        <div class="card">
+          <h2>放假／唔返工 <span class="badge">Skip</span></h2>
+          <p class="field-hint" style="margin-top: 0">
+            揀一日加入後，嗰日<strong>唔會</strong>計任何「預設支出」金額（日限、buffer、本月「預設日扣」統計都會跟住變）。手動喺錢包記嘅支出<strong>唔受影響</strong>。
+          </p>
+          <div class="toolbar" style="margin-top: 10px; flex-wrap: wrap; gap: 10px; align-items: flex-end">
+            <label class="field" style="margin: 0">
+              <span class="key">跳過日期</span>
+              <input type="date" id="walletPresetSkipDate" />
+            </label>
+            <button type="button" class="btn btn-accent" id="btnWalletPresetSkipAdd">加入跳過日</button>
+          </div>
+          <div id="walletPresetSkipList" style="margin-top: 12px"></div>
         </div>
         <div class="card">
           <h2>快速記今日支出 <span class="badge">+</span></h2>
@@ -4867,6 +4916,62 @@
         if (wic) fillWalletCategorySelect_(wic, false);
       }
 
+      function resetWalletEntryEditUi_() {
+        walletEditingEntryId = null;
+        var b = document.getElementById("btnWalletAddEntry");
+        if (b) b.textContent = "加入紀錄";
+        var c = document.getElementById("btnWalletEntryEditCancel");
+        if (c) c.hidden = true;
+      }
+
+      function beginWalletEntryEdit_(id) {
+        var arr = routineState.wallet.entries || [];
+        var ent = null;
+        for (var wi = 0; wi < arr.length; wi++) {
+          if (arr[wi].id === id) {
+            ent = arr[wi];
+            break;
+          }
+        }
+        if (!ent) {
+          toast("搵唔到紀錄");
+          return;
+        }
+        walletEditingEntryId = id;
+        var dEl = document.getElementById("walletEntryDate");
+        var tEl = document.getElementById("walletEntryType");
+        if (dEl) dEl.value = (ent.date || "").trim().slice(0, 10) || todayISO();
+        if (tEl) tEl.value = ent.type === "income" ? "income" : "expense";
+        refreshWalletCategoryDropdowns_();
+        var cEl = document.getElementById("walletEntryCat");
+        if (cEl) {
+          var cv = (ent.category || "").trim() || (ent.type === "income" ? "其他收入" : "其他");
+          var ok = false;
+          for (var oi = 0; oi < cEl.options.length; oi++) {
+            if (cEl.options[oi].value === cv) {
+              cEl.value = cv;
+              ok = true;
+              break;
+            }
+          }
+          if (!ok && cEl.options.length) cEl.selectedIndex = 0;
+        }
+        var aEl = document.getElementById("walletEntryAmt");
+        if (aEl) aEl.value = String(ent.amount);
+        var nEl = document.getElementById("walletEntryNote");
+        if (nEl) nEl.value = ent.note || "";
+        var exWrap = document.getElementById("walletExcludeFromDailyWrap");
+        var exCb = document.getElementById("walletEntryExcludeDaily");
+        var isInc = ent.type === "income";
+        if (exWrap) exWrap.hidden = isInc;
+        if (exCb) exCb.checked = !!(ent.excludeFromDailyCap && !isInc);
+        var btn = document.getElementById("btnWalletAddEntry");
+        if (btn) btn.textContent = "儲存修改";
+        var cbtn = document.getElementById("btnWalletEntryEditCancel");
+        if (cbtn) cbtn.hidden = false;
+        toast("已載入；改好撳「儲存修改」");
+      }
+
       function parsePlaybookStrategiesBlocks_(text) {
         var out = {};
         var lines = String(text || "").split(/\r?\n/);
@@ -5311,6 +5416,8 @@
             entries: [],
             dailyExpenseCap: null,
             expensePresets: [],
+            presetSkipDates: [],
+            presetAmountOverrides: [],
             monthlyFixedTemplates: [],
             monthlyIncomeTemplates: [],
           },
@@ -5381,6 +5488,56 @@
               };
             })
           : [];
+        d.wallet.presetSkipDates = Array.isArray(d.wallet.presetSkipDates)
+          ? d.wallet.presetSkipDates
+              .map(function (s) {
+                return String(s || "")
+                  .trim()
+                  .slice(0, 10);
+              })
+              .filter(function (s) {
+                return /^\d{4}-\d{2}-\d{2}$/.test(s);
+              })
+          : [];
+        (function dedupeSkips() {
+          var seen = {};
+          d.wallet.presetSkipDates = d.wallet.presetSkipDates.filter(function (s) {
+            if (seen[s]) return false;
+            seen[s] = true;
+            return true;
+          });
+          d.wallet.presetSkipDates.sort();
+        })();
+        d.wallet.presetAmountOverrides = Array.isArray(d.wallet.presetAmountOverrides)
+          ? d.wallet.presetAmountOverrides
+              .map(function (r) {
+                if (!r || typeof r !== "object") return null;
+                var iso = String(r.iso || "")
+                  .trim()
+                  .slice(0, 10);
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+                return {
+                  id: r.id || lifeId("pao"),
+                  iso: iso,
+                  amount: Math.max(0, Math.abs(Number(r.amount) || 0)),
+                  updatedAt: r.updatedAt != null && !isNaN(Number(r.updatedAt)) ? Number(r.updatedAt) : Date.now(),
+                };
+              })
+              .filter(Boolean)
+          : [];
+        (function dedupePresetOv() {
+          var best = {};
+          for (var oi = 0; oi < d.wallet.presetAmountOverrides.length; oi++) {
+            var row = d.wallet.presetAmountOverrides[oi];
+            var ex = best[row.iso];
+            if (!ex || row.updatedAt >= ex.updatedAt) best[row.iso] = row;
+          }
+          d.wallet.presetAmountOverrides = Object.keys(best)
+            .sort()
+            .map(function (k) {
+              return best[k];
+            });
+        })();
         d.wallet.expensePresets = Array.isArray(d.wallet.expensePresets)
           ? d.wallet.expensePresets.map(function (p) {
               var rep = p.repeat;
@@ -5749,6 +5906,7 @@
       var routineState = loadRoutineWallet();
       var characterRpgState = loadCharacterRpg();
       var walletSubtab = "ledger";
+      var walletEditingEntryId = null;
       var schedSelectedDow = new Date().getDay();
 
       var WORK_CAL_KEY = "tradeLogWorkCalendarV1";
@@ -5925,6 +6083,7 @@
         }
         for (var day = 1; day <= daysInMonth; day++) {
           var iso = workCalIso(y, m, day);
+          var walletSkip = isWalletPresetSkipDate_(iso);
           var titles = workCalTitlesForDay(y, m, day);
           var bnSet = workCalBuiltinTitlesForDay(y, m, day);
           var chips = '<div class="work-cal-chips">';
@@ -5947,13 +6106,25 @@
           }
           chips += "</div>";
           var tdCls = iso === today ? " today" : "";
+          var cellCls = "work-cal-cell" + (walletSkip ? " work-cal-cell--wallet-skip" : "");
+          var skipBtn =
+            '<button type="button" class="work-cal-skip-btn' +
+            (walletSkip ? " on" : "") +
+            '" data-wallet-skip-toggle="' +
+            escapeHtml(iso) +
+            '">' +
+            (walletSkip ? "✓放假" : "設放假") +
+            "</button>";
           html +=
-            '<div class="work-cal-cell"><div class="wd' +
+            '<div class="' +
+            cellCls +
+            '"><div class="wd' +
             tdCls +
             '">' +
             day +
             "</div>" +
             chips +
+            skipBtn +
             "</div>";
         }
         var totalCells = startWd + daysInMonth;
@@ -8913,7 +9084,25 @@
         });
         saveRoutineWallet();
         renderDailySpendPanel();
+        renderWalletPanel();
+        bumpDailySpendIfVisible();
         toast("已刪除預設");
+      });
+
+      document.getElementById("routinePaneWallet").addEventListener("click", function (e) {
+        var rm = e.target.closest("[data-wallet-preset-skip-remove]");
+        if (!rm) return;
+        var iso = rm.getAttribute("data-wallet-preset-skip-remove");
+        if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+        routineState.wallet.presetSkipDates = (routineState.wallet.presetSkipDates || []).filter(function (s) {
+          return s !== iso;
+        });
+        saveRoutineWallet();
+        renderDailySpendPanel();
+        bumpDailySpendIfVisible();
+        renderWalletPanel();
+        renderDashLifeSummary();
+        toast("已移除跳過日");
       });
 
       document.getElementById("btnDailyQuickExpense").addEventListener("click", function () {
@@ -9145,6 +9334,37 @@
         }
         var exEl = document.getElementById("walletEntryExcludeDaily");
         var exDaily = !!(exEl && exEl.checked && typ === "expense");
+        if (walletEditingEntryId) {
+          var arr = routineState.wallet.entries || [];
+          var ent = null;
+          for (var wi = 0; wi < arr.length; wi++) {
+            if (arr[wi].id === walletEditingEntryId) {
+              ent = arr[wi];
+              break;
+            }
+          }
+          if (!ent) {
+            toast("搵唔到紀錄");
+            resetWalletEntryEditUi_();
+            return;
+          }
+          ent.date = d;
+          ent.type = typ === "income" ? "income" : "expense";
+          ent.amount = amt;
+          ent.category = cat || (typ === "income" ? "其他收入" : "其他");
+          ent.note = note;
+          ent.excludeFromDailyCap = exDaily;
+          resetWalletEntryEditUi_();
+          saveRoutineWallet();
+          document.getElementById("walletEntryAmt").value = "";
+          document.getElementById("walletEntryNote").value = "";
+          if (exEl) exEl.checked = false;
+          renderWalletPanel();
+          renderDashLifeSummary();
+          bumpDailySpendIfVisible();
+          toast("已更新紀錄");
+          return;
+        }
         routineState.wallet.entries.push({
           id: lifeId("w"),
           date: d,
@@ -9167,7 +9387,39 @@
         toast("已記錄");
       });
 
+      document.getElementById("btnWalletEntryEditCancel").addEventListener("click", function () {
+        resetWalletEntryEditUi_();
+        document.getElementById("walletEntryAmt").value = "";
+        document.getElementById("walletEntryNote").value = "";
+        var exEl = document.getElementById("walletEntryExcludeDaily");
+        if (exEl) exEl.checked = false;
+        toast("已取消編輯");
+      });
+
+      document.getElementById("btnWalletPresetSkipAdd").addEventListener("click", function () {
+        var inp = document.getElementById("walletPresetSkipDate");
+        var iso = inp && inp.value ? String(inp.value).trim().slice(0, 10) : "";
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+          toast("請揀有效日期");
+          return;
+        }
+        routineState.wallet.presetSkipDates = routineState.wallet.presetSkipDates || [];
+        if (routineState.wallet.presetSkipDates.indexOf(iso) >= 0) {
+          toast("呢日已經喺跳過列表");
+          return;
+        }
+        routineState.wallet.presetSkipDates.push(iso);
+        routineState.wallet.presetSkipDates.sort();
+        saveRoutineWallet();
+        renderDailySpendPanel();
+        bumpDailySpendIfVisible();
+        renderWalletPanel();
+        renderDashLifeSummary();
+        toast("已加入跳過日");
+      });
+
       document.getElementById("walletMonth").addEventListener("change", function () {
+        resetWalletEntryEditUi_();
         renderWalletPanel();
         renderDashLifeSummary();
       });
@@ -9182,9 +9434,16 @@
       });
 
       document.getElementById("walletEntryList").addEventListener("click", function (e) {
+        var ed = e.target.closest("[data-wallet-edit]");
+        if (ed) {
+          var eid = ed.getAttribute("data-wallet-edit");
+          if (eid) beginWalletEntryEdit_(eid);
+          return;
+        }
         var del = e.target.closest("[data-wallet-del]");
         if (!del) return;
         var id = del.getAttribute("data-wallet-del");
+        if (walletEditingEntryId === id) resetWalletEntryEditUi_();
         recordSyncTombstone_("walletEntry", id);
         routineState.wallet.entries = (routineState.wallet.entries || []).filter(function (x) {
           return x.id !== id;
@@ -9195,6 +9454,34 @@
         bumpDailySpendIfVisible();
         toast("已刪除");
       });
+
+      (function wireWalletPresetFlowList_() {
+        var host = document.getElementById("walletPresetFlowList");
+        if (!host || host._presetFlowWired) return;
+        host._presetFlowWired = true;
+        host.addEventListener("click", function (e) {
+          var ed = e.target.closest("[data-wallet-preset-ov-edit]");
+          if (ed) {
+            promptEditWalletPresetDayAmount_(ed.getAttribute("data-wallet-preset-ov-edit"));
+            return;
+          }
+          var sk = e.target.closest("[data-wallet-preset-skip]");
+          if (sk) {
+            toggleWalletPresetSkipForIso_(sk.getAttribute("data-wallet-preset-skip"));
+            return;
+          }
+          var cl = e.target.closest("[data-wallet-preset-ov-clear]");
+          if (cl) {
+            clearWalletPresetOverrideOnly_(cl.getAttribute("data-wallet-preset-ov-clear"));
+            return;
+          }
+          var rv = e.target.closest("[data-wallet-preset-day-revert]");
+          if (rv) {
+            if (window.confirm("確定還原該日？會取消放假同清金額覆寫。"))
+              revertWalletPresetDayFully_(rv.getAttribute("data-wallet-preset-day-revert"));
+          }
+        });
+      })();
 
       document.getElementById("btnWalletFixedAdd").addEventListener("click", function () {
         var title = (document.getElementById("walletFixedTitle").value || "").trim();
@@ -10777,7 +11064,38 @@
         return false;
       }
 
-      function presetExpenseSumOnDate(iso) {
+      function isWalletPresetSkipDate_(iso) {
+        if (!iso || String(iso).length < 10) return false;
+        var arr = routineState.wallet.presetSkipDates || [];
+        for (var si = 0; si < arr.length; si++) {
+          if (arr[si] === iso) return true;
+        }
+        return false;
+      }
+
+      /** 該月「預設日扣」加總（跟日限／buffer 同一規則；已過日數用 dailyPoolEndDay） */
+      function walletMonthPresetExpenseTotal_(ym) {
+        var end = dailyPoolEndDay(ym);
+        if (end < 1) return 0;
+        var t = 0;
+        for (var day = 1; day <= end; day++) {
+          var iso = ym + "-" + String(day).padStart(2, "0");
+          t += presetExpenseSumOnDate(iso);
+        }
+        return t;
+      }
+
+      function walletMonthLedgerExpenseOnly_(ym) {
+        var exp = 0;
+        var list = walletEntriesForMonth(ym) || [];
+        for (var i = 0; i < list.length; i++) {
+          if (list[i].type === "expense") exp += list[i].amount;
+        }
+        return exp;
+      }
+
+      /** 規則本身加總（唔理放假／覆寫） */
+      function walletPresetRuleSumOnDate_(iso) {
         var dt = new Date(iso + "T12:00:00");
         if (isNaN(dt.getTime())) return 0;
         var presets = routineState.wallet.expensePresets || [];
@@ -10786,6 +11104,273 @@
           if (presetAppliesOnDate(presets[i], dt)) s += presets[i].amount;
         }
         return s;
+      }
+
+      function walletPresetAmountOverrideRowForIso_(iso) {
+        if (!iso || String(iso).length < 10) return null;
+        var arr = routineState.wallet.presetAmountOverrides || [];
+        var hit = null;
+        var bestU = -Infinity;
+        for (var i = 0; i < arr.length; i++) {
+          var r = arr[i];
+          if (!r || String(r.iso).slice(0, 10) !== iso) continue;
+          var u = Number(r.updatedAt) || 0;
+          if (u >= bestU) {
+            bestU = u;
+            hit = r;
+          }
+        }
+        return hit;
+      }
+
+      function presetExpenseSumOnDate(iso) {
+        if (isWalletPresetSkipDate_(iso)) return 0;
+        var ov = walletPresetAmountOverrideRowForIso_(iso);
+        if (ov) return Math.max(0, Number(ov.amount) || 0);
+        return walletPresetRuleSumOnDate_(iso);
+      }
+
+      /** 錢包「本月流水」：逐日列出預設日扣（同 presetExpenseSumOnDate／放假跳過／覆寫一致） */
+      function buildWalletPresetFlowHtml_(ym) {
+        if (!ym || String(ym).length < 7) return '<p class="field-hint">揀返檢視月份。</p>';
+        var presets = routineState.wallet.expensePresets || [];
+        var lastDay = ymToLastDay(ym);
+        var dows = ["日", "一", "二", "三", "四", "五", "六"];
+        var parts = [];
+        var rowCount = 0;
+        if (!presets.length) {
+          var hasOrphan = false;
+          for (var od = 1; od <= lastDay; od++) {
+            var oiso = ym + "-" + String(od).padStart(2, "0");
+            if (walletPresetAmountOverrideRowForIso_(oiso) || isWalletPresetSkipDate_(oiso)) {
+              hasOrphan = true;
+              break;
+            }
+          }
+          if (!hasOrphan) {
+            return '<p class="field-hint">未設「預設支出（日限／預設）」；設咗之後呢度會逐日列出自動扣款明細。</p>';
+          }
+        }
+        for (var day = 1; day <= lastDay; day++) {
+          var iso = ym + "-" + String(day).padStart(2, "0");
+          var dt = new Date(iso + "T12:00:00");
+          if (isNaN(dt.getTime())) continue;
+          var applicable = [];
+          for (var pi = 0; pi < presets.length; pi++) {
+            if (presetAppliesOnDate(presets[pi], dt)) applicable.push(presets[pi]);
+          }
+          var skip = isWalletPresetSkipDate_(iso);
+          var ovRow = walletPresetAmountOverrideRowForIso_(iso);
+          if (!applicable.length && !skip && !ovRow) continue;
+          rowCount++;
+          var ruleSum = walletPresetRuleSumOnDate_(iso);
+          var sumAct = presetExpenseSumOnDate(iso);
+          var hasOv = !!(ovRow && !skip);
+          var pillExtra = "";
+          if (skip) pillExtra = "放假";
+          else if (hasOv) pillExtra = "覆寫";
+          else pillExtra = "自動";
+          var lines = "";
+          if (applicable.length) {
+            lines = applicable
+              .map(function (p) {
+                return (
+                  '<span style="display:block;margin-top:2px;font-size:0.75rem;opacity:0.92">' +
+                  escapeHtml(p.title) +
+                  " · " +
+                  presetRepeatLabel(p) +
+                  " · <strong>" +
+                  p.amount.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
+                  "</strong></span>"
+                );
+              })
+              .join("");
+            if (hasOv && ruleSum !== sumAct) {
+              lines +=
+                '<p class="field-hint" style="margin:6px 0 0;font-size:0.72rem">規則合計 ' +
+                ruleSum.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
+                " → 實際入帳 " +
+                sumAct.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
+                "</p>";
+            }
+          } else {
+            lines =
+              '<span class="field-hint" style="margin:0;font-size:0.75rem">跳過日（呢日無適用預設規則）</span>';
+          }
+          if (skip && ovRow) {
+            lines +=
+              '<p class="field-hint" style="margin:6px 0 0;font-size:0.72rem">放假中；仍有覆寫紀錄，取消放假後會用覆寫金額。</p>';
+          }
+          var btns =
+            '<div style="margin-top:8px;display:flex;flex-direction:column;align-items:flex-end;gap:4px">' +
+            '<button type="button" class="btn btn-ghost" style="padding:4px 8px;font-size:0.7rem" data-wallet-preset-ov-edit="' +
+            escapeHtml(iso) +
+            '">改金額</button>' +
+            '<button type="button" class="btn btn-ghost" style="padding:4px 8px;font-size:0.7rem" data-wallet-preset-skip="' +
+            escapeHtml(iso) +
+            '">' +
+            (skip ? "取消放假" : "放假") +
+            "</button>" +
+            (hasOv
+              ? '<button type="button" class="btn btn-ghost" style="padding:4px 8px;font-size:0.7rem" data-wallet-preset-ov-clear="' +
+                escapeHtml(iso) +
+                '">清覆寫</button>'
+              : "") +
+            '<button type="button" class="btn btn-ghost" style="padding:4px 8px;font-size:0.7rem" data-wallet-preset-day-revert="' +
+            escapeHtml(iso) +
+            '">還原該日</button></div>';
+          parts.push(
+            '<div class="trade-row" style="cursor:default;margin-bottom:6px">' +
+              '<div><span class="pill' +
+              (skip ? "" : hasOv ? "" : " bad") +
+              '">' +
+              escapeHtml(pillExtra) +
+              "</span> <strong>" +
+              escapeHtml(iso) +
+              "</strong> <span class=\"field-hint\">" +
+              escapeHtml(dows[dt.getDay()] || "") +
+              "</span>" +
+              lines +
+              "</div>" +
+              '<div class="pnl loss" style="text-align:right;font-size:0.9rem;min-width:120px">−' +
+              sumAct.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
+              btns +
+              "</div></div>"
+          );
+        }
+        if (!rowCount) {
+          return '<p class="field-hint">呢個月無任何預設規則適用嘅日子。</p>';
+        }
+        var monthSumPreset = walletMonthPresetExpenseTotal_(ym);
+        var curYm = currentYmLocal();
+        var foot =
+          ym === curYm
+            ? "（跟日限：計至<strong>今日</strong>為止，同頂欄「預設日扣」一致）"
+            : ym < curYm
+              ? "（全月已過，同頂欄「預設日扣」一致）"
+              : "（未來月：本月預設加總暫為 0，到咗嗰個月先會計入）";
+        parts.push(
+          '<p class="field-hint" style="margin-top:10px">「本月支出」內嘅預設日扣加總：<strong>' +
+            monthSumPreset.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
+            "</strong> " +
+            foot +
+            "。</p>" +
+            '<p class="field-hint" style="margin-top:6px"><strong>改金額</strong>＝該日用你填嘅總額（覆寫規則）。<strong>放假</strong>＝該日預設日扣當 0。<strong>清覆寫</strong>＝用返規則。<strong>還原該日</strong>＝清放假＋清覆寫。</p>'
+        );
+        return parts.join("");
+      }
+
+      function refreshAfterWalletPresetDayActions_() {
+        routineState = normalizeRoutineWallet(routineState);
+        saveRoutineWallet();
+        renderWalletPanel();
+        renderDashLifeSummary();
+        bumpDailySpendIfVisible();
+        try {
+          renderDailySpendPanel();
+        } catch (e1) {}
+        try {
+          renderWorkCalendarPanel();
+        } catch (e2) {}
+      }
+
+      function revertWalletPresetDayFully_(iso) {
+        iso = String(iso || "")
+          .trim()
+          .slice(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+        routineState.wallet.presetAmountOverrides = (routineState.wallet.presetAmountOverrides || []).filter(function (r) {
+          return !r || String(r.iso).slice(0, 10) !== iso;
+        });
+        routineState.wallet.presetSkipDates = (routineState.wallet.presetSkipDates || []).filter(function (s) {
+          return s !== iso;
+        });
+        refreshAfterWalletPresetDayActions_();
+        toast("已還原該日（取消放假、清覆寫）");
+      }
+
+      function clearWalletPresetOverrideOnly_(iso) {
+        iso = String(iso || "")
+          .trim()
+          .slice(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+        routineState.wallet.presetAmountOverrides = (routineState.wallet.presetAmountOverrides || []).filter(function (r) {
+          return !r || String(r.iso).slice(0, 10) !== iso;
+        });
+        refreshAfterWalletPresetDayActions_();
+        toast("已清覆寫");
+      }
+
+      function toggleWalletPresetSkipForIso_(iso) {
+        iso = String(iso || "")
+          .trim()
+          .slice(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+        routineState.wallet.presetSkipDates = routineState.wallet.presetSkipDates || [];
+        var arr = routineState.wallet.presetSkipDates;
+        var ix = arr.indexOf(iso);
+        if (ix >= 0) {
+          arr.splice(ix, 1);
+          toast("已取消放假");
+        } else {
+          arr.push(iso);
+          arr.sort();
+          toast("已設放假");
+        }
+        refreshAfterWalletPresetDayActions_();
+      }
+
+      function promptEditWalletPresetDayAmount_(iso) {
+        iso = String(iso || "")
+          .trim()
+          .slice(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+        var rule = walletPresetRuleSumOnDate_(iso);
+        var curShown = presetExpenseSumOnDate(iso);
+        var hint =
+          "該日「預設日扣」總額（唔包手動錢包流水）。\n規則合計約 " +
+          rule.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
+          "；而家入帳 " +
+          curShown.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
+          "。\n輸入新總額會取消放假並用覆寫；留空＝唔改。";
+        var inp = window.prompt(hint, String(curShown));
+        if (inp === null) return;
+        inp = String(inp).trim();
+        if (inp === "") {
+          toast("已取消");
+          return;
+        }
+        var num = parseNum(inp);
+        if (num == null || isNaN(num) || num < 0) {
+          toast("請輸入有效非負數字");
+          return;
+        }
+        routineState.wallet.presetAmountOverrides = routineState.wallet.presetAmountOverrides || [];
+        routineState.wallet.presetSkipDates = (routineState.wallet.presetSkipDates || []).filter(function (s) {
+          return s !== iso;
+        });
+        var arr = routineState.wallet.presetAmountOverrides;
+        var now = Date.now();
+        var found = -1;
+        for (var i = 0; i < arr.length; i++) {
+          if (String(arr[i].iso).slice(0, 10) === iso) {
+            found = i;
+            break;
+          }
+        }
+        var row = {
+          id: found >= 0 ? arr[found].id : lifeId("pao"),
+          iso: iso,
+          amount: Math.max(0, num),
+          updatedAt: now,
+        };
+        if (found >= 0) arr[found] = row;
+        else arr.push(row);
+        arr.sort(function (a, b) {
+          return String(a.iso).localeCompare(String(b.iso));
+        });
+        refreshAfterWalletPresetDayActions_();
+        toast("已改該日預設日扣");
       }
 
       function ymToLastDay(ym) {
@@ -10926,13 +11511,9 @@
         return 0;
       }
 
+      /** 帳本支出 + 預設日扣（用於月池、總覽、餅圖加總） */
       function walletMonthExpenseTotal_(ym) {
-        var exp = 0;
-        var list = walletEntriesForMonth(ym) || [];
-        for (var i = 0; i < list.length; i++) {
-          if (list[i].type === "expense") exp += list[i].amount;
-        }
-        return exp;
+        return walletMonthLedgerExpenseOnly_(ym) + walletMonthPresetExpenseTotal_(ym);
       }
 
       function presetRepeatLabel(p) {
@@ -10990,14 +11571,10 @@
           } else {
             var overDay = totT > cap;
             var overHead = headroomT != null && headroomT < 0;
+            var pureToday = cap - totT;
             tb.innerHTML =
+              '<h3 class="section-title" style="margin:0 0 10px;font-size:0.82rem;font-weight:800;opacity:0.92">今日 · 純日上限（唔計跨日 buffer）</h3>' +
               '<div class="wallet-grid">' +
-              '<div class="wallet-stat"><div class="wk">日初 buffer<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">（昨日日尾）</span></div><div class="wv ' +
-              (openingBuf >= 0 ? "good" : "bad") +
-              '">' +
-              (openingBuf >= 0 ? "+" : "") +
-              openingBuf.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
-              "</div></div>" +
               '<div class="wallet-stat"><div class="wk">日上限</div><div class="wv">' +
               cap.toLocaleString("zh-HK", { maximumFractionDigits: 0 }) +
               "</div></div>" +
@@ -11012,19 +11589,32 @@
               '">' +
               totT.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
               "</div></div>" +
-              '<div class="wallet-stat"><div class="wk">今日可用<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">日限+日初buffer−今已用</span></div><div class="wv ' +
-              (overHead ? "bad" : "good") +
+              '<div class="wallet-stat"><div class="wk">今日限內淨空間<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">日上限−今日合計</span></div><div class="wv ' +
+              (pureToday < 0 ? "bad" : pureToday > 0 ? "good" : "") +
               '">' +
-              (headroomT.toLocaleString("zh-HK", { maximumFractionDigits: 2 })) +
+              pureToday.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
               "</div></div>" +
-              '<div class="wallet-stat"><div class="wk">淨超日限<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">max(0,今使−日限)</span></div><div class="wv ' +
+              '<div class="wallet-stat"><div class="wk">淨超日限<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">max(0,合計−日上限)</span></div><div class="wv ' +
               (overDay ? "bad" : "") +
               '">' +
               (overDay ? (totT - cap).toLocaleString("zh-HK", { maximumFractionDigits: 2 }) : "0") +
               "</div></div></div>" +
+              '<h3 class="section-title" style="margin:18px 0 10px;font-size:0.82rem;font-weight:800;opacity:0.92">跨日累積 buffer（連住上面「限內淨空間」）</h3>' +
+              '<div class="wallet-grid">' +
+              '<div class="wallet-stat"><div class="wk">日初 buffer<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">昨日日尾結餘</span></div><div class="wv ' +
+              (openingBuf >= 0 ? "good" : "bad") +
+              '">' +
+              (openingBuf >= 0 ? "+" : "") +
+              openingBuf.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
+              "</div></div>" +
+              '<div class="wallet-stat"><div class="wk">預計今日日尾 buffer<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">日初＋（日上限−合計）＝即時尚可使</span></div><div class="wv ' +
+              (overHead ? "bad" : "good") +
+              '">' +
+              (headroomT != null ? (headroomT >= 0 ? "+" : "") + headroomT.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) : "—") +
+              "</div></div></div>" +
               '<p class="field-hint" style="margin-top:10px">日期：<strong>' +
               escapeHtml(today) +
-              "</strong> · buffer 以<strong>日尾</strong>結算；上面「今日可用」係而家時刻嘅即時數。去「生活錢包」可改其他日子嘅流水。</p>";
+              "</strong> · 上面<strong>第一格</strong>淨係「今日 vs 日上限」；<strong>第二格</strong>先係跨日滾存 buffer。buffer 以<strong>日尾</strong>結算。去「生活錢包」可改流水；預設日扣可喺「本月流水 → 預設日扣」改／放假。</p>";
           }
         }
         var mb = document.getElementById("dailySpendMonthBox");
@@ -11041,7 +11631,7 @@
               '<div class="wallet-stat"><div class="wk">月支出上限池<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">（本月花費預算）</span></div><div class="wv">' +
               monthBud.toLocaleString("zh-HK", { maximumFractionDigits: 0 }) +
               "</div></div>" +
-              '<div class="wallet-stat"><div class="wk">本月已用<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">帳本支出加總</span></div><div class="wv bad">' +
+              '<div class="wallet-stat"><div class="wk">本月已用<br/><span style="font-weight:400;font-size:0.72rem;opacity:0.88">帳本＋預設日扣</span></div><div class="wv bad">' +
               monthExp.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
               "</div></div>" +
               '<div class="wallet-stat"><div class="wk">月池尚餘</div><div class="wv ' +
@@ -11122,6 +11712,28 @@
         }
         var qc = document.getElementById("dailyQuickCat");
         if (qc) fillWalletCategorySelect_(qc, true);
+        var skList = document.getElementById("walletPresetSkipList");
+        if (skList) {
+          var skips = routineState.wallet.presetSkipDates || [];
+          skList.innerHTML = skips.length
+            ? skips
+                .map(function (iso) {
+                  return (
+                    '<div class="trade-row" style="cursor:default;margin-bottom:8px"><div><strong>' +
+                    escapeHtml(iso) +
+                    '</strong><p class="field-hint" style="margin:4px 0 0">呢日唔計任何預設支出</p></div><div><button type="button" class="btn btn-ghost btn-sm" data-wallet-preset-skip-remove="' +
+                    escapeHtml(iso) +
+                    '">移除</button></div></div>'
+                  );
+                })
+                .join("")
+            : '<p class="field-hint">未有跳過日；放假唔返工可以喺上面加。</p>';
+        }
+        var skDate = document.getElementById("walletPresetSkipDate");
+        if (skDate && !skDate._defSet) {
+          skDate.value = todayISO();
+          skDate._defSet = true;
+        }
       }
 
       function schedIsDone(blockId, iso) {
@@ -11692,11 +12304,13 @@
         ensureMonthlyIncomeEntriesForYm_(ym);
         var entries = walletEntriesForMonth(ym);
         var inc = 0,
-          exp = 0;
+          expLedger = 0;
         for (var i = 0; i < entries.length; i++) {
           if (entries[i].type === "income") inc += entries[i].amount;
-          else exp += entries[i].amount;
+          else expLedger += entries[i].amount;
         }
+        var expPreset = walletMonthPresetExpenseTotal_(ym);
+        var exp = expLedger + expPreset;
         var net = inc - exp;
         var budget = routineState.wallet.monthlyExpenseBudget;
         var leftSpend =
@@ -11716,6 +12330,10 @@
             "</div></div>" +
             '<div class="wallet-stat"><div class="wk">本月支出</div><div class="wv bad">-' +
             exp.toLocaleString("zh-HK", { maximumFractionDigits: 0 }) +
+            '</div><div class="field-hint" style="margin-top:4px;opacity:0.9">帳本 ' +
+            expLedger.toLocaleString("zh-HK", { maximumFractionDigits: 0 }) +
+            " · 預設日扣 " +
+            expPreset.toLocaleString("zh-HK", { maximumFractionDigits: 0 }) +
             "</div></div>" +
             '<div class="wallet-stat"><div class="wk">結餘（入−出）</div><div class="wv ' +
             (net >= 0 ? "good" : "bad") +
@@ -11795,7 +12413,9 @@
                 '" style="text-align:right">' +
                 (e.type === "income" ? "+" : "−") +
                 e.amount.toLocaleString("zh-HK", { maximumFractionDigits: 2 }) +
-                '<br/><button type="button" class="btn btn-ghost" style="margin-top:6px;padding:4px 8px;font-size:0.72rem" data-wallet-del="' +
+                '<br/><button type="button" class="btn btn-ghost" style="margin-top:6px;padding:4px 8px;font-size:0.72rem" data-wallet-edit="' +
+                escapeHtml(e.id) +
+                '">改</button> <button type="button" class="btn btn-ghost" style="margin-top:6px;padding:4px 8px;font-size:0.72rem" data-wallet-del="' +
                 escapeHtml(e.id) +
                 '">刪</button></div></div>'
               );
@@ -11803,6 +12423,9 @@
             .join("");
           if (!rows.length) listEl.innerHTML = '<p class="field-hint">呢個月未有紀錄。</p>';
         }
+
+        var presetFlowEl = document.getElementById("walletPresetFlowList");
+        if (presetFlowEl) presetFlowEl.innerHTML = buildWalletPresetFlowHtml_(ym);
 
         var wfx = document.getElementById("walletFixedList");
         if (wfx) {
@@ -12035,6 +12658,7 @@
             if (entD[ej].type === "expense") expD += entD[ej].amount;
             else incD += entD[ej].amount;
           }
+          expD += walletMonthPresetExpenseTotal_(ymD);
           var budD = routineState.wallet.monthlyExpenseBudget;
           var leftD = budD != null && !isNaN(budD) ? budD - expD : null;
           rw.innerHTML =
@@ -12459,6 +13083,11 @@
           var c = entries[i].category || "其他";
           by[c] = (by[c] || 0) + entries[i].amount;
         }
+        var presetTot = walletMonthPresetExpenseTotal_(ym);
+        if (presetTot > 0.0001) {
+          var pk = "預設日扣（自動）";
+          by[pk] = (by[pk] || 0) + presetTot;
+        }
         var keys = Object.keys(by).sort(function (a, b) {
           return by[b] - by[a];
         });
@@ -12666,11 +13295,7 @@
           return lifeCadenceShowsToday(g);
         });
         var ym = new Date().getFullYear() + "-" + String(new Date().getMonth() + 1).padStart(2, "0");
-        var ent = walletEntriesForMonth(ym);
-        var exp = 0;
-        for (var ej = 0; ej < ent.length; ej++) {
-          if (ent[ej].type === "expense") exp += ent[ej].amount;
-        }
+        var exp = walletMonthExpenseTotal_(ym);
         var budget = routineState.wallet.monthlyExpenseBudget;
         var over = budget != null && !isNaN(budget) && exp > budget;
         var qrSt = loadQuickRemindersState_();
@@ -12963,6 +13588,41 @@
             saveWorkCal();
             renderWorkCalendarPanel();
             toast("已刪除");
+          });
+        }
+        var calGrid = document.getElementById("calendarWorkHeat");
+        if (calGrid) {
+          calGrid.addEventListener("click", function (e) {
+            var btn = e.target.closest("[data-wallet-skip-toggle]");
+            if (!btn) return;
+            e.preventDefault();
+            e.stopPropagation();
+            var iso = btn.getAttribute("data-wallet-skip-toggle") || "";
+            iso = String(iso).trim().slice(0, 10);
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+            routineState.wallet.presetSkipDates = routineState.wallet.presetSkipDates || [];
+            var arr = routineState.wallet.presetSkipDates;
+            var ix = arr.indexOf(iso);
+            if (ix >= 0) {
+              arr.splice(ix, 1);
+              toast("已取消放假（該日恢復預設日扣）");
+            } else {
+              arr.push(iso);
+              arr.sort();
+              toast("已設放假（該日預設日扣跳過）");
+            }
+            saveRoutineWallet();
+            renderWorkCalendarPanel();
+            try {
+              renderDailySpendPanel();
+            } catch (eD0) {}
+            bumpDailySpendIfVisible();
+            try {
+              renderWalletPanel();
+            } catch (eW0) {}
+            try {
+              renderDashLifeSummary();
+            } catch (eDs) {}
           });
         }
       })();
@@ -13414,6 +14074,39 @@
             dailyExpenseCap: preferLo ? lo.wallet.dailyExpenseCap : cl.wallet.dailyExpenseCap,
             entries: mergedEntries,
             expensePresets: mergedPresets,
+            presetSkipDates: (function () {
+              var set = {};
+              (lo.wallet.presetSkipDates || []).forEach(function (s) {
+                if (/^\d{4}-\d{2}-\d{2}$/.test(String(s))) set[String(s)] = true;
+              });
+              (cl.wallet.presetSkipDates || []).forEach(function (s) {
+                if (/^\d{4}-\d{2}-\d{2}$/.test(String(s))) set[String(s)] = true;
+              });
+              return Object.keys(set).sort();
+            })(),
+            presetAmountOverrides: (function () {
+              var mergedOv = (lo.wallet.presetAmountOverrides || []).concat(cl.wallet.presetAmountOverrides || []);
+              var best = {};
+              mergedOv.forEach(function (row) {
+                if (!row || !/^\d{4}-\d{2}-\d{2}$/.test(String(row.iso || "").slice(0, 10))) return;
+                var iso = String(row.iso).trim().slice(0, 10);
+                var u = Number(row.updatedAt) || 0;
+                var ex = best[iso];
+                if (!ex || u > ex.updatedAt) {
+                  best[iso] = {
+                    id: row.id || lifeId("pao"),
+                    iso: iso,
+                    amount: Math.max(0, Math.abs(Number(row.amount) || 0)),
+                    updatedAt: u,
+                  };
+                }
+              });
+              return Object.keys(best)
+                .sort()
+                .map(function (k) {
+                  return best[k];
+                });
+            })(),
             monthlyFixedTemplates: mergedFixed,
             monthlyIncomeTemplates: mergedIncFixed,
           },
