@@ -1238,6 +1238,42 @@
       text-shadow: none;
     }
 
+    #panel-wallet .heat-cell[data-wallet-cal-day] {
+      cursor: pointer;
+    }
+
+    #panel-wallet .heat-cell[data-wallet-cal-day]:hover {
+      outline: 2px solid rgba(56, 189, 248, 0.55);
+      outline-offset: 1px;
+    }
+
+    #walletSpendCal .heat-cell .v {
+      font-size: 0.92rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    #walletSpendCal.heatmap-grid .heat-cell:not(.muted) {
+      min-height: 50px;
+      justify-content: flex-start;
+      padding: 5px 3px 4px;
+      gap: 0;
+    }
+
+    #walletSpendCal .heat-cell .wallet-cal-rem {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 800;
+      margin-top: 1px;
+      line-height: 1.1;
+      color: rgba(255, 255, 255, 0.95);
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+    }
+
+    #walletSpendCal .heat-cell .wallet-cal-rem--over {
+      color: rgba(254, 226, 226, 0.98);
+    }
+
     .cal-work-card {
       border-color: rgba(252, 211, 77, 0.28);
       background: linear-gradient(165deg, rgba(252, 211, 77, 0.07), transparent 45%), var(--bg-card);
@@ -4161,6 +4197,15 @@
               <canvas id="chartWalletSpend" aria-label="支出分類餅圖"></canvas>
             </div>
           </div>
+          <div class="cal-grid-scroll" style="margin-top: 16px">
+            <div class="cal-grid-scroll-inner">
+              <h3 class="section-title" style="margin: 0 0 8px; font-size: 0.95rem">錢包日曆 · 每日使費</h3>
+              <p class="field-hint" style="margin-bottom: 10px">
+                跟<strong>檢視月份</strong>一致；每格＝<strong>帳本所有支出</strong>＋<strong>預設日扣</strong>。撳格可跳到下面「記一筆」並帶返該日。
+              </p>
+              <div class="heatmap-grid" id="walletSpendCal" aria-label="錢包月曆使費"></div>
+            </div>
+          </div>
           <div class="form-actions" style="border: none; padding-top: 0; margin-top: 0">
             <button type="button" class="btn btn-primary" id="btnWalletSaveMeta">儲存預算設定</button>
             <button type="button" class="btn btn-ghost" id="btnWalletExport">匯出錢包 JSON</button>
@@ -4395,9 +4440,13 @@
           <div id="walletPresetSkipList" style="margin-top: 12px"></div>
         </div>
         <div class="card">
-          <h2>快速記今日支出 <span class="badge">+</span></h2>
-          <p class="lead">寫入<strong>生活錢包</strong>同一個流水；日期固定<strong>今日</strong>。</p>
+          <h2>快速記支出 <span class="badge">+</span></h2>
+          <p class="lead">寫入<strong>生活錢包</strong>同一個流水；可揀<strong>任何曆日</strong>（補記過去、改日限／buffer 統計）。</p>
           <div class="form-grid">
+            <label class="field">
+              <span class="key">日期</span>
+              <input type="date" id="dailyQuickDate" />
+            </label>
             <label class="field">
               <span class="key">金額</span>
               <input type="number" id="dailyQuickAmt" min="0" step="0.01" placeholder="50" />
@@ -4416,7 +4465,7 @@
             </label>
           </div>
           <div class="form-actions" style="border: none; padding-top: 12px; margin-top: 0">
-            <button type="button" class="btn btn-primary" id="btnDailyQuickExpense">加入今日支出</button>
+            <button type="button" class="btn btn-primary" id="btnDailyQuickExpense">加入支出</button>
           </div>
         </div>
       </div>
@@ -4592,7 +4641,7 @@
           <button type="button" class="btn btn-ghost" id="btnCloudSyncPull">從雲端覆蓋本機</button>
         </div>
         <p class="field-hint" style="margin-top: 12px">
-          <strong>合併同步（預設）：</strong>會先下載雲端，將<strong>交易、生活目標／日誌、錢包／時間表、工作日曆、每日心情日記、自訂每日金句／效應池、效應庫（閃卡／出現紀錄）、交易思路庫、交易筆記閃卡（主題／卡片）、待辦快速備忘、XAU 模擬倉</strong>等一併按規則合併（交易／帶 <code>createdAt</code> 嘅紀錄：同 ID 保留較新；快速備忘同思路庫：同 ID 以較新 <code>updatedAt</code> 為準；<strong>設定（含 Playbook 標籤庫、策略說明、犯錯標籤、範本）</strong>：標籤名單會合併去重；同一 Playbook 標籤嘅策略說明以較新 <code>updatedAt</code> 為準；錢包預設／時間格：邊邊 <code>syncUpdatedAt</code> 新就邊邊主導預算欄；XAU 開倉狀態以較新 <code>openedAt</code> 為準）。<strong>XAU 本地蠟燭時間框／TradingView 時間框</strong>只留本機、唔寫入備份 JSON。再寫回本機並<strong>上傳成個備份</strong>。「從雲端覆蓋本機」才會<strong>唔合併</strong>整份取代本機（舊備份冇嘅欄位會保留本機）。進階 <code>DELETE</code> 仍係刻意清空雲端專用。
+          <strong>合併同步（預設）：</strong>會先下載雲端，將<strong>交易、生活目標／日誌、錢包／時間表、工作日曆、每日心情日記、自訂每日金句／效應池、效應庫（閃卡／出現紀錄）、交易思路庫、交易筆記閃卡（主題／卡片）、待辦快速備忘、XAU 模擬倉</strong>等一併按規則合併（同 ID 一般以較新嘅 <code>updatedAt</code>／<code>createdAt</code>（兩者取較後）為準；本機刪除會寫墓碑，避免舊雲端備份喺同步時復活；快速備忘同思路庫：同 ID 以較新 <code>updatedAt</code> 為準；<strong>設定（含 Playbook 標籤庫、策略說明、犯錯標籤、範本）</strong>：標籤名單會合併去重；同一 Playbook 標籤嘅策略說明以較新 <code>updatedAt</code> 為準；錢包<strong>逐筆</strong>預設支出／課表時段／月費同固定收入範本亦按上述時間戳合併；錢包<strong>預算／資產等頂欄</strong>仍以邊份備份嘅 <code>syncUpdatedAt</code> 較新邊邊主導；XAU 開倉狀態以較新 <code>openedAt</code> 為準）。<strong>XAU 本地蠟燭時間框／TradingView 時間框</strong>只留本機、唔寫入備份 JSON。再寫回本機並<strong>上傳成個備份</strong>。「從雲端覆蓋本機」才會<strong>唔合併</strong>整份取代本機（舊備份冇嘅欄位會保留本機）。進階 <code>DELETE</code> 仍係刻意清空雲端專用。
         </p>
         <div class="journal-ai-box">
           <h3 style="margin: 0 0 8px; font-size: 1rem">備份 AI 助手（Google Gemini）</h3>
@@ -5216,7 +5265,16 @@
           timeClose: t.timeClose || "",
           notes: t.notes || "",
           date: t.date || "",
-          createdAt: t.createdAt != null ? Number(t.createdAt) : Date.now(),
+          createdAt: (function () {
+            var c = t.createdAt != null ? Number(t.createdAt) : NaN;
+            return !isNaN(c) && c > 0 ? c : Date.now();
+          })(),
+          updatedAt: (function () {
+            var c = t.createdAt != null ? Number(t.createdAt) : NaN;
+            var cr = !isNaN(c) && c > 0 ? c : Date.now();
+            var u = t.updatedAt != null ? Number(t.updatedAt) : NaN;
+            return !isNaN(u) && u > 0 ? u : cr;
+          })(),
           screenshot: t.screenshot || null,
         };
       }
@@ -5309,6 +5367,8 @@
         lifeStep: true,
         expensePreset: true,
         scheduleBlock: true,
+        walletFixedTemplate: true,
+        walletIncomeTemplate: true,
       };
 
       function normalizeSyncTombstones(t) {
@@ -5576,6 +5636,8 @@
                 estMin: estMin,
                 repeat: rep,
                 monthDay: md,
+                createdAt: b.createdAt != null && !isNaN(Number(b.createdAt)) ? Number(b.createdAt) : 0,
+                updatedAt: b.updatedAt != null && !isNaN(Number(b.updatedAt)) ? Number(b.updatedAt) : 0,
               };
             })
           : [];
@@ -5613,6 +5675,12 @@
                 createdAt: e.createdAt != null ? Number(e.createdAt) : Date.now(),
                 monthlyFixedTemplateId: e.monthlyFixedTemplateId ? String(e.monthlyFixedTemplateId) : "",
                 monthlyIncomeTemplateId: e.monthlyIncomeTemplateId ? String(e.monthlyIncomeTemplateId) : "",
+                updatedAt: (function () {
+                  var c = e.createdAt != null ? Number(e.createdAt) : NaN;
+                  var cr = !isNaN(c) && c > 0 ? c : Date.now();
+                  var u = e.updatedAt != null ? Number(e.updatedAt) : NaN;
+                  return !isNaN(u) && u > 0 ? u : cr;
+                })(),
               };
             })
           : [];
@@ -5682,18 +5750,28 @@
                 repeat: rep,
                 dow: dow,
                 monthDay: md,
+                createdAt: p.createdAt != null && !isNaN(Number(p.createdAt)) ? Number(p.createdAt) : 0,
+                updatedAt: p.updatedAt != null && !isNaN(Number(p.updatedAt)) ? Number(p.updatedAt) : 0,
               };
             })
           : [];
         d.wallet.monthlyFixedTemplates = Array.isArray(d.wallet.monthlyFixedTemplates)
-          ? d.wallet.monthlyFixedTemplates.map(function (t) {
-              return normalizeWalletMonthlyExpenseTemplate_(t);
-            })
+          ? d.wallet.monthlyFixedTemplates
+              .map(function (t) {
+                return normalizeWalletMonthlyExpenseTemplate_(t);
+              })
+              .filter(function (t) {
+                return !entityKilledByTombstone_("walletFixedTemplate", t.id, 0);
+              })
           : [];
         d.wallet.monthlyIncomeTemplates = Array.isArray(d.wallet.monthlyIncomeTemplates)
-          ? d.wallet.monthlyIncomeTemplates.map(function (t) {
-              return normalizeWalletMonthlyIncomeTemplate_(t);
-            })
+          ? d.wallet.monthlyIncomeTemplates
+              .map(function (t) {
+                return normalizeWalletMonthlyIncomeTemplate_(t);
+              })
+              .filter(function (t) {
+                return !entityKilledByTombstone_("walletIncomeTemplate", t.id, 0);
+              })
           : [];
         if (typeof d.syncUpdatedAt !== "number" || isNaN(d.syncUpdatedAt)) d.syncUpdatedAt = 0;
         return d;
@@ -5773,6 +5851,8 @@
           category: (t.category || "住屋").trim() || "其他支出",
           billDay: billDay,
           excludeFromDailyCap: !!t.excludeFromDailyCap,
+          createdAt: t.createdAt != null && !isNaN(Number(t.createdAt)) ? Number(t.createdAt) : 0,
+          updatedAt: t.updatedAt != null && !isNaN(Number(t.updatedAt)) ? Number(t.updatedAt) : 0,
         };
       }
 
@@ -5789,6 +5869,8 @@
           amountBrackets: brackets,
           category: (t.category || "薪資").trim() || "其他收入",
           payDay: payDay,
+          createdAt: t.createdAt != null && !isNaN(Number(t.createdAt)) ? Number(t.createdAt) : 0,
+          updatedAt: t.updatedAt != null && !isNaN(Number(t.updatedAt)) ? Number(t.updatedAt) : 0,
         };
       }
 
@@ -5812,6 +5894,9 @@
       function saveRoutineWallet() {
         routineState.syncUpdatedAt = Date.now();
         persistRoutineWalletToStorage_();
+        try {
+          scheduleDebouncedCloudAutoPush_();
+        } catch (eRw) {}
       }
 
       var CHARACTER_RPG_KEY = "tradeLogCharacterRpgV1";
@@ -9539,6 +9624,8 @@
           repeat: rep,
           dow: rep === "weekly" ? dow : 1,
           monthDay: md,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
         });
         saveRoutineWallet();
         document.getElementById("dailyPresetTitle").value = "";
@@ -9583,6 +9670,12 @@
       });
 
       document.getElementById("btnDailyQuickExpense").addEventListener("click", function () {
+        var dQ = document.getElementById("dailyQuickDate");
+        var isoD = (dQ && dQ.value ? String(dQ.value).trim().slice(0, 10) : "") || todayISO();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(isoD)) {
+          toast("請揀有效日期");
+          return;
+        }
         var amt = parseNum(document.getElementById("dailyQuickAmt").value);
         var cat = (document.getElementById("dailyQuickCat").value || "").trim();
         var note = (document.getElementById("dailyQuickNote").value || "").trim();
@@ -9593,13 +9686,14 @@
         var qEx = document.getElementById("dailyQuickExcludeDaily");
         routineState.wallet.entries.push({
           id: lifeId("w"),
-          date: todayISO(),
+          date: isoD,
           type: "expense",
           amount: amt,
           category: cat || "其他支出",
           note: note,
           excludeFromDailyCap: !!(qEx && qEx.checked),
           createdAt: Date.now(),
+          updatedAt: Date.now(),
           monthlyFixedTemplateId: "",
           monthlyIncomeTemplateId: "",
         });
@@ -9610,7 +9704,7 @@
         renderDailySpendPanel();
         renderWalletPanel();
         renderDashLifeSummary();
-        toast("已加入今日支出");
+        toast("已加入支出（" + isoD + "）");
       });
 
       document.getElementById("schedDowTabs").addEventListener("click", function (e) {
@@ -9743,6 +9837,8 @@
           estMin: estMin,
           repeat: rep,
           monthDay: monthDay,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
         });
         saveRoutineWallet();
         renderSchedulePanel();
@@ -9831,6 +9927,7 @@
           ent.category = cat || (typ === "income" ? "其他收入" : "其他");
           ent.note = note;
           ent.excludeFromDailyCap = exDaily;
+          ent.updatedAt = Date.now();
           resetWalletEntryEditUi_();
           saveRoutineWallet();
           document.getElementById("walletEntryAmt").value = "";
@@ -9851,6 +9948,7 @@
           note: note,
           excludeFromDailyCap: exDaily,
           createdAt: Date.now(),
+          updatedAt: Date.now(),
           monthlyFixedTemplateId: "",
           monthlyIncomeTemplateId: "",
         });
@@ -9900,6 +9998,33 @@
         renderWalletPanel();
         renderDashLifeSummary();
       });
+
+      (function wireWalletSpendCalNav_() {
+        var root = document.getElementById("panel-wallet");
+        if (!root || root._walletCalNavWired) return;
+        root._walletCalNavWired = true;
+        root.addEventListener("click", function (e) {
+          var cell = e.target.closest("[data-wallet-cal-day]");
+          if (!cell) return;
+          var iso = String(cell.getAttribute("data-wallet-cal-day") || "")
+            .trim()
+            .slice(0, 10);
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+          var wm = document.getElementById("walletMonth");
+          if (wm) wm.value = iso.slice(0, 7);
+          var de = document.getElementById("walletEntryDate");
+          if (de) de.value = iso;
+          walletSubtab = "ledger";
+          renderWalletTab();
+          var ph = document.getElementById("walletEntryAmt");
+          if (ph) {
+            try {
+              ph.focus();
+            } catch (eF) {}
+          }
+          toast("已揀 " + iso + "；填金額加入「記一筆」");
+        });
+      })();
 
       document.getElementById("walletEntryType").addEventListener("change", function () {
         refreshWalletCategoryDropdowns_();
@@ -9984,6 +10109,8 @@
             category: cat,
             billDay: day,
             excludeFromDailyCap: !!(ex && ex.checked),
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
           })
         );
         saveRoutineWallet();
@@ -10006,6 +10133,7 @@
         var b = e.target.closest("[data-wallet-fixed-del]");
         if (!b) return;
         var id = b.getAttribute("data-wallet-fixed-del");
+        recordSyncTombstone_("walletFixedTemplate", id);
         routineState.wallet.monthlyFixedTemplates = (routineState.wallet.monthlyFixedTemplates || []).filter(function (t) {
           return t.id !== id;
         });
@@ -10036,6 +10164,8 @@
             amount: amt,
             category: cat,
             payDay: day,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
           })
         );
         saveRoutineWallet();
@@ -10057,6 +10187,7 @@
         var b = e.target.closest("[data-wallet-inc-del]");
         if (!b) return;
         var id = b.getAttribute("data-wallet-inc-del");
+        recordSyncTombstone_("walletIncomeTemplate", id);
         routineState.wallet.monthlyIncomeTemplates = (routineState.wallet.monthlyIncomeTemplates || []).filter(function (t) {
           return t.id !== id;
         });
@@ -10094,6 +10225,7 @@
           }
         }
         if (!tpl || ix < 0) return;
+        tpl.updatedAt = Date.now();
         var merged = walletDedupeAmountBrackets_((tpl.amountBrackets || []).concat([{ fromYm: fromYm, amount: newAmt }]));
         tpl.amountBrackets = merged;
         if (kind === "inc") {
@@ -11521,6 +11653,16 @@
         return sum;
       }
 
+      /** 該日帳本所有支出（唔理「唔計日限」；用於錢包日曆總使費） */
+      function walletLedgerExpenseAllOnDate_(iso) {
+        var sum = 0;
+        var ent = routineState.wallet.entries || [];
+        for (var i = 0; i < ent.length; i++) {
+          if (ent[i].type === "expense" && ent[i].date === iso) sum += ent[i].amount;
+        }
+        return sum;
+      }
+
       function presetAppliesOnDate(p, dt) {
         if (!dt || !(dt instanceof Date) || isNaN(dt.getTime())) return false;
         var r = p.repeat || "daily";
@@ -12020,6 +12162,8 @@
               ? String(routineState.wallet.dailyExpenseCap)
               : "";
         }
+        var dqd = document.getElementById("dailyQuickDate");
+        if (dqd && !dqd.value) dqd.value = todayISO();
         var dm = document.getElementById("dailySpendMonth");
         if (dm && !dm._inited) {
           dm.value = currentYmLocal();
@@ -12969,6 +13113,7 @@
         var exWrap2 = document.getElementById("walletExcludeFromDailyWrap");
         var typ2 = document.getElementById("walletEntryType");
         if (exWrap2 && typ2) exWrap2.hidden = typ2.value === "income";
+        renderWalletSpendCalendar_();
         requestAnimationFrame(function () {
           drawWalletSpendChart();
         });
@@ -13308,6 +13453,27 @@
         return "rgba(255, 139, 163, " + b + ")";
       }
 
+      /** 錢包日曆：有設每日上限時，超上限先紅、未超（有緩衝）綠；無上限則唔用紅色熱力。 */
+      function heatColorWalletCalDay_(spend, dailyCap) {
+        spend = Math.max(0, Number(spend) || 0);
+        if (spend <= 0) return "rgba(30, 41, 59, 0.55)";
+        var cap = dailyCap != null && !isNaN(Number(dailyCap)) && Number(dailyCap) > 0 ? Number(dailyCap) : null;
+        if (cap == null) {
+          return "rgba(51, 65, 85, 0.52)";
+        }
+        if (spend <= cap) {
+          var headroom = cap > 0 ? (cap - spend) / cap : 1;
+          var a = 0.3 + headroom * 0.42;
+          if (a > 0.88) a = 0.88;
+          if (a < 0.28) a = 0.28;
+          return "rgba(94, 233, 160, " + a + ")";
+        }
+        var overRatio = (spend - cap) / cap;
+        var b = 0.34 + Math.min(overRatio, 2.5) * 0.26;
+        if (b > 0.92) b = 0.92;
+        return "rgba(255, 139, 163, " + b + ")";
+      }
+
       function renderAnalytics() {
         var box = document.getElementById("analyticsPlaybooks");
         var tbody = document.getElementById("tbodySymbols");
@@ -13545,6 +13711,106 @@
           html += "</div></div>";
         }
         host.innerHTML = html;
+      }
+
+      function renderWalletSpendCalendar_() {
+        var grid = document.getElementById("walletSpendCal");
+        if (!grid) return;
+        var ym = walletMonthKey();
+        if (!ym || String(ym).length < 7) {
+          grid.innerHTML = "";
+          return;
+        }
+        var p2 = ym.split("-");
+        var y = parseInt(p2[0], 10);
+        var mo = parseInt(p2[1], 10);
+        if (isNaN(y) || isNaN(mo)) {
+          grid.innerHTML = "";
+          return;
+        }
+        var first = new Date(y, mo - 1, 1);
+        var startWd = first.getDay();
+        var daysInMonth = new Date(y, mo, 0).getDate();
+        var today = todayISO();
+        var dayCap =
+          routineState.wallet.dailyExpenseCap != null && !isNaN(Number(routineState.wallet.dailyExpenseCap))
+            ? Number(routineState.wallet.dailyExpenseCap)
+            : null;
+        var htmlW = "";
+        var dowsW = ["日", "一", "二", "三", "四", "五", "六"];
+        for (var hw = 0; hw < 7; hw++) {
+          htmlW += '<div class="dow">' + dowsW[hw] + "</div>";
+        }
+        for (var pw = 0; pw < startWd; pw++) {
+          htmlW += '<div class="heat-cell muted"></div>';
+        }
+        for (var dw = 1; dw <= daysInMonth; dw++) {
+          var isoW = ym + "-" + String(dw).padStart(2, "0");
+          var ledW = walletLedgerExpenseAllOnDate_(isoW);
+          var preW = presetExpenseSumOnDate(isoW);
+          var totW = ledW + preW;
+          var zcW = totW === 0 ? " heat-zero" : "";
+          var titW =
+            dw +
+            " 日 · 帳本支出 " +
+            ledW.toLocaleString("zh-HK", { maximumFractionDigits: 0 }) +
+            " · 預設日扣 " +
+            preW.toLocaleString("zh-HK", { maximumFractionDigits: 0 }) +
+            " · 合計 " +
+            totW.toLocaleString("zh-HK", { maximumFractionDigits: 0 });
+          if (dayCap != null && dayCap > 0) {
+            titW += " · 每日上限 " + dayCap.toLocaleString("zh-HK", { maximumFractionDigits: 0 });
+            if (totW <= dayCap) {
+              titW +=
+                " · 尚餘 " +
+                Math.max(0, dayCap - totW).toLocaleString("zh-HK", { maximumFractionDigits: 0 });
+            } else {
+              titW +=
+                " · 超出 " +
+                (totW - dayCap).toLocaleString("zh-HK", { maximumFractionDigits: 0 });
+            }
+          }
+          var boxShadow = isoW === today ? ";box-shadow: inset 0 0 0 2px rgba(252, 211, 77, 0.85)" : "";
+          var remLine = "";
+          if (dayCap != null && dayCap > 0 && totW > 0) {
+            if (totW <= dayCap) {
+              remLine =
+                '<span class="wallet-cal-rem">餘 ' +
+                Math.max(0, dayCap - totW).toLocaleString("zh-HK", { maximumFractionDigits: 0 }) +
+                "</span>";
+            } else {
+              remLine =
+                '<span class="wallet-cal-rem wallet-cal-rem--over">超 ' +
+                (totW - dayCap).toLocaleString("zh-HK", { maximumFractionDigits: 0 }) +
+                "</span>";
+            }
+          }
+          htmlW +=
+            '<div class="heat-cell' +
+            zcW +
+            '" data-wallet-cal-day="' +
+            escapeHtml(isoW) +
+            '" style="background:' +
+            heatColorWalletCalDay_(totW, dayCap) +
+            boxShadow +
+            '" title="' +
+            escapeHtml(titW) +
+            '"><span class="d">' +
+            dw +
+            '</span><span class="v">' +
+            (totW ? totW.toLocaleString("zh-HK", { maximumFractionDigits: 0 }) : "") +
+            "</span>" +
+            remLine +
+            "</div>";
+        }
+        var totalCellsW = startWd + daysInMonth;
+        var remW = totalCellsW % 7;
+        if (remW) {
+          for (var qw = 0; qw < 7 - remW; qw++) {
+            htmlW += '<div class="heat-cell muted"></div>';
+          }
+        }
+        grid.innerHTML = htmlW;
       }
 
       function drawWalletSpendChart() {
@@ -14273,6 +14539,15 @@
           });
       }
 
+      function entityLatestTs_(o) {
+        if (!o || typeof o !== "object") return 0;
+        var u = Number(o.updatedAt);
+        var c = Number(o.createdAt);
+        var tu = !isNaN(u) && u > 0 ? u : 0;
+        var tc = !isNaN(c) && c > 0 ? c : 0;
+        return Math.max(tu, tc);
+      }
+
       function mergeTradesById(localArr, cloudArr) {
         var map = {};
         function consider(t) {
@@ -14283,9 +14558,7 @@
             map[n.id] = n;
             return;
           }
-          var ca = Number(ex.createdAt) || 0;
-          var cb = Number(n.createdAt) || 0;
-          map[n.id] = cb > ca ? n : ex;
+          map[n.id] = entityLatestTs_(n) > entityLatestTs_(ex) ? n : ex;
         }
         (localArr || []).forEach(consider);
         (cloudArr || []).forEach(consider);
@@ -14294,12 +14567,12 @@
             return map[k];
           })
           .filter(function (t) {
-            return !entityKilledByTombstone_("trade", t.id, Number(t.createdAt) || 0);
+            return !entityKilledByTombstone_("trade", t.id, entityLatestTs_(t));
           })
           .sort(function (a, b) {
             var c = String(b.date || "").localeCompare(String(a.date || ""));
             if (c !== 0) return c;
-            return (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0);
+            return entityLatestTs_(b) - entityLatestTs_(a);
           });
       }
 
@@ -14389,9 +14662,7 @@
             map[n.id] = n;
             return;
           }
-          var ca = Number(ex.createdAt) || 0;
-          var cb = Number(n.createdAt) || 0;
-          map[n.id] = cb > ca ? n : ex;
+          map[n.id] = entityLatestTs_(n) > entityLatestTs_(ex) ? n : ex;
         }
         (localArr || []).forEach(consider);
         (cloudArr || []).forEach(consider);
@@ -14466,6 +14737,39 @@
         });
       }
 
+      function mergeByBlockIdNewerTs(localArr, cloudArr, tsFn) {
+        tsFn = tsFn || entityLatestTs_;
+        var map = {};
+        function consider(b) {
+          if (!b || !b.id) return;
+          var ex = map[b.id];
+          if (!ex) {
+            map[b.id] = b;
+            return;
+          }
+          if (tsFn(b) > tsFn(ex)) map[b.id] = b;
+        }
+        (localArr || []).forEach(consider);
+        (cloudArr || []).forEach(consider);
+        var seen = {};
+        var order = [];
+        (localArr || []).forEach(function (b) {
+          if (b && b.id && !seen[b.id]) {
+            seen[b.id] = true;
+            order.push(b.id);
+          }
+        });
+        (cloudArr || []).forEach(function (b) {
+          if (b && b.id && !seen[b.id]) {
+            seen[b.id] = true;
+            order.push(b.id);
+          }
+        });
+        return order.map(function (id) {
+          return map[id];
+        });
+      }
+
       function getLifePayloadForSync_() {
         return {
           version: 1,
@@ -14479,11 +14783,11 @@
         lo = lo || { version: 1, goals: [], logs: [], syncUpdatedAt: 0 };
         cl = cl || { version: 1, goals: [], logs: [], syncUpdatedAt: 0 };
         var goals = mergeEntityByIdNewerCreated(lo.goals || [], cl.goals || [], normalizeLifeGoal).filter(function (g) {
-          return !entityKilledByTombstone_("lifeGoal", g.id, Number(g.createdAt) || 0);
+          return !entityKilledByTombstone_("lifeGoal", g.id, entityLatestTs_(g));
         });
         goals = filterGoalsStripTombstonedSteps_(goals);
         var logs = mergeEntityByIdNewerCreated(lo.logs || [], cl.logs || [], normalizeLifeLog).filter(function (l) {
-          return !entityKilledByTombstone_("lifeLog", l.id, Number(l.createdAt) || 0);
+          return !entityKilledByTombstone_("lifeLog", l.id, entityLatestTs_(l));
         });
         return {
           version: 1,
@@ -14512,27 +14816,30 @@
           return normalizeRoutineWallet({ wallet: { monthlyFixedTemplates: [t] } }).wallet.monthlyFixedTemplates[0];
         }
         var mergedEntries = mergeEntityByIdNewerCreated(lo.wallet.entries, cl.wallet.entries, normEntry).filter(function (x) {
-          return !entityKilledByTombstone_("walletEntry", x.id, Number(x.createdAt) || 0);
+          return !entityKilledByTombstone_("walletEntry", x.id, entityLatestTs_(x));
         });
-        var mergedPresets = mergeByBlockIdPreferFirst(lo.wallet.expensePresets, cl.wallet.expensePresets, preferLo)
+        var mergedPresets = mergeByBlockIdNewerTs(lo.wallet.expensePresets, cl.wallet.expensePresets)
           .map(normPreset)
           .filter(function (p) {
             return !entityKilledByTombstone_("expensePreset", p.id, 0);
           });
-        var mergedFixed = mergeByBlockIdPreferFirst(
-          lo.wallet.monthlyFixedTemplates || [],
-          cl.wallet.monthlyFixedTemplates || [],
-          preferLo
-        ).map(normFixedTpl);
+        var mergedFixed = mergeByBlockIdNewerTs(lo.wallet.monthlyFixedTemplates || [], cl.wallet.monthlyFixedTemplates || [])
+          .map(normFixedTpl)
+          .filter(function (t) {
+            return !entityKilledByTombstone_("walletFixedTemplate", t.id, 0);
+          });
         function normIncTpl(t) {
           return normalizeRoutineWallet({ wallet: { monthlyIncomeTemplates: [t] } }).wallet.monthlyIncomeTemplates[0];
         }
-        var mergedIncFixed = mergeByBlockIdPreferFirst(
+        var mergedIncFixed = mergeByBlockIdNewerTs(
           lo.wallet.monthlyIncomeTemplates || [],
-          cl.wallet.monthlyIncomeTemplates || [],
-          preferLo
-        ).map(normIncTpl);
-        var mergedBlocks = mergeByBlockIdPreferFirst(lo.scheduleBlocks, cl.scheduleBlocks, preferLo)
+          cl.wallet.monthlyIncomeTemplates || []
+        )
+          .map(normIncTpl)
+          .filter(function (t) {
+            return !entityKilledByTombstone_("walletIncomeTemplate", t.id, 0);
+          });
+        var mergedBlocks = mergeByBlockIdNewerTs(lo.scheduleBlocks, cl.scheduleBlocks)
           .map(normBlock)
           .filter(function (b) {
             return !entityKilledByTombstone_("scheduleBlock", b.id, 0);
@@ -15290,6 +15597,7 @@
               state.trades[j].pnl = pnl;
               state.trades[j].rMultiple = parseNum(document.getElementById("m_r").value);
               state.trades[j].notes = document.getElementById("m_notes").value.trim();
+              state.trades[j].updatedAt = Date.now();
               break;
             }
           }
@@ -16678,12 +16986,12 @@
           if (s === "date-desc") {
             var c = String(b.date || "").localeCompare(String(a.date || ""));
             if (c !== 0) return c;
-            return (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0);
+            return entityLatestTs_(b) - entityLatestTs_(a);
           }
           if (s === "date-asc") {
             var c2 = String(a.date || "").localeCompare(String(b.date || ""));
             if (c2 !== 0) return c2;
-            return (Number(a.createdAt) || 0) - (Number(b.createdAt) || 0);
+            return entityLatestTs_(a) - entityLatestTs_(b);
           }
           if (s === "pnl-desc") return (Number(b.pnl) || 0) - (Number(a.pnl) || 0);
           if (s === "pnl-asc") return (Number(a.pnl) || 0) - (Number(b.pnl) || 0);
