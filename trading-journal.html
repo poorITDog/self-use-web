@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#080a0f" media="(prefers-color-scheme: dark)" />
-  <meta name="theme-color" content="#080a0f" />
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#000000" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="TradeLog" />
@@ -12,25 +12,40 @@
   <title>TradeLog Pro — 交易日誌 · 目標追蹤</title>
   <style>
     :root {
-      --bg: #06080d;
-      --bg-elevated: #0f141c;
-      --bg-card: #121a26;
-      --border: rgba(255, 255, 255, 0.14);
-      --text: #f1f5fd;
-      --text-muted: #aab8d4;
-      --accent: #5ccfff;
-      --accent-2: #c4b5fd;
-      --accent-soft: rgba(92, 207, 255, 0.22);
-      --profit: #5ee9a0;
-      --profit-bg: rgba(94, 233, 160, 0.16);
-      --loss: #ff8ba3;
-      --loss-bg: rgba(255, 139, 163, 0.16);
-      --warn: #fcd34d;
-      --radius: 14px;
-      --radius-sm: 9px;
-      --font: ui-sans-serif, "PingFang HK", "Microsoft JhengHei", system-ui, sans-serif;
-      --shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
-      --glow: 0 0 80px rgba(56, 189, 248, 0.08);
+      --bg: #000000;
+      --bg-grouped: #1c1c1e;
+      --bg-elevated: #2c2c2e;
+      --bg-card: #1c1c1e;
+      --bg-card-secondary: #2c2c2e;
+      --border: rgba(84, 84, 88, 0.65);
+      --border-strong: rgba(84, 84, 88, 0.85);
+      --separator: rgba(84, 84, 88, 0.36);
+      --text: #ffffff;
+      --text-secondary: rgba(235, 235, 245, 0.6);
+      --text-muted: rgba(235, 235, 245, 0.45);
+      --text-tertiary: rgba(235, 235, 245, 0.3);
+      --accent: #0a84ff;
+      --accent-2: #bf5af2;
+      --accent-soft: rgba(10, 132, 255, 0.18);
+      --profit: #30d158;
+      --profit-bg: rgba(48, 209, 88, 0.16);
+      --loss: #ff453a;
+      --loss-bg: rgba(255, 69, 58, 0.16);
+      --warn: #ffd60a;
+      --radius: 12px;
+      --radius-sm: 10px;
+      --radius-xs: 8px;
+      --radius-lg: 16px;
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang HK", "Helvetica Neue", system-ui, sans-serif;
+      --font-mono: ui-monospace, "SF Mono", Menlo, Monaco, monospace;
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+      --shadow-lift: 0 12px 40px rgba(0, 0, 0, 0.55);
+      --sidebar-w: 280px;
+      --tab-bar-h: 50px;
+      --content-max: 720px;
+      --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      --ios-fill: rgba(120, 120, 128, 0.24);
+      --ios-fill-secondary: rgba(120, 120, 128, 0.16);
     }
 
     /* 表單：配合重複方式顯示／隱藏（避免 hidden 喺 grid 內唔一致） */
@@ -78,104 +93,126 @@
     body {
       margin: 0;
       min-height: 100vh;
+      min-height: 100dvh;
       font-family: var(--font);
-      background: radial-gradient(ellipse 120% 80% at 50% -20%, rgba(56, 189, 248, 0.12), transparent 50%),
-        radial-gradient(ellipse 80% 50% at 100% 50%, rgba(167, 139, 250, 0.08), transparent 45%), var(--bg);
+      background: var(--bg);
       color: var(--text);
-      line-height: 1.5;
+      line-height: 1.47;
+      letter-spacing: -0.01em;
       -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    body.nav-open,
+    body.sheet-open {
+      overflow: hidden;
     }
 
     .shell.layout-pro {
-      max-width: 1400px;
+      max-width: 1280px;
       margin: 0 auto;
-      display: flex;
-      align-items: stretch;
-      gap: 0;
       min-height: 100vh;
-      padding: 0;
+      min-height: 100dvh;
     }
 
     .sidebar {
-      width: 238px;
-      flex-shrink: 0;
-      background: linear-gradient(180deg, #0f1419 0%, #0c1018 100%);
-      border-right: 1px solid var(--border);
-      padding: 20px 14px 32px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+      display: none;
     }
 
     .side-brand {
-      padding: 8px 10px 20px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 8px;
+      padding: 4px 16px 16px;
     }
 
     .side-brand .mark {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, #c084fc, var(--accent));
+      width: 44px;
+      height: 44px;
+      border-radius: 11px;
+      background: linear-gradient(145deg, var(--accent), #5e5ce6);
       display: grid;
       place-items: center;
-      font-weight: 900;
-      font-size: 0.7rem;
+      font-weight: 800;
+      font-size: 0.72rem;
       color: #fff;
       margin-bottom: 10px;
     }
 
     .side-brand strong {
       display: block;
-      font-size: 0.95rem;
+      font-size: 1.05rem;
+      font-weight: 700;
       letter-spacing: -0.02em;
     }
 
     .side-brand small {
       color: var(--text-muted);
-      font-size: 0.7rem;
+      font-size: 0.75rem;
       line-height: 1.35;
     }
 
     .side-nav {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 0;
+      padding: 0 12px;
+    }
+
+    .side-nav-group {
+      background: var(--bg-grouped);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-bottom: 22px;
+    }
+
+    .side-nav-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 8px 16px 4px;
+      text-transform: none;
+      letter-spacing: 0;
     }
 
     .side-nav button {
       width: 100%;
       text-align: left;
-      padding: 11px 12px;
+      padding: 11px 16px;
       border: none;
-      border-radius: var(--radius-sm);
+      border-radius: 0;
       background: transparent;
-      color: var(--text-muted);
+      color: var(--text);
       font-family: inherit;
-      font-size: 0.85rem;
-      font-weight: 600;
+      font-size: 1rem;
+      font-weight: 400;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 10px;
-      transition: background 0.15s, color 0.15s;
+      gap: 12px;
+      min-height: 44px;
+      transition: background 0.12s;
+      border-bottom: 0.5px solid var(--separator);
+    }
+
+    .side-nav-group button:last-child {
+      border-bottom: none;
     }
 
     .side-nav button:hover {
-      color: var(--text);
-      background: rgba(255, 255, 255, 0.04);
+      background: var(--ios-fill-secondary);
     }
 
     .side-nav button[aria-current="true"] {
-      color: #fff;
-      background: linear-gradient(90deg, rgba(192, 132, 252, 0.2), rgba(56, 189, 248, 0.08));
-      box-shadow: inset 3px 0 0 #c084fc;
+      color: var(--accent);
+      font-weight: 600;
+      background: transparent;
+    }
+
+    .side-nav button[aria-current="true"] .ico {
+      opacity: 1;
     }
 
     .side-nav button:focus-visible {
       outline: 2px solid var(--accent);
-      outline-offset: 2px;
+      outline-offset: -2px;
     }
 
     .btn:focus-visible,
@@ -218,81 +255,401 @@
     }
 
     .side-nav .ico {
-      width: 22px;
+      width: 28px;
       text-align: center;
-      opacity: 0.9;
-    }
-
-    .side-nav-group {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      margin-bottom: 12px;
-    }
-
-    .side-nav-group:last-child {
-      margin-bottom: 0;
-    }
-
-    .side-nav-label {
-      font-size: 0.62rem;
-      font-weight: 800;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      padding: 4px 12px 2px;
-      opacity: 0.9;
+      font-size: 1.05rem;
+      opacity: 0.85;
     }
 
     .main-flow {
-      flex: 1;
       min-width: 0;
-      padding: 18px 20px calc(56px + env(safe-area-inset-bottom, 0px));
+      max-width: var(--content-max);
+      margin: 0 auto;
+      padding: 0 16px calc(var(--tab-bar-h) + 16px + env(safe-area-inset-bottom, 0px));
     }
 
-    @media (max-width: 920px) {
+    .sidebar-backdrop {
+      display: none;
+    }
+
+    .btn-nav-toggle {
+      display: none;
+    }
+
+    .ios-top-bar {
+      padding: max(8px, env(safe-area-inset-top, 0px)) 0 12px;
+      margin-bottom: 8px;
+    }
+
+    .ios-top-bar-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 44px;
+      margin-bottom: 4px;
+    }
+
+    .ios-top-bar-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .ios-icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--accent);
+      font-size: 1.35rem;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .ios-icon-btn-primary {
+      background: var(--accent);
+      color: #fff;
+      font-size: 1.5rem;
+      font-weight: 300;
+    }
+
+    .ios-icon-btn:active {
+      opacity: 0.65;
+    }
+
+    .ios-menu-wrap {
+      position: relative;
+    }
+
+    .ios-popover {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 200px;
+      background: var(--bg-elevated);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lift);
+      padding: 6px;
+      z-index: 300;
+    }
+
+    .ios-popover[hidden] {
+      display: none !important;
+    }
+
+    .ios-popover button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 12px 14px;
+      border: none;
+      border-radius: var(--radius-xs);
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .ios-popover button:active {
+      background: var(--ios-fill);
+    }
+
+    .ios-large-title {
+      margin: 0;
+      font-size: clamp(1.75rem, 5vw, 2.125rem);
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+    }
+
+    .ios-large-sub {
+      margin: 4px 0 0;
+      font-size: 0.9375rem;
+      color: var(--text-secondary);
+      line-height: 1.35;
+    }
+
+    .ios-segment-wrap {
+      margin-bottom: 16px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .ios-segment-wrap[hidden] {
+      display: none !important;
+    }
+
+    .ios-segment-wrap::-webkit-scrollbar {
+      display: none;
+    }
+
+    .ios-segment {
+      display: inline-flex;
+      min-width: min(100%, max-content);
+      padding: 3px;
+      background: var(--ios-fill);
+      border-radius: 9px;
+      gap: 2px;
+    }
+
+    .ios-segment-btn {
+      flex: 1 0 auto;
+      min-width: 64px;
+      padding: 7px 14px;
+      border: none;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .ios-segment-btn.on {
+      background: var(--bg-elevated);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    }
+
+    .ios-tab-bar {
+      display: flex;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 200;
+      padding: 0 0 env(safe-area-inset-bottom, 0px);
+      background: rgba(28, 28, 30, 0.94);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-top: 0.5px solid var(--separator);
+    }
+
+    .ios-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1px;
+      min-height: var(--tab-bar-h);
+      padding: 4px 2px 2px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.625rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .ios-tab-icon {
+      font-size: 1.35rem;
+      line-height: 1.1;
+      font-style: normal;
+    }
+
+    .ios-tab-label {
+      letter-spacing: -0.01em;
+    }
+
+    .ios-tab[aria-current="true"] {
+      color: var(--accent);
+    }
+
+    .ios-tab-accent .ios-tab-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 1.25rem;
+      font-weight: 300;
+    }
+
+    .ios-tab-accent[aria-current="true"] {
+      color: var(--accent);
+    }
+
+    .ios-sheet-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 350;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.28s ease;
+    }
+
+    .ios-sheet-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .ios-sheet-backdrop[hidden] {
+      display: none !important;
+    }
+
+    .ios-sheet {
+      width: 100%;
+      max-width: 640px;
+      max-height: min(88vh, 720px);
+      background: var(--bg-grouped);
+      border-radius: 14px 14px 0 0;
+      transform: translateY(100%);
+      transition: transform 0.32s var(--ease-out);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .ios-sheet-backdrop.open .ios-sheet {
+      transform: translateY(0);
+    }
+
+    .ios-sheet-grabber {
+      width: 36px;
+      height: 5px;
+      border-radius: 3px;
+      background: rgba(235, 235, 245, 0.3);
+      margin: 8px auto 4px;
+      flex-shrink: 0;
+    }
+
+    .ios-sheet-head {
+      padding: 8px 20px 12px;
+      flex-shrink: 0;
+    }
+
+    .ios-sheet-head h2 {
+      margin: 0;
+      font-size: 1.0625rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .ios-sheet-body {
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 0 16px calc(20px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .ios-list-group {
+      background: var(--bg-elevated);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-bottom: 22px;
+    }
+
+    .ios-list-group-label {
+      font-size: 0.8125rem;
+      font-weight: 400;
+      color: var(--text-muted);
+      padding: 0 16px 7px;
+      text-transform: none;
+    }
+
+    .ios-list-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      min-height: 44px;
+      padding: 11px 16px;
+      border: none;
+      border-bottom: 0.5px solid var(--separator);
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      font-size: 1.0625rem;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .ios-list-row:last-child {
+      border-bottom: none;
+    }
+
+    .ios-list-row:active {
+      background: var(--ios-fill-secondary);
+    }
+
+    .ios-list-row .ico {
+      width: 28px;
+      text-align: center;
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+
+    .ios-list-row .chev {
+      margin-left: auto;
+      color: var(--text-tertiary);
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .card .ios-list-group {
+      background: var(--bg-elevated);
+    }
+
+    @media (min-width: 1024px) {
       .shell.layout-pro {
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+        max-width: 1280px;
       }
 
       .sidebar {
-        width: 100%;
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-        padding-bottom: 12px;
-      }
-
-      .side-nav {
+        display: flex;
         flex-direction: column;
-        flex-wrap: nowrap;
-        max-height: min(52vh, 420px);
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        height: 100dvh;
         overflow-y: auto;
-        overflow-x: hidden;
-        -webkit-overflow-scrolling: touch;
-        padding-right: 4px;
+        padding: 20px 0 28px;
+        border-right: 0.5px solid var(--separator);
+        background: var(--bg);
       }
 
-      .side-nav button {
-        flex: 0 0 auto;
-        min-width: 0;
-        min-height: 44px;
-        justify-content: flex-start;
+      .main-flow {
+        max-width: none;
+        padding: 20px 28px 32px;
       }
 
-      .side-nav button[aria-current="true"] {
-        box-shadow: inset 3px 0 0 #c084fc;
+      .ios-tab-bar {
+        display: none;
       }
 
-      .side-nav-group {
-        margin-bottom: 10px;
+      .ios-top-bar-row .btn-nav-toggle {
+        display: none;
+      }
+    }
+
+    @media (max-width: 1023px) {
+      .sidebar {
+        display: none !important;
       }
 
-      .header-actions .btn {
-        min-height: 44px;
-      }
-
-      .subtab-btn {
-        min-height: 44px;
+      #toast {
+        bottom: calc(var(--tab-bar-h) + 12px + env(safe-area-inset-bottom, 0px));
       }
     }
 
@@ -345,17 +702,6 @@
 
     .tip-banner[hidden] {
       display: none !important;
-    }
-
-    header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 28px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid var(--border);
     }
 
     .brand {
@@ -429,30 +775,31 @@
     .btn-primary {
       background: var(--accent);
       color: #fff;
+      border-radius: var(--radius-sm);
     }
 
     .btn-primary:hover {
-      background: #0ea5e9;
+      filter: brightness(1.08);
     }
 
     .btn-accent {
-      background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(167, 139, 250, 0.2));
+      background: var(--ios-fill);
       color: var(--text);
-      border: 1px solid rgba(56, 189, 248, 0.35);
+      border: none;
     }
 
     .btn-accent:hover {
-      background: linear-gradient(135deg, rgba(56, 189, 248, 0.35), rgba(167, 139, 250, 0.28));
+      background: rgba(120, 120, 128, 0.32);
     }
 
     .btn-ghost {
-      background: transparent;
+      background: var(--ios-fill-secondary);
       color: var(--text);
-      border-color: var(--border);
+      border: none;
     }
 
     .btn-ghost:hover {
-      background: var(--bg-elevated);
+      background: var(--ios-fill);
     }
 
     .btn-sm {
@@ -562,51 +909,45 @@
 
     .grid-stats {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 14px;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 148px), 1fr));
+      gap: 12px 14px;
       margin-bottom: 24px;
     }
 
     .stat-card {
-      background: linear-gradient(165deg, rgba(255, 255, 255, 0.04) 0%, transparent 42%), var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px 18px;
+      background: var(--bg-elevated);
+      border: none;
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
       position: relative;
       overflow: hidden;
       cursor: default;
-      transition: border-color 0.2s, transform 0.2s;
-    }
-
-    .stat-card:hover {
-      border-color: rgba(56, 189, 248, 0.25);
-      transform: translateY(-1px);
-    }
-
-    .stat-card::after {
-      content: "";
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 70%;
-      height: 3px;
-      background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.35), rgba(167, 139, 250, 0.25));
-      opacity: 0.9;
-    }
-
-    .stat-card .label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 6px;
+      transition: background 0.15s;
     }
 
     .stat-card .value {
-      font-size: 1.35rem;
+      font-size: clamp(1.25rem, 4vw, 1.5rem);
       font-weight: 700;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+      font-family: var(--font);
+    }
+
+    .stat-card:hover {
+      background: #3a3a3c;
+    }
+
+    .stat-card::after {
+      display: none;
+    }
+
+    .stat-card .label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 4px;
     }
 
     .stat-card .value.profit {
@@ -624,19 +965,16 @@
     }
 
     .card {
-      background: linear-gradient(165deg, rgba(255, 255, 255, 0.035) 0%, transparent 50%), var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 22px 22px 20px;
-      margin-bottom: 20px;
-      box-shadow: var(--shadow);
-      transition: box-shadow 0.28s ease, border-color 0.22s ease, transform 0.22s ease;
+      background: var(--bg-grouped);
+      border: none;
+      border-radius: var(--radius-lg);
+      padding: clamp(16px, 3vw, 20px);
+      margin-bottom: 16px;
     }
 
     section.panel .card:hover {
-      border-color: rgba(255, 255, 255, 0.16);
-      box-shadow: 0 10px 36px rgba(0, 0, 0, 0.28);
-      transform: translateY(-1px);
+      transform: none;
+      box-shadow: none;
     }
 
     .card h2 {
@@ -649,20 +987,20 @@
     }
 
     .card h2 .badge {
-      font-size: 0.65rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: none;
+      letter-spacing: 0;
       padding: 3px 8px;
       border-radius: 6px;
-      background: var(--accent-soft);
-      color: var(--accent);
+      background: var(--ios-fill);
+      color: var(--text-secondary);
     }
 
     .card .lead {
-      margin: 0 0 20px;
-      font-size: 0.85rem;
-      color: var(--text-muted);
+      margin: 0 0 16px;
+      font-size: 0.9375rem;
+      color: var(--text-secondary);
     }
 
     .charts-grid {
@@ -769,8 +1107,14 @@
 
     .form-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 16px 18px;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+      gap: 14px 16px;
+    }
+
+    @media (max-width: 480px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     label.field {
@@ -790,21 +1134,20 @@
     select,
     textarea {
       font-family: inherit;
-      font-size: 0.9rem;
-      padding: 11px 12px;
+      font-size: 1rem;
+      padding: 11px 14px;
       border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
+      border: none;
       background: var(--bg-elevated);
       color: var(--text);
       width: 100%;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition: box-shadow 0.15s;
     }
 
     input:focus,
     select:focus,
     textarea:focus {
       outline: none;
-      border-color: var(--accent);
       box-shadow: 0 0 0 3px var(--accent-soft);
     }
 
@@ -846,15 +1189,15 @@
       grid-template-columns: 1fr auto;
       gap: 12px;
       align-items: start;
-      padding: 16px 18px;
+      padding: 14px 16px;
       background: var(--bg-elevated);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      transition: border-color 0.15s;
+      border: none;
+      border-radius: var(--radius-lg);
+      transition: background 0.12s;
     }
 
     .trade-row:hover {
-      border-color: rgba(59, 130, 246, 0.35);
+      background: #3a3a3c;
     }
 
     .trade-row .meta {
@@ -896,10 +1239,12 @@
     }
 
     .trade-row .pnl {
-      font-size: 1.15rem;
+      font-size: clamp(1.05rem, 3vw, 1.2rem);
       font-weight: 800;
       text-align: right;
       white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      font-family: var(--font-mono);
     }
 
     .trade-row .pnl.profit {
@@ -954,19 +1299,19 @@
       bottom: 24px;
       left: 50%;
       transform: translateX(-50%) translateY(120px);
-      padding: 12px 20px;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      font-size: 0.875rem;
-      font-weight: 600;
+      padding: 12px 18px;
+      background: rgba(44, 44, 46, 0.96);
+      border: 0.5px solid var(--separator);
+      border-radius: 14px;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      color: var(--text);
       box-shadow: var(--shadow);
-      z-index: 200;
+      z-index: 500;
       opacity: 0;
-      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s, border-color 0.25s ease,
-        box-shadow 0.28s ease;
       pointer-events: none;
-      max-width: calc(100% - 32px);
+      transition: transform 0.32s var(--ease-out), opacity 0.32s ease;
+      max-width: min(90vw, 360px);
       text-align: center;
     }
 
@@ -976,13 +1321,15 @@
     }
 
     #toast.toast-ok {
-      border-color: rgba(74, 222, 128, 0.5);
-      box-shadow: 0 8px 28px rgba(74, 222, 128, 0.12), var(--shadow);
+      background: rgba(48, 209, 88, 0.92);
+      color: #000;
+      border-color: transparent;
     }
 
     #toast.toast-warn {
-      border-color: rgba(251, 191, 36, 0.55);
-      box-shadow: 0 8px 28px rgba(251, 191, 36, 0.1), var(--shadow);
+      background: rgba(255, 214, 10, 0.92);
+      color: #000;
+      border-color: transparent;
     }
 
     .sr-only {
@@ -1017,10 +1364,10 @@
       max-width: 560px;
       max-height: min(88vh, 900px);
       overflow: auto;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
+      background: var(--bg-grouped);
+      border: none;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lift);
     }
 
     .modal-head {
@@ -1029,10 +1376,10 @@
       justify-content: space-between;
       gap: 12px;
       padding: 16px 18px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 0.5px solid var(--separator);
       position: sticky;
       top: 0;
-      background: var(--bg-card);
+      background: var(--bg-grouped);
       z-index: 1;
     }
 
@@ -2262,32 +2609,36 @@
     .subtab-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 18px;
+      gap: 2px;
+      margin-bottom: 16px;
+      padding: 3px;
+      background: var(--ios-fill);
+      border-radius: 9px;
+      width: fit-content;
+      max-width: 100%;
     }
 
     .subtab-btn {
-      padding: 10px 16px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      background: var(--bg-elevated);
-      color: var(--text-muted);
+      padding: 7px 14px;
+      border-radius: 7px;
+      border: none;
+      background: transparent;
+      color: var(--text);
       font: inherit;
-      font-weight: 700;
-      font-size: 0.82rem;
+      font-weight: 600;
+      font-size: 0.8125rem;
       cursor: pointer;
-      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      white-space: nowrap;
     }
 
     .subtab-btn:hover {
       color: var(--text);
-      border-color: rgba(56, 189, 248, 0.35);
     }
 
     .subtab-btn.on {
-      color: #fff;
-      border-color: rgba(167, 139, 250, 0.55);
-      background: linear-gradient(135deg, rgba(167, 139, 250, 0.25), rgba(56, 189, 248, 0.12));
+      color: var(--text);
+      background: var(--bg-elevated);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
     }
 
     .sched-dow-row {
@@ -3083,10 +3434,76 @@
       color: var(--text-muted);
       margin-bottom: 4px;
     }
+
+    /* —— Responsive polish —— */
+    .subtab-row {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      flex-wrap: nowrap;
+      padding-bottom: 4px;
+      mask-image: linear-gradient(90deg, #000 92%, transparent);
+    }
+
+    .subtab-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    .subtab-btn {
+      flex-shrink: 0;
+    }
+
+    .toolbar {
+      gap: 8px;
+    }
+
+    .toolbar input[type="search"],
+    .toolbar select {
+      flex: 1 1 140px;
+      min-width: 0;
+      max-width: none;
+    }
+
+    .cal-grid-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: var(--radius);
+      padding-bottom: 4px;
+    }
+
+    @media (max-width: 640px) {
+      .cal-grid-scroll-inner {
+        min-width: 520px;
+      }
+
+      .heat-cell {
+        min-height: 42px;
+      }
+
+      .charts-grid {
+        gap: 12px;
+      }
+
+      .card h2 {
+        font-size: 1.0625rem;
+      }
+
+      input,
+      select,
+      textarea {
+        font-size: 16px;
+      }
+
+      .grid-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+    }
   </style>
 </head>
 <body>
   <a class="skip-link" href="#main-content">跳至主要內容</a>
+  <input type="file" id="fileImport" accept=".csv,text/csv" class="sr-only" />
   <div class="shell layout-pro">
     <aside class="sidebar" aria-label="主選單">
       <div class="side-brand">
@@ -3094,7 +3511,7 @@
         <strong>TradeLog Pro</strong>
         <small>個人日誌 · 本機儲存</small>
       </div>
-      <nav class="side-nav" role="navigation" aria-label="主要分頁">
+      <nav class="side-nav" id="sidebarNav" role="navigation" aria-label="主要分頁">
         <div class="side-nav-group">
           <div class="side-nav-label">交易紀錄</div>
           <button type="button" data-tab="dash" id="tab-dash" aria-current="true" aria-controls="panel-dash"><span class="ico">◆</span>概覽</button>
@@ -3127,29 +3544,43 @@
     </aside>
 
     <main class="main-flow" id="main-content" tabindex="-1">
-      <div class="tip-banner" id="tipBanner" role="note">
-        <p>
-          <strong>TradeLog Pro</strong>：側欄分類瀏覽；資料預設<strong>本機</strong>，可用<strong>設定 → 雲端合併同步</strong>備份多部機。
-        </p>
-        <button type="button" id="tipDismiss" aria-label="關閉提示">✕</button>
-      </div>
-
-      <header>
-        <div class="brand">
-          <div class="brand-mark">TL</div>
-          <div>
-            <h1 id="pageTitle" tabindex="-1">概覽</h1>
-            <p id="pageSub">權益 · 勝率 · 盈虧因子 · 期望值</p>
+      <header class="ios-top-bar">
+        <div class="ios-top-bar-row">
+          <div class="ios-top-bar-actions" style="margin-left: auto">
+            <button type="button" class="ios-icon-btn ios-icon-btn-primary" id="btnQuickAdd" aria-label="記一單">＋</button>
+            <div class="ios-menu-wrap">
+              <button type="button" class="ios-icon-btn" id="btnHeaderMenu" aria-label="更多操作" aria-expanded="false" aria-haspopup="true">⋯</button>
+              <div class="ios-popover" id="headerMenuPopover" hidden role="menu">
+                <button type="button" role="menuitem" id="btnImport">匯入 CSV</button>
+                <button type="button" role="menuitem" id="btnExport">匯出 CSV</button>
+                <button type="button" role="menuitem" id="btnDemo">示範數據</button>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="header-actions">
-          <input type="file" id="fileImport" accept=".csv,text/csv" class="sr-only" />
-          <button type="button" class="btn btn-ghost" id="btnImport" title="匯入 CSV（需含 symbol,pnl,date 欄）">匯入 CSV</button>
-          <button type="button" class="btn btn-ghost" id="btnExport">匯出 CSV</button>
-          <button type="button" class="btn btn-accent" id="btnDemo">示範數據</button>
-          <button type="button" class="btn btn-primary" id="btnQuickAdd">＋ 快速記一單</button>
-        </div>
+        <h1 class="ios-large-title" id="pageTitle" tabindex="-1">概覽</h1>
+        <p class="ios-large-sub" id="pageSub">權益 · 勝率 · 生活總覽 · 期望值</p>
       </header>
+
+      <div class="ios-segment-wrap" id="tradeSegment" hidden>
+        <div class="ios-segment" role="tablist" aria-label="交易分頁">
+          <button type="button" class="ios-segment-btn" data-tab="new">記單</button>
+          <button type="button" class="ios-segment-btn on" data-tab="list">列表</button>
+          <button type="button" class="ios-segment-btn" data-tab="analytics">分析</button>
+          <button type="button" class="ios-segment-btn" data-tab="calendar">日曆</button>
+        </div>
+      </div>
+
+      <div class="ios-segment-wrap" id="lifeSegment" hidden>
+        <div class="ios-segment" role="tablist" aria-label="生活分頁">
+          <button type="button" class="ios-segment-btn on" data-tab="goals">目標</button>
+          <button type="button" class="ios-segment-btn" data-tab="reminders">待辦</button>
+          <button type="button" class="ios-segment-btn" data-tab="daily">心情</button>
+          <button type="button" class="ios-segment-btn" data-tab="routine">課表</button>
+          <button type="button" class="ios-segment-btn" data-tab="wallet">錢包</button>
+          <button type="button" class="ios-segment-btn" data-tab="character">角色</button>
+        </div>
+      </div>
 
     <section id="panel-dash" class="panel active" role="tabpanel" aria-labelledby="tab-dash">
       <div class="grid-stats" id="statsGrid"></div>
@@ -3160,13 +3591,13 @@
         <div id="dashAreaBreakdown" style="margin-bottom: 14px"></div>
         <div class="life-goals-grid" id="dashLifeGoalsMini" style="margin-bottom: 14px"></div>
         <div id="dashRoutineWalletStrip" class="field-hint" style="margin-bottom: 12px; font-size: 0.82rem"></div>
-        <div id="dashLifeLogsMini" style="margin-bottom: 14px"></div>
-        <div class="form-actions" style="border: none; padding-top: 0; margin-top: 0">
-          <button type="button" class="btn btn-primary" id="btnDashToGoals">目標頁</button>
-          <button type="button" class="btn btn-accent" id="btnDashToRemind">待辦提醒</button>
-          <button type="button" class="btn btn-ghost" id="btnDashToRoutine">每週課表</button>
-          <button type="button" class="btn btn-ghost" id="btnDashToWallet">錢包</button>
-          <button type="button" class="btn btn-ghost" id="btnDashToXau">XAU 練習</button>
+        <div id="dashLifeLogsMini" style="margin-bottom: 8px"></div>
+        <div class="ios-list-group">
+          <button type="button" class="ios-list-row" id="btnDashToGoals"><span class="ico">◇</span>目標與進度<span class="chev">›</span></button>
+          <button type="button" class="ios-list-row" id="btnDashToRemind"><span class="ico">!</span>待辦提醒<span class="chev">›</span></button>
+          <button type="button" class="ios-list-row" id="btnDashToRoutine"><span class="ico">▥</span>每週課表<span class="chev">›</span></button>
+          <button type="button" class="ios-list-row" id="btnDashToWallet"><span class="ico">$</span>錢包<span class="chev">›</span></button>
+          <button type="button" class="ios-list-row" id="btnDashToXau"><span class="ico">◎</span>XAU 練習<span class="chev">›</span></button>
         </div>
       </div>
 
@@ -4898,6 +5329,68 @@
       </div>
     </section>
     </main>
+  </div>
+
+  <nav class="ios-tab-bar" id="navDock" aria-label="主要分頁">
+    <button type="button" class="ios-tab" data-dock-tab="dash" aria-current="true" aria-label="概覽">
+      <span class="ios-tab-icon" aria-hidden="true">⌂</span>
+      <span class="ios-tab-label">概覽</span>
+    </button>
+    <button type="button" class="ios-tab" data-dock-tab="list" aria-current="false" aria-label="交易">
+      <span class="ios-tab-icon" aria-hidden="true">☰</span>
+      <span class="ios-tab-label">交易</span>
+    </button>
+    <button type="button" class="ios-tab ios-tab-accent" data-dock-tab="new" aria-current="false" aria-label="記一單">
+      <span class="ios-tab-icon" aria-hidden="true">＋</span>
+      <span class="ios-tab-label">記單</span>
+    </button>
+    <button type="button" class="ios-tab" data-dock-tab="goals" aria-current="false" aria-label="生活">
+      <span class="ios-tab-icon" aria-hidden="true">♡</span>
+      <span class="ios-tab-label">生活</span>
+    </button>
+    <button type="button" class="ios-tab" data-dock-tab="browse" id="btnDockBrowse" aria-current="false" aria-label="瀏覽全部">
+      <span class="ios-tab-icon" aria-hidden="true">▦</span>
+      <span class="ios-tab-label">瀏覽</span>
+    </button>
+  </nav>
+
+  <div class="ios-sheet-backdrop" id="browseSheetBackdrop" hidden aria-hidden="true">
+    <div class="ios-sheet" role="dialog" aria-modal="true" aria-labelledby="browseSheetTitle">
+      <div class="ios-sheet-grabber" aria-hidden="true"></div>
+      <div class="ios-sheet-head">
+        <h2 id="browseSheetTitle">瀏覽</h2>
+      </div>
+      <div class="ios-sheet-body" id="browseSheetBody">
+        <p class="ios-list-group-label">交易</p>
+        <div class="ios-list-group">
+          <button type="button" class="ios-list-row" data-browse-tab="dash"><span class="ico">⌂</span>概覽<span class="chev">›</span></button>
+          <button type="button" class="ios-list-row" data-browse-tab="new"><span class="ico">＋</span>記一單<span class="chev">›</span></button>
+          <button type="button" class="ios-list-row" data-browse-tab="list"><span class="ico">☰</span>全部交易<span class="chev">›</span></button>
+          <button type="button" class="ios-list-row" data-browse-tab="analytics"><span class="ico">▤</span>分析<span class="chev">›</span></button>
+          <button type="button" class="ios-list-row" data-browse-tab="calendar"><span class="ico">▦</span>日曆<span class="chev">›</span></button>
+        </div>
+        <p class="ios-list-group-label">生活 · 理財</p>
+        <div class="ios-list-group">
+          <button type="button" class="ios-list-row" data-browse-tab="goals"><span class="ico">◇</span>目標與進度<span class="chev">›</span></button>
+          <button type="button" class="ios-list-row" data-browse-tab="reminders"><span class="ico">!</span>待辦・提醒<span class="chev">›</span></button>
+          <button type="button" class="ios-list-row" data-browse-tab="daily"><span class="ico">✎</span>每日心情<span class="chev">›</span></button>
+          <button type="button" class="ios-list-row" data-browse-tab="routine"><span class="ico">▥</span>每週課表<span class="chev">›</span></button>
+          <button type="button" class="ios-list-row" data-browse-tab="wallet"><span class="ico">$</span>錢包<span class="chev">›</span></button>
+          <button type="button" class="ios-list-row" data-browse-tab="character"><span class="ico">★</span>角色<span class="chev">›</span></button>
+        </div>
+        <p class="ios-list-group-label">學習 · 工具</p>
+        <div class="ios-list-group">
+          <button type="button" class="ios-list-row" data-browse-tab="psych"><span class="ico">✧</span>效應庫<span class="chev">›</span></button>
+          <button type="button" class="ios-list-row" data-browse-tab="tradeideas"><span class="ico">◈</span>交易思路<span class="chev">›</span></button>
+          <button type="button" class="ios-list-row" data-browse-tab="tradnotes"><span class="ico">≣</span>交易筆記<span class="chev">›</span></button>
+          <button type="button" class="ios-list-row" data-browse-tab="xau"><span class="ico">◎</span>XAU 練習<span class="chev">›</span></button>
+        </div>
+        <p class="ios-list-group-label">系統</p>
+        <div class="ios-list-group">
+          <button type="button" class="ios-list-row" data-browse-tab="settings"><span class="ico">⚙</span>設定<span class="chev">›</span></button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-hidden="true">
@@ -9484,6 +9977,75 @@
         }, 2800);
       }
 
+      var TAB_DOCK_MAP = {
+        dash: "dash",
+        new: "new",
+        list: "list",
+        analytics: "list",
+        calendar: "list",
+        goals: "goals",
+        reminders: "goals",
+        daily: "goals",
+        routine: "goals",
+        wallet: "goals",
+        character: "goals",
+        psych: "browse",
+        tradeideas: "browse",
+        tradnotes: "browse",
+        xau: "browse",
+        settings: "browse",
+      };
+      var TRADE_TABS = ["new", "list", "analytics", "calendar"];
+      var LIFE_TABS = ["goals", "reminders", "daily", "routine", "wallet", "character"];
+
+      function closeBrowseSheet_() {
+        var bd = document.getElementById("browseSheetBackdrop");
+        if (!bd) return;
+        bd.classList.remove("open");
+        bd.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("sheet-open");
+        setTimeout(function () {
+          if (!bd.classList.contains("open")) bd.hidden = true;
+        }, 320);
+      }
+
+      function openBrowseSheet_() {
+        var bd = document.getElementById("browseSheetBackdrop");
+        if (!bd) return;
+        bd.hidden = false;
+        bd.setAttribute("aria-hidden", "false");
+        document.body.classList.add("sheet-open");
+        requestAnimationFrame(function () {
+          bd.classList.add("open");
+        });
+      }
+
+      function updateIosSegments_(id) {
+        var tradeSeg = document.getElementById("tradeSegment");
+        var lifeSeg = document.getElementById("lifeSegment");
+        if (tradeSeg) {
+          tradeSeg.hidden = TRADE_TABS.indexOf(id) === -1;
+          tradeSeg.querySelectorAll(".ios-segment-btn").forEach(function (b) {
+            b.classList.toggle("on", b.getAttribute("data-tab") === id);
+          });
+        }
+        if (lifeSeg) {
+          lifeSeg.hidden = LIFE_TABS.indexOf(id) === -1;
+          lifeSeg.querySelectorAll(".ios-segment-btn").forEach(function (b) {
+            b.classList.toggle("on", b.getAttribute("data-tab") === id);
+          });
+        }
+        var sub = document.getElementById("pageSub");
+        if (sub) sub.hidden = TRADE_TABS.indexOf(id) !== -1 || LIFE_TABS.indexOf(id) !== -1;
+      }
+
+      function syncTabBar_(id) {
+        var dockId = TAB_DOCK_MAP[id] || "browse";
+        document.querySelectorAll(".ios-tab[data-dock-tab]").forEach(function (b) {
+          b.setAttribute("aria-current", b.getAttribute("data-dock-tab") === dockId ? "true" : "false");
+        });
+      }
+
       function setTab(id, opts) {
         var ids = ["dash", "new", "list", "analytics", "calendar", "goals", "reminders", "daily", "psych", "tradeideas", "tradnotes", "routine", "wallet", "character", "xau", "settings"];
         ids.forEach(function (t) {
@@ -9496,6 +10058,9 @@
             panel.hidden = !on;
           }
         });
+        syncTabBar_(id);
+        updateIosSegments_(id);
+        closeBrowseSheet_();
         var meta = TAB_META[id] || TAB_META.dash;
         document.getElementById("pageTitle").textContent = meta.title;
         document.getElementById("pageSub").textContent = meta.sub;
@@ -9521,6 +10086,7 @@
             if (ph) ph.focus({ preventScroll: true });
           });
         }
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
 
       document.querySelectorAll(".side-nav button[data-tab]").forEach(function (btn) {
@@ -9528,6 +10094,60 @@
           setTab(btn.getAttribute("data-tab"), { focusTitle: true });
         });
       });
+
+      (function wireIosNav_() {
+        var sheetBd = document.getElementById("browseSheetBackdrop");
+        document.querySelectorAll(".ios-tab[data-dock-tab]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var t = btn.getAttribute("data-dock-tab");
+            if (t === "browse") {
+              openBrowseSheet_();
+              return;
+            }
+            setTab(t, { focusTitle: true });
+          });
+        });
+        if (sheetBd) {
+          sheetBd.addEventListener("click", function (e) {
+            if (e.target === sheetBd) closeBrowseSheet_();
+          });
+        }
+        document.querySelectorAll("[data-browse-tab]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            setTab(btn.getAttribute("data-browse-tab"), { focusTitle: true });
+          });
+        });
+        document.querySelectorAll(".ios-segment-btn[data-tab]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            setTab(btn.getAttribute("data-tab"), { focusTitle: true });
+          });
+        });
+        var menuBtn = document.getElementById("btnHeaderMenu");
+        var menuPop = document.getElementById("headerMenuPopover");
+        if (menuBtn && menuPop) {
+          menuBtn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            var open = menuPop.hidden;
+            menuPop.hidden = !open;
+            menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
+          });
+          document.addEventListener("click", function () {
+            menuPop.hidden = true;
+            menuBtn.setAttribute("aria-expanded", "false");
+          });
+          menuPop.addEventListener("click", function (e) {
+            e.stopPropagation();
+            menuPop.hidden = true;
+            menuBtn.setAttribute("aria-expanded", "false");
+          });
+        }
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape") {
+            closeBrowseSheet_();
+            if (menuPop) menuPop.hidden = true;
+          }
+        });
+      })();
 
       document.getElementById("btnQuickAdd").addEventListener("click", function () {
         setTab("new");
@@ -10914,14 +11534,6 @@
           prev.style.display = "block";
         });
       })();
-
-      if (localStorage.getItem("tradeLogTipDismissed") === "1") {
-        document.getElementById("tipBanner").hidden = true;
-      }
-      document.getElementById("tipDismiss").addEventListener("click", function () {
-        document.getElementById("tipBanner").hidden = true;
-        localStorage.setItem("tradeLogTipDismissed", "1");
-      });
 
       (function pnlLivePreview() {
         var pnlIn = document.getElementById("inputPnl");
@@ -17237,6 +17849,8 @@
       });
 
       renderDash();
+      syncTabBar_("dash");
+      updateIosSegments_("dash");
       populateLifeNewAreaSelect_();
       refreshWalletCategoryDropdowns_();
       try {
