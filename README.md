@@ -43,10 +43,11 @@ python3 -m http.server 8765
 
 | 頁面 | 內容 |
 |------|------|
-| 今日 | 今日習慣打卡、達成率、時數、倒數、短期目標 |
-| 習慣 | 是/否、數量、計時；連擊、本月達成、累計時數 |
-| 日曆 | 月曆熱點、當日時數、時間流、打卡紀錄 |
-| 更多 | 時間表、倒數、番茄鐘、短/長期目標、記帳、主題、同步 |
+| 習慣 | 今日記錄 + 每個習慣的月曆卡片（完成日數、累計時數、連續日） |
+| 日曆 | 月曆總覽、當日時間流、打卡紀錄 |
+| 時間表 | 每週時間區塊規劃 |
+| 倒數 | 倒數日子 + 專注番茄鐘 |
+| 設定 | 目標、記帳、主題、Google Drive 自動同步 |
 
 ### 主題
 
@@ -55,8 +56,9 @@ python3 -m http.server 8765
 
 ### 同步
 
+- **Google Drive 自動同步**（預設路徑）：GIS OAuth + `appDataFolder`，見 [`sync/README.md`](sync/README.md)
 - **匯出／匯入 JSON**（永遠可用；可手動放去 iCloud Drive）
-- **Google Drive**：見 [`sync/README.md`](sync/README.md)（Apps Script）
+- **舊版 Apps Script**：設定頁「進階／舊版同步」
 
 > Browser 冇官方 iCloud API；iCloud 請用匯出 JSON →「檔案」App。
 

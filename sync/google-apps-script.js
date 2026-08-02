@@ -7,7 +7,7 @@
  * 3. 部署 → 新部署 → 網頁應用程式
  *    - 執行身分：我
  *    - 可存取對象：任何擁有連結嘅人
- * 4. 複製 Web App URL，貼去 Solara → 更多 → 同步
+ * 4. 複製 Web App URL，貼去 Solara → 設定 → 進階／舊版同步
  *
  * 會喺你 Drive 根目錄建立／更新 solara-backup.json
  */
