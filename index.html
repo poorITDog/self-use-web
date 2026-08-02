@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#F4A261" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Solara" />
+  <link rel="manifest" href="solara.webmanifest" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%23F4A261'/%3E%3Cstop offset='1' stop-color='%232A9D8F'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='128' height='128' rx='28' fill='url(%23g)'/%3E%3Ccircle cx='64' cy='54' r='22' fill='%23FFE8A3'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="solara.css" />
+  <title>Solara — 日暖生活</title>
+</head>
+<body data-theme="sunshine">
+  <div class="app" id="app">
+    <header class="brand">
+      <div class="brand-mark">
+        <div class="logo">S</div>
+        <h1>Solara</h1>
+        <p>把日子過得明亮一點</p>
+      </div>
+      <div class="chip-row" id="topChips"></div>
+    </header>
+
+    <main>
+      <section class="view active" data-view="today" id="view-today"></section>
+      <section class="view" data-view="habits" id="view-habits"></section>
+      <section class="view" data-view="calendar" id="view-calendar"></section>
+      <section class="view" data-view="more" id="view-more"></section>
+    </main>
+  </div>
+
+  <nav class="nav" id="nav">
+    <button type="button" data-nav="today" class="active"><span class="ico">☀</span>今日</button>
+    <button type="button" data-nav="habits"><span class="ico">✦</span>習慣</button>
+    <button type="button" data-nav="calendar"><span class="ico">▦</span>日曆</button>
+    <button type="button" data-nav="more"><span class="ico">☰</span>更多</button>
+  </nav>
+
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" id="modal" role="dialog" aria-modal="true"></div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script src="solara.js"></script>
+</body>
+</html>
