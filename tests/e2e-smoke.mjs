@@ -215,12 +215,13 @@ await assert(goalsBody.includes("跑步目標"), "goal saved");
 await assert(goalsBody.includes("連結習慣"), "goal shows linked habit");
 await assert(!!(await page.$("[data-goal-check]")), "goal has check-and-plus when habit linked");
 
-// settings notify tab has focus sound option
-await page.click('[data-nav="settings"]');
-await page.click('[data-settings="notify"]');
-await page.waitForSelector("#settingsBody");
-const notifySound = await page.$("#settingsBody #focusSoundEnabled");
+// settings notify tab has focus sound + event remind options
+await page.evaluate(() => document.querySelector('[data-settings="notify"]').click());
+await page.waitForSelector("#notifyEvents");
+const notifySound = await page.$("#settingsFocusSound");
 await assert(!!notifySound, "settings notify tab has focusSound toggle");
+const notifyEvents = await page.$("#notifyEvents");
+await assert(!!notifyEvents, "settings notify tab has event remind toggle");
 
 // focus / pomodoro (revisit)
 await page.click('[data-nav="focus"]');

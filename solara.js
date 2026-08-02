@@ -2462,7 +2462,7 @@
       (state.settings.notifyEvents !== false ? " checked" : "") +
       (state.settings.notifyEnabled && supported ? "" : " disabled") +
       " /> 行程提醒（當日開始時間）</label></div>";
-    html += '<div class="settings-row"><label class="settings-row-label"><input type="checkbox" id="focusSoundEnabled"' +
+    html += '<div class="settings-row"><label class="settings-row-label"><input type="checkbox" id="settingsFocusSound"' +
       (state.settings.focusSoundEnabled !== false ? " checked" : "") +
       " /> 專注提示音</label></div>";
     html += "</div>";
@@ -2949,10 +2949,12 @@
       toast(state.settings.notifyEvents ? "已開啟行程提醒" : "已關閉行程提醒");
       return;
     }
-    if (e.target.id === "focusSoundEnabled") {
+    if (e.target.id === "focusSoundEnabled" || e.target.id === "settingsFocusSound") {
       state.settings.focusSoundEnabled = e.target.checked;
       saveStateLocal();
       toast(state.settings.focusSoundEnabled ? "已開啟提示音" : "已關閉提示音");
+      if (ui.view === "focus") renderFocus();
+      if (ui.view === "settings") renderSettingsBody();
       return;
     }
     if (e.target.id === "autoSyncToggle") {
