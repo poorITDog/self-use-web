@@ -2,13 +2,42 @@
 
 私人用生產力 PWA：習慣追蹤 · 日曆 · 時間表 · 倒數 · 專注 · 目標 · 記帳。
 
-## 點樣用
+## GitHub Pages（推薦）
 
-1. 用瀏覽器打開 `index.html`（或任何靜態伺服器）
-2. iPhone：Safari → 分享 → **加入主畫面**
-3. Android：Chrome → 選單 → **安裝應用程式 / 加到主畫面**
+呢個 repo **已經開咗** GitHub Pages（來源：`main` 分支根目錄）。
 
-資料預設只存本機（`localStorage`）。
+**網址：**
+
+```text
+https://pooritdog.github.io/self-use-web/
+```
+
+### 第一次上線（你要做）
+
+1. Merge PR：[#1 Solara](https://github.com/poorITDog/self-use-web/pull/1) 入 `main`
+2. 等 1–2 分鐘等 Pages rebuild  
+   （Settings → Pages 可以看到狀態）
+3. 用瀏覽器開上面個網址
+
+> 而家 `main` 仲係舊檔；**merge 完** Pages 先會變成 Solara。
+
+### iPhone 加到主畫面
+
+1. 用 **Safari** 打開  
+   `https://pooritdog.github.io/self-use-web/`
+2. 底部分享掣 → **加入主畫面**
+3. 名稱用 `Solara` → 加入
+
+之後主畫面個 icon 就可以當 App 用；資料存喺手機本機。
+
+---
+
+## 本地預覽
+
+```bash
+python3 -m http.server 8765
+# 開 http://localhost:8765
+```
 
 ## 功能
 
