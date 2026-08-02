@@ -7,16 +7,18 @@
   var DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.appdata";
   var BASE_COLORS = ["#F4A261", "#2A9D8F", "#E76F51", "#457B9D", "#E9C46A", "#90BE6D", "#F28482", "#1D8A99"];
   var GROUPS = ["朝早", "下午", "晚上", "健康", "工作", "生活"];
-  var MONEY_CATS = ["飲食", "交通", "住屋", "娛樂", "購物", "薪資", "其他"];
   var DOW = ["日", "一", "二", "三", "四", "五", "六"];
 
   var state = loadState();
   var ui = {
     view: "habits",
-    settingsTab: "sync",
+    settingsTab: "goals",
     calMonth: startOfMonth(new Date()),
     calSelected: dateKey(new Date()),
-    habitCalMonth: startOfMonth(new Date()),
+    calMode: "month",
+    timetableDow: new Date().getDay(),
+    habitDetailId: "",
+    habitDetailMonth: startOfMonth(new Date()),
     focus: {
       running: false,
       mode: "focus",
@@ -79,11 +81,6 @@
     return '<option value="' + escAttr(val) + '"' + (String(val) === String(current) ? " selected" : "") + ">" + esc(label) + "</option>";
   }
 
-  function fmtMoney(n) {
-    var v = Number(n) || 0;
-    return (v < 0 ? "-" : "") + "$" + Math.abs(v).toLocaleString("zh-HK", { maximumFractionDigits: 2 });
-  }
-
   function fmtMin(m) {
     m = Math.max(0, Math.round(Number(m) || 0));
     var h = Math.floor(m / 60);
@@ -122,8 +119,7 @@
       blocks: [],
       countdowns: [],
       focusSessions: [],
-      goals: [],
-      transactions: []
+      goals: []
     };
   }
 
@@ -132,9 +128,10 @@
     if (!data || typeof data !== "object") return base;
     var out = Object.assign({}, base, data);
     out.settings = Object.assign({}, base.settings, data.settings || {});
-    ["habits", "checkins", "blocks", "countdowns", "focusSessions", "goals", "transactions"].forEach(function (k) {
+    ["habits", "checkins", "blocks", "countdowns", "focusSessions", "goals"].forEach(function (k) {
       if (!Array.isArray(out[k])) out[k] = [];
     });
+    if (Array.isArray(data.transactions)) out.transactions = data.transactions;
     out.syncUpdatedAt = Number(out.syncUpdatedAt) || 0;
     return out;
   }
@@ -526,6 +523,7 @@
         }));
       }
       saveState();
+      if (ui.habitDetailId) refreshHabitDetail();
       render();
       return;
     }
@@ -538,6 +536,7 @@
   }
 
   function closeModal() {
+    ui.habitDetailId = "";
     document.getElementById("modalBackdrop").classList.remove("open");
     document.getElementById("modal").innerHTML = "";
   }
@@ -551,36 +550,171 @@
   });
 
   function renderTopChips() {
-    var key = todayKey();
-    var html =
-      '<span class="chip">今日完成 <strong>' + completionRate(key) + '%</strong></span>' +
-      '<span class="chip">投入 <strong>' + fmtMin(minutesOnDate(key)) + '</strong></span>' +
-      '<span class="chip sync-chip sync-' + syncStatus + '" id="syncChip">雲端 <strong>' +
-      syncStatusLabel() + "</strong></span>";
-    document.getElementById("topChips").innerHTML = html;
+    var chip = document.getElementById("syncChip");
+    if (chip) {
+      chip.className = "chip sync-chip sync-" + syncStatus;
+      chip.innerHTML = "雲端 <strong>" + syncStatusLabel() + "</strong>";
+    }
   }
 
-  function habitRowHtml(h) {
-    var key = todayKey();
+  function dateChipLabel() {
+    var d = new Date();
+    return (d.getMonth() + 1) + "月" + d.getDate() + "日";
+  }
+
+  var VIEW_TITLES = {
+    habits: "習慣",
+    calendar: "日曆",
+    timetable: "時間表",
+    countdown: "倒數",
+    settings: "設定"
+  };
+
+  function appBarActionHtml(view) {
+    if (view === "habits") {
+      return '<button type="button" class="icon-btn" data-action="add-habit" aria-label="新增習慣">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>';
+    }
+    if (view === "calendar") return "";
+    if (view === "timetable") {
+      return '<button type="button" class="btn sm soft" data-action="add-block">+ 時段</button>';
+    }
+    if (view === "countdown") {
+      return '<button type="button" class="btn sm soft" data-action="add-countdown">+ 新增</button>';
+    }
+    return "";
+  }
+
+  function renderAppBar() {
+    var view = ui.view;
+    var title = VIEW_TITLES[view] || "Solara";
+    var html = '<div class="app-bar-start">';
+    if (view === "habits") {
+      html += '<span class="solara-mark" aria-label="Solara" title="Solara">S</span>';
+    }
+    html += '<h1 class="app-bar-title">' + title + "</h1>";
+    if (view === "habits") {
+      html += '<span class="date-chip">' + dateChipLabel() + "</span>";
+    }
+    html += '</div><div class="app-bar-actions">' + appBarActionHtml(view);
+    if (view === "habits") {
+      html += '<span class="chip sync-chip sync-' + syncStatus + '" id="syncChip">雲端 <strong>' +
+        syncStatusLabel() + "</strong></span>";
+    }
+    html += "</div>";
+    var bar = document.getElementById("appBar");
+    if (bar) bar.innerHTML = html;
+  }
+
+  function todayHeaderLabel() {
+    var d = new Date();
+    return "今天 · " + (d.getMonth() + 1) + "月" + d.getDate() + "日 星期" + DOW[d.getDay()];
+  }
+
+  function todayStatusText(h, dateStr) {
+    var key = dateStr || todayKey();
     var done = isHabitDone(h, key);
     var c = getCheckin(h.id, key);
-    var detail = h.type === "yesno" ? (done ? "已完成" : "未完成")
-      : h.type === "count" ? ((c ? c.value : 0) + " / " + (h.target || 1))
-      : fmtMin(c ? (c.minutes || c.value || 0) : 0) + " / " + fmtMin(h.target || 1);
-    var actionBtn = h.type === "yesno"
-      ? '<button class="btn sm soft" data-toggle="' + h.id + '">' + (done ? "取消" : "完成") + "</button>"
-      : '<button class="btn sm soft" data-toggle="' + h.id + '">記錄</button>';
-    return '<div class="habit-item' + (done ? " done" : "") + '" data-habit="' + h.id + '">' +
-      '<button type="button" class="check' + (done ? " on" : "") + '" style="--hcolor:' + h.color + '" data-toggle="' + h.id + '" aria-label="完成今日">' +
-      (done ? "✓" : "") + "</button>" +
-      '<div class="habit-meta"><strong><span class="dot" style="--hcolor:' + h.color + '"></span>' + esc(h.name) +
-      "</strong><span>" + esc(h.group || "") + " · " + detail + " · 連續日 " + streakFor(h) + "</span></div>" +
-      '<div class="row-actions" style="flex-direction:column;gap:6px">' + actionBtn +
-      '<button class="btn sm ghost" data-edit-habit="' + h.id + '">編輯</button></div></div>';
+    if (!habitDueOn(h, key)) return "休息日";
+    if (h.type === "yesno") return done ? "已完成" : "未完成";
+    if (h.type === "count") return (c ? c.value : 0) + " / " + (h.target || 1) + " 次";
+    return fmtMin(c ? (c.minutes || c.value || 0) : 0) + " / " + fmtMin(h.target || 1);
+  }
+
+  function checkBtnHtml(h, key, cls) {
+    key = key || todayKey();
+    var done = isHabitDone(h, key);
+    return '<button type="button" class="' + (cls || "check") + (done ? " on" : "") +
+      '" style="--hcolor:' + h.color + '" data-toggle="' + h.id +
+      (key !== todayKey() ? '" data-toggle-date="' + key : "") +
+      '" aria-label="完成">' + (done ? "✓" : "") + "</button>";
+  }
+
+  function progressRingHtml(pct, size) {
+    size = size || 72;
+    return '<div class="progress-ring" style="--p:' + pct + '%;--ring-size:' + size + 'px" aria-label="今日完成 ' + pct + '%">' +
+      '<div class="progress-ring-inner"><strong>' + pct + '</strong><span>%</span></div></div>';
+  }
+
+  function todayStripHtml(todayHabits) {
+    var key = todayKey();
+    var doneCount = todayHabits.filter(function (h) { return isHabitDone(h, key); }).length;
+    var total = todayHabits.length;
+    var rate = total ? Math.round((doneCount / total) * 100) : 0;
+    var html = '<div class="today-strip">';
+    html += '<div class="today-strip-head">';
+    html += '<div class="today-progress-text">已完成 <strong>' + doneCount + "/" + total +
+      '</strong> · 投入 <strong>' + fmtMin(minutesOnDate(key)) + "</strong></div>";
+    html += progressRingHtml(rate, 48) + "</div>";
+    html += '<div class="progress-bar-slim"><i style="width:' + rate + '%"></i></div>';
+    html += "</div>";
+    return html;
+  }
+
+  function groupOrderIndex(group) {
+    var g = group || "";
+    var idx = GROUPS.indexOf(g);
+    return idx >= 0 ? idx : GROUPS.length;
+  }
+
+  function groupHabits(habits) {
+    var map = {};
+    habits.forEach(function (h) {
+      var g = h.group || "其他";
+      if (!map[g]) map[g] = [];
+      map[g].push(h);
+    });
+    var keys = Object.keys(map).sort(function (a, b) {
+      var da = groupOrderIndex(a);
+      var db = groupOrderIndex(b);
+      if (da !== db) return da - db;
+      return a.localeCompare(b, "zh-Hant");
+    });
+    return keys.map(function (k) { return { group: k, habits: map[k] }; });
+  }
+
+  var chevronSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+
+  function weekStripHtml(habit) {
+    var d = new Date();
+    var start = new Date(d);
+    start.setDate(d.getDate() - d.getDay());
+    var html = '<div class="week-strip" aria-label="本週記錄">';
+    for (var i = 0; i < 7; i++) {
+      var cur = new Date(start);
+      cur.setDate(start.getDate() + i);
+      var key = dateKey(cur);
+      var due = habitDueOn(habit, key);
+      var done = isHabitDone(habit, key);
+      var cls = "week-cell";
+      if (key === todayKey()) cls += " today";
+      if (!due) cls += " off";
+      else if (done) cls += " done";
+      else if (key <= todayKey()) cls += " missed";
+      else cls += " future";
+      var inner = done ? "✓" : String(cur.getDate());
+      html += '<span class="' + cls + '" style="--hcolor:' + habit.color + '">' + inner + "</span>";
+    }
+    html += "</div>";
+    return html;
+  }
+
+  function habitListRowHtml(h) {
+    var key = todayKey();
+    var done = isHabitDone(h, key);
+    var rate = monthRate(h);
+    return '<article class="habit-card habit-row' + (done ? " done" : "") + '" style="--hcolor:' + h.color + '">' +
+      checkBtnHtml(h, key, "check check-lg") +
+      '<button type="button" class="habit-row-body" data-habit-open="' + h.id + '">' +
+      '<div class="habit-row-name">' + esc(h.name) + "</div>" +
+      '<div class="habit-row-meta">連續日 ' + streakFor(h) + " · 本月 " + rate + "%</div>" +
+      weekStripHtml(h) + "</button>" +
+      '<button type="button" class="habit-row-chevron" data-habit-open="' + h.id + '" aria-label="詳情">' +
+      chevronSvg + "</button></article>";
   }
 
   function monthDoneDays(habit) {
-    var month = ui.habitCalMonth || startOfMonth(new Date());
+    var month = ui.habitDetailMonth || startOfMonth(new Date());
     var y = month.getFullYear();
     var m = month.getMonth();
     var days = new Date(y, m + 1, 0).getDate();
@@ -594,29 +728,24 @@
     return count;
   }
 
-  function totalCount(habit) {
-    return state.checkins.reduce(function (sum, c) {
-      if (c.habitId !== habit.id) return sum;
-      return sum + Number(c.value || 0);
-    }, 0);
+  function totalDoneDays(habit) {
+    var dates = {};
+    state.checkins.forEach(function (c) {
+      if (c.habitId === habit.id && isHabitDone(habit, c.date)) dates[c.date] = true;
+    });
+    return Object.keys(dates).length;
   }
 
-  function habitStatPill(h) {
-    if (h.type === "duration") return '累計時數 <strong>' + fmtMin(totalMinutes(h)) + "</strong>";
-    if (h.type === "count") return '累計次數 <strong>' + totalCount(h) + " 次</strong>";
-    return '累計 <strong>' + monthDoneDays(h) + " 日</strong>";
-  }
-
-  function habitMiniCalHtml(habit) {
-    var month = ui.habitCalMonth;
+  function habitCalGridHtml(habit, month, prefix) {
+    prefix = prefix || "habit";
     var y = month.getFullYear();
     var m = month.getMonth();
     var firstDow = new Date(y, m, 1).getDay();
     var daysInMonth = new Date(y, m + 1, 0).getDate();
-    var html = '<div class="habit-mini-cal" style="--hcolor:' + habit.color + '">';
-    html += '<div class="habit-mini-dow">';
+    var html = '<div class="' + prefix + '-cal" style="--hcolor:' + habit.color + '">';
+    html += '<div class="' + prefix + '-dow">';
     DOW.forEach(function (d) { html += "<span>" + d + "</span>"; });
-    html += '</div><div class="habit-mini-grid">';
+    html += '</div><div class="' + prefix + '-grid">';
     for (var i = 0; i < firstDow; i++) html += '<span class="habit-day pad" aria-hidden="true"></span>';
     for (var day = 1; day <= daysInMonth; day++) {
       var key = dateKey(new Date(y, m, day));
@@ -637,50 +766,72 @@
     return html;
   }
 
-  function habitCardHtml(h) {
-    var key = todayKey();
-    var done = isHabitDone(h, key);
-    return '<div class="habit-card" data-habit="' + h.id + '">' +
-      '<div class="habit-card-head">' +
-      '<button type="button" class="check' + (done ? " on" : "") + '" style="--hcolor:' + h.color +
-      '" data-toggle="' + h.id + '" aria-label="完成今日">' + (done ? "✓" : "") + "</button>" +
-      '<div class="habit-card-title"><strong><span class="dot" style="--hcolor:' + h.color + '"></span>' +
-      esc(h.name) + '</strong><span>' + typeLabel(h.type) + " · " + esc(h.group || "未分組") + "</span></div>" +
-      '<button class="btn sm ghost" data-edit-habit="' + h.id + '">編輯</button></div>' +
-      '<div class="habit-card-stats">' +
-      '<span class="stat-pill">本月日數 <strong>' + monthDoneDays(h) + "</strong></span>" +
-      '<span class="stat-pill">' + habitStatPill(h) + "</span>" +
-      '<span class="stat-pill">連續日 <strong>' + streakFor(h) + "</strong></span></div>" +
-      habitMiniCalHtml(h) + "</div>";
+  function habitStatTotal(h) {
+    if (h.type === "duration") return { label: "累計時數", value: fmtMin(totalMinutes(h)) };
+    if (h.type === "count") return { label: "累計次數", value: totalCount(h) + " 次" };
+    return { label: "完成日數", value: totalDoneDays(h) + " 日" };
+  }
+
+  function openHabitDetail(habit, month) {
+    ui.habitDetailId = habit.id;
+    ui.habitDetailMonth = month || ui.habitDetailMonth || startOfMonth(new Date());
+    var ym = ui.habitDetailMonth;
+    var stat = habitStatTotal(habit);
+    var html = '<div class="habit-detail">' +
+      '<div class="habit-detail-hero" style="--hcolor:' + habit.color + '">' +
+      '<span class="dot dot-lg" style="--hcolor:' + habit.color + '"></span>' +
+      "<h3>" + esc(habit.name) + "</h3>" +
+      '<p class="muted">' + typeLabel(habit.type) + " · " + esc(habit.group || "未分組") + "</p></div>" +
+      '<div class="habit-detail-stats">' +
+      '<div class="detail-stat"><div class="label">連續日</div><div class="value">' + streakFor(habit) + "</div></div>" +
+      '<div class="detail-stat"><div class="label">本月達成率</div><div class="value">' + monthRate(habit) + "%</div></div>" +
+      '<div class="detail-stat"><div class="label">本月完成</div><div class="value">' + monthDoneDays(habit) + " 日</div></div>" +
+      '<div class="detail-stat"><div class="label">' + stat.label + '</div><div class="value">' + stat.value + "</div></div>" +
+      "</div>" +
+      '<div class="habit-cal-nav">' +
+      '<button type="button" class="btn sm ghost" data-hdetail-cal="prev">‹</button>' +
+      '<span class="muted cal-month-label">' + ym.getFullYear() + " 年 " + (ym.getMonth() + 1) + " 月</span>" +
+      '<button type="button" class="btn sm ghost" data-hdetail-cal="next">›</button></div>' +
+      habitCalGridHtml(habit, ym, "habit-full") +
+      '<div class="row-actions">' +
+      '<button class="btn" data-edit-habit="' + habit.id + '">編輯</button>' +
+      '<button class="btn ghost" data-archive-habit="' + habit.id + '">封存</button>' +
+      '<button class="btn ghost" id="hdClose">關閉</button></div></div>';
+    openModal(html);
+    document.getElementById("hdClose").onclick = closeModal;
+  }
+
+  function refreshHabitDetail() {
+    if (!ui.habitDetailId) return;
+    var h = state.habits.find(function (x) { return x.id === ui.habitDetailId; });
+    if (h && !h.archived) openHabitDetail(h, ui.habitDetailMonth);
+    else closeModal();
+  }
+
+  function emptyHabitsHtml() {
+    return '<div class="empty">' +
+      '<div class="empty-illus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>' +
+      "<p>未有習慣。建立一個，開始記錄生活。</p>" +
+      '<button class="btn" data-action="add-habit">+ 新增習慣</button></div>';
   }
 
   function renderHabits() {
     var key = todayKey();
     var todayHabits = state.habits.filter(function (h) { return !h.archived && habitDueOn(h, key); });
     var active = state.habits.filter(function (h) { return !h.archived; });
-    var ym = ui.habitCalMonth;
-    var html = '<div class="panel"><div class="section-head"><h2>今日記錄</h2>' +
-      '<button class="btn sm soft" data-action="add-habit">+ 新增</button></div>';
-    if (!todayHabits.length) {
-      html += '<div class="empty">今日未有要完成的習慣。</div>';
-    } else {
-      html += '<div class="habit-list">' + todayHabits.map(habitRowHtml).join("") + "</div>";
-    }
-    html += "</div>";
-
-    html += '<div class="panel bare"><div class="section-head"><h2>我的習慣</h2>' +
-      '<div class="row-actions" style="margin:0">' +
-      '<button class="btn sm ghost" data-hcal="prev">‹</button>' +
-      '<span class="muted" style="font-weight:700">' + ym.getFullYear() + " 年 " + (ym.getMonth() + 1) + " 月</span>" +
-      '<button class="btn sm ghost" data-hcal="next">›</button>' +
-      '<button class="btn sm" data-action="add-habit">+ 新增習慣</button></div></div>';
+    var html = todayStripHtml(todayHabits);
     if (!active.length) {
-      html += '<div class="empty">未有習慣。建立一個，開始記錄生活。</div>';
+      html += emptyHabitsHtml();
     } else {
-      html += '<div class="habit-cards">' + active.map(habitCardHtml).join("") + "</div>";
+      html += '<div class="habit-groups">';
+      groupHabits(active).forEach(function (section) {
+        html += '<div class="habit-group-section">';
+        html += '<div class="habit-group-label">' + esc(section.group) + "</div>";
+        html += section.habits.map(habitListRowHtml).join("");
+        html += "</div>";
+      });
+      html += "</div>";
     }
-    html += "</div>";
-
     document.getElementById("view-habits").innerHTML = html;
   }
 
@@ -688,6 +839,13 @@
     if (t === "count") return "#";
     if (t === "duration") return "⏱";
     return "✓";
+  }
+
+  function totalCount(habit) {
+    return state.checkins.reduce(function (sum, c) {
+      if (c.habitId !== habit.id) return sum;
+      return sum + Number(c.value || 0);
+    }, 0);
   }
 
   function monthRate(habit) {
@@ -732,6 +890,7 @@
   }
 
   function openHabitEditor(habit) {
+    ui.habitDetailId = "";
     var h = habit || {
       id: "", name: "", color: colors()[0], type: "yesno",
       frequency: [0, 1, 2, 3, 4, 5, 6], group: "朝早", target: 1, timeOfDay: ""
@@ -753,7 +912,7 @@
         return '<button type="button" class="swatch' + (c === h.color ? " active" : "") +
           '" data-color="' + c + '" style="background:' + c + '"></button>';
       }).join("") + '</div><input type="hidden" id="hColor" value="' + escAttr(h.color) + '" /></div>' +
-      '<div class="field"><label>重複星期</label><div class="week-picks" id="hFreq">' +
+      '<div class="field"><label>重複星期</label><div class="freq-picks" id="hFreq">' +
       DOW.map(function (label, i) {
         return '<button type="button" data-dow="' + i + '" class="' + (freq.indexOf(i) >= 0 ? "on" : "") + '">' + label + "</button>";
       }).join("") + "</div></div>" +
@@ -851,43 +1010,35 @@
       saveState();
       closeModal();
       toast("已記錄");
+      if (ui.habitDetailId) refreshHabitDetail();
       render();
     };
   }
 
-  function renderCalendar() {
-    var month = ui.calMonth;
-    var selected = ui.calSelected;
-    var y = month.getFullYear();
-    var m = month.getMonth();
-    var firstDow = new Date(y, m, 1).getDay();
-    var daysInMonth = new Date(y, m + 1, 0).getDate();
-    var html = '<div class="panel"><div class="cal-head">' +
-      '<button class="btn sm ghost" data-cal="prev">‹</button>' +
-      '<h2 style="margin:0;font-family:var(--display)">' + y + " 年 " + (m + 1) + " 月</h2>" +
-      '<button class="btn sm ghost" data-cal="next">›</button></div>';
-    html += '<div class="cal-grid">';
-    DOW.forEach(function (d) { html += '<div class="cal-dow">' + d + "</div>"; });
-    for (var i = 0; i < firstDow; i++) html += '<div></div>';
-    for (var day = 1; day <= daysInMonth; day++) {
-      var key = dateKey(new Date(y, m, day));
-      var mins = minutesOnDate(key);
-      var rate = completionRate(key);
-      var cls = "cal-day";
-      if (key === todayKey()) cls += " today";
-      if (key === selected) cls += " selected";
-      html += '<button type="button" class="' + cls + '" data-day="' + key + '">' + day +
-        (rate > 0 || mins > 0 ? '<span class="heat" style="opacity:' + Math.max(0.25, rate / 100) + '"></span>' : "") +
-        "</button>";
+  function calDayHabitsHtml(selected) {
+    var due = state.habits.filter(function (h) { return !h.archived && habitDueOn(h, selected); });
+    if (!due.length) {
+      return '<div class="empty compact">呢日未有要完成的習慣</div>';
     }
+    var html = '<div class="cal-habit-list">';
+    due.forEach(function (h) {
+      var done = isHabitDone(h, selected);
+      html += '<div class="cal-habit-row' + (done ? " done" : "") + '">' +
+        checkBtnHtml(h, selected, "check check-md") +
+        '<div class="cal-habit-info"><strong>' + esc(h.name) + '</strong>' +
+        '<span class="muted">' + todayStatusText(h, selected) + "</span></div></div>";
+    });
     html += "</div>";
-    html += '<div class="grid-2" style="margin-top:12px">' +
-      '<div class="stat"><div class="label">當日達成</div><div class="value">' + completionRate(selected) + '%</div></div>' +
-      '<div class="stat"><div class="label">當日時數</div><div class="value">' + fmtMin(minutesOnDate(selected)) + '</div></div>' +
-      "</div></div>";
+    return html;
+  }
 
-    html += '<div class="panel"><div class="section-head"><h2>當日時間流</h2>' +
-      '<button class="btn sm soft" data-action="add-block">+ 時段</button></div><div class="timeline">';
+  function timeToMinutes(t) {
+    if (!t) return 0;
+    var p = String(t).split(":");
+    return Number(p[0]) * 60 + Number(p[1] || 0);
+  }
+
+  function timelineFlowHtml(selected) {
     var dayBlocks = blocksForDate(selected);
     var dayHabits = state.habits.filter(function (h) {
       return !h.archived && habitDueOn(h, selected) && h.timeOfDay;
@@ -908,32 +1059,116 @@
       return String(a.start).localeCompare(String(b.start));
     });
     if (!flow.length) {
-      html += '<div class="empty">呢日未有時間區塊。可以加一個，或者喺習慣設定建議時段。</div>';
-    } else {
-      flow.forEach(function (item) {
-        html += '<div class="block-row"><div class="block-time">' + esc(item.start) +
-          (item.end ? "<br>" + esc(item.end) : "") + '</div><div class="block-body" style="--bcolor:' +
-          item.color + '"><strong>' + esc(item.title) + '</strong><div class="tiny">' +
-          (item.kind === "habit" ? (item.done ? "習慣 · 已完成" : "習慣 · 未完成") : "時間區塊") +
-          "</div></div></div>";
-      });
+      return '<div class="empty compact" style="padding:20px">呢日未有時間區塊</div>';
     }
-    html += "</div></div>";
+    var startHour = 6;
+    var endHour = 23;
+    var pxPerMin = 1.2;
+    var totalH = (endHour - startHour) * 60 * pxPerMin;
+    var html = '<div class="timeline-flow" style="height:' + Math.max(200, totalH + 24) + 'px">';
+    html += '<div class="timeline-gutter">';
+    for (var h = startHour; h <= endHour; h++) {
+      var top = (h - startHour) * 60 * pxPerMin;
+      html += '<div class="timeline-hour" style="top:' + top + 'px">' + pad(h) + ":00</div>";
+    }
+    html += "</div>";
+    flow.forEach(function (item) {
+      var mins = timeToMinutes(item.start);
+      var top = Math.max(0, (mins - startHour * 60) * pxPerMin);
+      var dur = item.end ? Math.max(30, timeToMinutes(item.end) - mins) : 45;
+      var height = Math.max(28, dur * pxPerMin);
+      html += '<div class="timeline-block" style="top:' + top + "px;height:" + height +
+        "px;background:" + item.color + '">' + esc(item.title) +
+        '<div class="tiny">' + (item.kind === "habit" ? (item.done ? "習慣 · 已完成" : "習慣 · 未完成") : esc(item.start) + (item.end ? "–" + esc(item.end) : "")) +
+        "</div></div>";
+    });
+    html += "</div>";
+    return html;
+  }
 
-    html += '<div class="panel"><div class="section-head"><h2>當日紀錄</h2></div><div class="list">';
-    var logs = state.checkins.filter(function (c) { return c.date === selected; });
-    if (!logs.length) html += '<div class="empty">未有打卡紀錄</div>';
-    else {
-      logs.forEach(function (c) {
-        var h = state.habits.find(function (x) { return x.id === c.habitId; });
-        html += '<div class="list-item"><div class="dot" style="--hcolor:' + (h && h.color || "#ccc") +
-          ';width:12px;height:12px;margin:0"></div><div><strong>' + esc(h ? h.name : "已刪習慣") +
-          '</strong><div class="muted">' + (h && h.type === "duration" ? fmtMin(c.minutes || c.value) :
-          (h && h.type === "count" ? ("數量 " + c.value) : "完成")) +
-          (c.note ? " · " + esc(c.note) : "") + "</div></div><span></span></div>";
+  function calWeekViewHtml() {
+    var month = ui.calMonth;
+    var y = month.getFullYear();
+    var m = month.getMonth();
+    var start = new Date(y, m, 1);
+    while (start.getDay() !== 0) start.setDate(start.getDate() - 1);
+    var html = '<div class="cal-week-grid">';
+    for (var i = 0; i < 7; i++) {
+      var d = new Date(start);
+      d.setDate(start.getDate() + i);
+      var key = dateKey(d);
+      var cls = "cal-week-col";
+      if (key === todayKey()) cls += " today";
+      if (key === ui.calSelected) cls += " selected";
+      html += '<button type="button" class="' + cls + '" data-day="' + key + '">';
+      html += '<div class="cal-week-col-head">' + DOW[d.getDay()] + "<br>" + d.getDate() + "</div>";
+      var due = state.habits.filter(function (h) { return !h.archived && habitDueOn(h, key); });
+      due.slice(0, 4).forEach(function (h) {
+        var done = isHabitDone(h, key);
+        html += '<div class="cal-week-item" style="background:' + h.color + ";opacity:" + (done ? "1" : "0.55") + '">' +
+          esc(h.name) + "</div>";
       });
+      blocksForDate(key).slice(0, 2).forEach(function (b) {
+        html += '<div class="cal-week-item" style="background:' + b.color + '">' + esc(b.title) + "</div>";
+      });
+      html += "</button>";
     }
-    html += "</div></div>";
+    html += "</div>";
+    return html;
+  }
+
+  function renderCalendar() {
+    var month = ui.calMonth;
+    var selected = ui.calSelected;
+    var y = month.getFullYear();
+    var m = month.getMonth();
+    var html = '<div class="cal-toolbar">' +
+      '<button class="btn sm ghost icon-only" data-cal="prev" aria-label="上個月">‹</button>' +
+      '<h2>' + y + " 年 " + (m + 1) + " 月</h2>" +
+      '<button class="btn sm ghost icon-only" data-cal="next" aria-label="下個月">›</button></div>';
+
+    html += '<div class="seg"><button type="button" data-cal-mode="month" class="' +
+      (ui.calMode === "month" ? "on" : "") + '">月</button><button type="button" data-cal-mode="week" class="' +
+      (ui.calMode === "week" ? "on" : "") + '">週</button></div>';
+
+    if (ui.calMode === "week") {
+      html += calWeekViewHtml();
+    } else {
+      var firstDow = new Date(y, m, 1).getDay();
+      var daysInMonth = new Date(y, m + 1, 0).getDate();
+      html += '<div class="cal-grid-wrap"><div class="cal-grid">';
+      DOW.forEach(function (d) { html += '<div class="cal-dow">' + d + "</div>"; });
+      for (var i = 0; i < firstDow; i++) html += '<div></div>';
+      for (var day = 1; day <= daysInMonth; day++) {
+        var key = dateKey(new Date(y, m, day));
+        var rate = completionRate(key);
+        var cls = "cal-day";
+        if (key === todayKey()) cls += " today";
+        if (key === selected) cls += " selected";
+        if (rate > 0) cls += " has-heat";
+        var heatStyle = rate > 0 ? ' style="--heat:' + Math.max(0.12, rate / 100) + '"' : "";
+        html += '<button type="button" class="' + cls + '" data-day="' + key + '"' + heatStyle + ">" +
+          '<span class="cal-day-num">' + day + "</span>" +
+          (rate > 0 ? '<span class="cal-day-pct">' + rate + "%</span>" : "") +
+          "</button>";
+      }
+      html += "</div></div>";
+    }
+
+    var selRate = completionRate(selected);
+    var selMins = minutesOnDate(selected);
+    var selLabel = selected === todayKey() ? "今天" : selected.slice(5).replace("-", "月") + "日";
+    html += '<div class="day-panel">';
+    html += '<div class="day-panel-head"><strong>' + selLabel + '</strong>' +
+      '<span class="muted">星期' + DOW[parseKey(selected).getDay()] + "</span></div>";
+    html += '<div class="day-panel-stats">' +
+      '<div class="stat-cell"><div class="label">達成率</div><div class="value">' + selRate + '%</div></div>' +
+      '<div class="stat-cell"><div class="label">投入時數</div><div class="value">' + fmtMin(selMins) + "</div></div>" +
+      "</div>";
+    html += timelineFlowHtml(selected);
+    html += '<div class="section-title" style="padding-top:8px">當日習慣</div>';
+    html += calDayHabitsHtml(selected);
+    html += "</div>";
 
     document.getElementById("view-calendar").innerHTML = html;
   }
@@ -1006,23 +1241,22 @@
 
   function renderCountdown() {
     var html = renderCountdownPanel();
-    html += '<div class="panel" style="margin-top:14px">' + renderFocusPanelInner() + "</div>";
+    html += '<div class="focus-panel">' + renderFocusPanelInner() + "</div>";
     document.getElementById("view-countdown").innerHTML = html;
   }
 
   function renderSettings() {
     var tabs = [
-      ["sync", "同步"],
       ["goals", "目標"],
-      ["money", "記帳"],
-      ["theme", "主題"]
+      ["theme", "主題"],
+      ["sync", "同步"]
     ];
-    var html = '<div class="seg" style="grid-template-columns:repeat(4,1fr)">';
+    var html = '<div class="settings-wrap"><div class="seg settings-seg">';
     tabs.forEach(function (t) {
       html += '<button type="button" data-settings="' + t[0] + '" class="' +
         (ui.settingsTab === t[0] ? "on" : "") + '">' + t[1] + "</button>";
     });
-    html += '</div><div id="settingsBody"></div>';
+    html += '</div><div id="settingsBody"></div></div>';
     document.getElementById("view-settings").innerHTML = html;
     renderSettingsBody();
   }
@@ -1033,28 +1267,39 @@
     var map = {
       sync: renderSyncPanel,
       goals: renderGoalsPanel,
-      money: renderMoneyPanel,
       theme: renderThemePanel
     };
-    el.innerHTML = (map[ui.settingsTab] || renderSyncPanel)();
+    el.innerHTML = (map[ui.settingsTab] || renderGoalsPanel)();
   }
 
   function renderTimetablePanel() {
-    var html = '<div class="panel"><div class="section-head"><h2>每週時間表</h2>' +
-      '<button class="btn sm" data-action="add-block">+ 時段</button></div><div class="list">';
-    if (!state.blocks.length) html += '<div class="empty">未有時間區塊。用時段規劃一日節奏。</div>';
-    else {
-      state.blocks.slice().sort(function (a, b) {
-        return (Number(a.dayOfWeek) || 0) - (Number(b.dayOfWeek) || 0) || String(a.start).localeCompare(String(b.start));
-      }).forEach(function (b) {
-        html += '<div class="list-item"><div class="dot" style="--hcolor:' + b.color +
-          ';width:12px;height:12px;margin:0"></div><div><strong>' + esc(b.title) +
-          '</strong><div class="muted">' + (b.date ? b.date : ("逢星期" + DOW[b.dayOfWeek])) +
-          " · " + esc(b.start) + "–" + esc(b.end) + '</div></div>' +
-          '<button class="btn sm ghost" data-edit-block="' + b.id + '">編輯</button></div>';
+    var dow = ui.timetableDow;
+    var html = '<div class="timetable-wrap">';
+    html += '<div class="week-picks" id="ttDow">';
+    DOW.forEach(function (label, i) {
+      html += '<button type="button" data-tt-dow="' + i + '" class="' + (i === dow ? "on" : "") + '">' + label + "</button>";
+    });
+    html += "</div>";
+    var blocks = state.blocks.filter(function (b) {
+      if (b.date) return false;
+      return Number(b.dayOfWeek) === dow;
+    }).sort(function (a, b) { return String(a.start).localeCompare(String(b.start)); });
+    html += '<div class="schedule-day">';
+    if (!blocks.length) {
+      html += '<div class="empty compact"><p>呢日未有時間區塊</p>' +
+        '<button class="btn sm" data-action="add-block">+ 新增時段</button></div>';
+    } else {
+      blocks.forEach(function (b) {
+        html += '<div class="schedule-block"><div class="schedule-time">' + esc(b.start) +
+          (b.end ? "<br>" + esc(b.end) : "") + '</div><div class="schedule-body" style="--bcolor:' + b.color +
+          '"><strong>' + esc(b.title) + '</strong><div class="muted">逢星期' + DOW[b.dayOfWeek] + "</div>" +
+          '<button class="btn sm ghost" style="margin-top:6px" data-edit-block="' + b.id + '">編輯</button></div></div>';
       });
     }
-    html += "</div></div>";
+    html += "</div>";
+    html += '<button type="button" class="fab" data-action="add-block" aria-label="新增時段">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>';
+    html += "</div>";
     return html;
   }
 
@@ -1068,19 +1313,29 @@
     return "仲有 " + hours + " 小時 " + mins + " 分";
   }
 
+  function countdownDaysLeft(ts) {
+    var diff = ts - Date.now();
+    if (diff <= 0) return 0;
+    return Math.ceil(diff / 86400000);
+  }
+
   function renderCountdownPanel() {
-    var html = '<div class="panel"><div class="section-head"><h2>倒數日子</h2>' +
-      '<button class="btn sm" data-action="add-countdown">+ 新增</button></div><div class="list">';
-    if (!state.countdowns.length) html += '<div class="empty">未有倒數。考試、旅行、deadline 都可以加。</div>';
-    else {
+    var html = '<div class="countdown-cards">';
+    if (!state.countdowns.length) {
+      html += '<div class="empty"><div class="empty-illus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="13" r="8"/><polyline points="12 9 12 13 15 15"/></svg></div>' +
+        "<p>未有倒數。考試、旅行、deadline 都可以加。</p>" +
+        '<button class="btn" data-action="add-countdown">+ 新增倒數</button></div>';
+    } else {
       state.countdowns.slice().sort(function (a, b) { return a.targetAt - b.targetAt; }).forEach(function (c) {
-        html += '<div class="list-item"><div style="font-size:1.4rem">' + (c.emoji || "⏳") +
-          '</div><div><strong>' + esc(c.title) + '</strong><div class="muted">' +
-          countdownLabel(c.targetAt) + " · " + new Date(c.targetAt).toLocaleString("zh-HK") +
+        var days = countdownDaysLeft(c.targetAt);
+        html += '<div class="countdown-card"><div class="countdown-hero">' + days + '</div><div><strong>' +
+          esc(c.title) + '</strong><div class="muted">' +
+          new Date(c.targetAt).toLocaleDateString("zh-HK", { year: "numeric", month: "long", day: "numeric" }) +
+          (days <= 0 ? " · 已到達" : " · 仲有 " + days + " 日") +
           '</div></div><button class="btn sm ghost" data-edit-countdown="' + c.id + '">編輯</button></div>';
       });
     }
-    html += "</div></div>";
+    html += "</div>";
     return html;
   }
 
@@ -1135,8 +1390,7 @@
     var p = 100 - Math.round((ui.focus.remainMs / Math.max(1, ui.focus.totalMs)) * 100);
     var mm = Math.floor(ui.focus.remainMs / 60000);
     var ss = Math.floor((ui.focus.remainMs % 60000) / 1000);
-    var html = '<div class="section-head"><h2>' +
-      (ui.focus.mode === "focus" ? "專注番茄鐘" : "休息一下") + "</h2></div>";
+    var html = '<h2>' + (ui.focus.mode === "focus" ? "專注番茄鐘" : "休息一下") + "</h2>";
     html += '<div class="focus-ring" style="--p:' + p + '%"><div style="text-align:center">' +
       '<div class="time">' + pad(mm) + ":" + pad(ss) + '</div>' +
       '<div class="tiny">' + (ui.focus.running ? "進行中" : "準備開始") + "</div></div></div>";
@@ -1149,16 +1403,15 @@
       (state.settings.focusMin || 25) + '" /></div>' +
       '<div class="field"><label>休息（分）</label><input id="breakMin" type="number" min="1" value="' +
       (state.settings.breakMin || 5) + '" /></div></div>';
-    html += '<div class="row-actions">' +
+    html += '<div class="focus-actions">' +
       '<button class="btn" data-focus="' + (ui.focus.running ? "pause" : "start") + '">' +
       (ui.focus.running ? "暫停" : "開始") + "</button>" +
       '<button class="btn ghost" data-focus="reset">重設</button>' +
       '<button class="btn soft" data-focus="switch">' +
       (ui.focus.mode === "focus" ? "切去休息" : "切去專注") + "</button></div>";
-
     var todayFocus = state.focusSessions.filter(function (s) { return dateKey(s.startedAt) === todayKey(); });
     var sum = todayFocus.reduce(function (a, s) { return a + Number(s.minutes || 0); }, 0);
-    html += '<div class="muted" style="margin-top:12px">今日專注 ' + todayFocus.length + " 次 · " + fmtMin(sum) + "</div>";
+    html += '<div class="focus-stats">今日專注 ' + todayFocus.length + " 次 · " + fmtMin(sum) + "</div>";
     return html;
   }
 
@@ -1267,27 +1520,29 @@
   }
 
   function renderGoalsPanel() {
-    var html = '<div class="panel"><div class="section-head"><h2>短期目標</h2>' +
-      '<button class="btn sm" data-action="add-goal-short">+ 新增</button></div><div class="list">';
+    var html = '<div class="settings-group"><div class="settings-group-title">短期目標</div>';
     var shorts = state.goals.filter(function (g) { return g.kind === "short"; });
-    if (!shorts.length) html += '<div class="empty">未有短期目標</div>';
+    if (!shorts.length) html += '<div class="settings-row"><span class="settings-row-label muted">未有短期目標</span></div>';
     else shorts.forEach(function (g) { html += goalRow(g); });
-    html += '</div></div><div class="panel"><div class="section-head"><h2>長期目標</h2>' +
-      '<button class="btn sm" data-action="add-goal-long">+ 新增</button></div><div class="list">';
+    html += '<div class="settings-row"><button class="btn sm soft block" data-action="add-goal-short">+ 新增短期目標</button></div>';
+    html += '</div><div class="settings-group"><div class="settings-group-title">長期目標</div>';
     var longs = state.goals.filter(function (g) { return g.kind === "long"; });
-    if (!longs.length) html += '<div class="empty">未有長期目標</div>';
+    if (!longs.length) html += '<div class="settings-row"><span class="settings-row-label muted">未有長期目標</span></div>';
     else longs.forEach(function (g) { html += goalRow(g); });
-    html += "</div></div>";
+    html += '<div class="settings-row"><button class="btn sm soft block" data-action="add-goal-long">+ 新增長期目標</button></div>';
+    html += "</div>";
     return html;
   }
 
   function goalRow(g) {
     var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
-    return '<div class="list-item" style="grid-template-columns:1fr auto"><div><strong>' + esc(g.title) +
-      '</strong><div class="muted">' + g.current + " / " + g.target + " " + esc(g.unit || "") +
-      (g.dueAt ? " · 期限 " + dateKey(g.dueAt) : "") +
-      '</div><div class="progress"><i style="width:' + pct + '%"></i></div></div>' +
-      '<div class="row-actions" style="flex-direction:column">' +
+    return '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%">' +
+      '<span class="settings-row-label"><strong>' + esc(g.title) + "</strong></span>" +
+      '<span class="settings-row-value">' + g.current + " / " + g.target + " " + esc(g.unit || "") + "</span></div>" +
+      (g.dueAt ? '<div class="tiny">期限 ' + dateKey(g.dueAt) + "</div>" : "") +
+      '<div class="progress"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="row-actions" style="margin-top:6px">' +
       '<button class="btn sm soft" data-goal-plus="' + g.id + '">+1</button>' +
       '<button class="btn sm ghost" data-edit-goal="' + g.id + '">編輯</button></div></div>';
   }
@@ -1343,85 +1598,6 @@
     }
   }
 
-  function renderMoneyPanel() {
-    var monthPrefix = todayKey().slice(0, 7);
-    var rows = state.transactions.filter(function (t) { return String(t.date).slice(0, 7) === monthPrefix; });
-    var income = 0, expense = 0;
-    rows.forEach(function (t) {
-      if (t.type === "in") income += Number(t.amount) || 0;
-      else expense += Number(t.amount) || 0;
-    });
-    var html = '<div class="panel"><div class="section-head"><h2>本月記帳</h2>' +
-      '<button class="btn sm" data-action="add-money">+ 記一筆</button></div>' +
-      '<div class="grid-2"><div class="stat"><div class="label">收入</div><div class="value money-pos">' +
-      fmtMoney(income) + '</div></div><div class="stat"><div class="label">支出</div><div class="value money-neg">' +
-      fmtMoney(expense) + '</div></div></div>' +
-      '<div class="stat" style="margin-top:10px"><div class="label">結餘</div><div class="value">' +
-      fmtMoney(income - expense) + "</div></div>";
-    html += '<div class="list" style="margin-top:12px">';
-    if (!rows.length) html += '<div class="empty">本月未有紀錄</div>';
-    else {
-      rows.slice().sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); }).forEach(function (t) {
-        html += '<div class="list-item"><div></div><div><strong>' + esc(t.category) +
-          (t.note ? " · " + esc(t.note) : "") + '</strong><div class="muted">' + t.date +
-          '</div></div><div style="display:flex;align-items:center;gap:8px">' +
-          '<span class="' + (t.type === "in" ? "money-pos" : "money-neg") + '">' +
-          (t.type === "in" ? "+" : "-") + fmtMoney(t.amount) +
-          '</span><button class="btn sm ghost" data-edit-money="' + t.id + '">編輯</button></div></div>';
-      });
-    }
-    html += "</div></div>";
-    return html;
-  }
-
-  function openMoneyEditor(item) {
-    var t = item || { id: "", type: "out", amount: 0, category: MONEY_CATS[0], note: "", date: todayKey() };
-    openModal(
-      "<h3>" + (t.id ? "編輯紀錄" : "記一筆") + "</h3>" +
-      '<div class="field"><label>類型</label><select id="mType">' +
-      opt("out", "支出", t.type) + opt("in", "收入", t.type) + "</select></div>" +
-      '<div class="field"><label>金額</label><input id="mAmount" type="number" min="0" step="0.01" value="' + (t.amount || 0) + '" /></div>' +
-      '<div class="field"><label>分類</label><select id="mCat">' +
-      MONEY_CATS.map(function (c) { return opt(c, c, t.category); }).join("") + "</select></div>" +
-      '<div class="field"><label>日期</label><input id="mDate" type="date" value="' + escAttr(t.date) + '" /></div>' +
-      '<div class="field"><label>備註</label><input id="mNote" value="' + escAttr(t.note || "") + '" /></div>' +
-      '<div class="row-actions"><button class="btn" id="mSave">儲存</button>' +
-      (t.id ? '<button class="btn warn" id="mDel">刪除</button>' : "") +
-      '<button class="btn ghost" id="mCancel">取消</button></div>'
-    );
-    document.getElementById("mCancel").onclick = closeModal;
-    document.getElementById("mSave").onclick = function () {
-      var amount = Number(document.getElementById("mAmount").value) || 0;
-      if (amount <= 0) return toast("請輸入金額");
-      var payload = {
-        type: document.getElementById("mType").value,
-        amount: amount,
-        category: document.getElementById("mCat").value,
-        date: document.getElementById("mDate").value || todayKey(),
-        note: document.getElementById("mNote").value.trim()
-      };
-      if (t.id) {
-        Object.assign(t, payload);
-        touch(t);
-      } else {
-        state.transactions.push(touch(Object.assign({ id: uid() }, payload)));
-      }
-      saveState();
-      closeModal();
-      toast("已儲存");
-      render();
-    };
-    if (t.id) {
-      document.getElementById("mDel").onclick = function () {
-        state.transactions = state.transactions.filter(function (x) { return x.id !== t.id; });
-        saveState();
-        closeModal();
-        toast("已刪除");
-        render();
-      };
-    }
-  }
-
   function renderThemePanel() {
     var cur = state.settings.theme || "sunshine";
     var themes = [
@@ -1430,16 +1606,18 @@
       { id: "fire", name: "Warm Fire", grad: "linear-gradient(135deg,#FFD2B8,#E76F51,#F4A261)" },
       { id: "photo", name: "自訂相片", grad: state.settings.photoDataUrl ? "url(" + state.settings.photoDataUrl + ") center/cover" : "linear-gradient(135deg,#ddd,#bbb)" }
     ];
-    var html = '<div class="panel"><div class="section-head"><h2>主題</h2></div><div class="theme-grid">';
+    var html = '<div class="settings-group"><div class="settings-group-title">主題</div>';
+    html += '<div style="padding:12px 16px"><div class="theme-grid">';
     themes.forEach(function (th) {
       html += '<button type="button" class="theme-card' + (cur === th.id ? " on" : "") + '" data-theme-pick="' + th.id + '">' +
         '<div class="preview" style="background:' + th.grad + '"></div><strong>' + esc(th.name) + '</strong></button>';
     });
-    html += '</div>';
-    html += '<div class="field" style="margin-top:14px"><label>上傳相片（自訂主題）</label>' +
+    html += '</div></div>';
+    html += '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
+      '<label class="settings-row-label">上傳相片（自訂主題）</label>' +
       '<input type="file" id="photoUpload" accept="image/*" /></div>';
     if (state.settings.palette && state.settings.palette.length) {
-      html += '<div class="field"><label>抽取色板（可用於習慣顏色）</label><div class="swatches">';
+      html += '<div class="settings-row" style="flex-direction:column;align-items:stretch"><span class="settings-row-label">抽取色板</span><div class="swatches">';
       state.settings.palette.forEach(function (c) {
         html += '<span class="swatch" style="background:' + c + '"></span>';
       });
@@ -1452,30 +1630,33 @@
   function renderSyncPanel() {
     var connected = state.settings.googleConnected;
     var autoOn = state.settings.autoSync !== false;
-    var html = '<div class="panel"><div class="section-head"><h2>Google Drive 自動同步</h2>' +
-      '<span class="chip sync-chip sync-' + syncStatus + '">' + syncStatusLabel() + "</span></div>" +
-      '<p class="muted">連接後，資料會自動儲存到 Google Drive 的 appDataFolder（檔名：' + DRIVE_FILE +
-      "）。多裝置以較新時間為準。</p>" +
-      '<div class="field"><label>Google OAuth Client ID（Web）</label>' +
+    var html = '<div class="settings-group"><div class="settings-group-title">Google Drive 自動同步</div>';
+    html += '<div class="settings-row"><span class="settings-row-label">狀態</span>' +
+      '<span class="chip sync-chip sync-' + syncStatus + '">' + syncStatusLabel() + "</span></div>";
+    html += '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
+      '<p class="muted tiny" style="margin:0">資料自動儲存到 Google Drive appDataFolder（' + DRIVE_FILE + "）</p></div>";
+    html += '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
+      '<label class="settings-row-label">OAuth Client ID</label>' +
       '<input id="googleClientId" value="' + escAttr(state.settings.googleClientId || "") +
       '" placeholder="123456789.apps.googleusercontent.com" /></div>';
     if (connected) {
-      html += '<div class="field"><label><input type="checkbox" id="autoSyncToggle"' +
-        (autoOn ? " checked" : "") + " /> 自動同步（建議開啟）</label></div>" +
-        '<div class="row-actions">' +
-        '<button class="btn soft" data-sync="drive-pull">立即同步</button>' +
-        '<button class="btn ghost" data-sync="disconnect">中斷連接</button></div>';
+      html += '<div class="settings-row"><label class="settings-row-label"><input type="checkbox" id="autoSyncToggle"' +
+        (autoOn ? " checked" : "") + " /> 自動同步</label></div>" +
+        '<div class="settings-row" style="gap:8px;flex-wrap:wrap">' +
+        '<button class="btn sm soft" data-sync="drive-pull">立即同步</button>' +
+        '<button class="btn sm ghost" data-sync="disconnect">中斷連接</button></div>';
     } else {
-      html += '<div class="row-actions"><button class="btn" data-sync="connect">連接 Google Drive</button></div>';
+      html += '<div class="settings-row"><button class="btn block" data-sync="connect">連接 Google Drive</button></div>';
     }
-    html += '<div class="row-actions" style="margin-top:14px">' +
-      '<button class="btn ghost" data-sync="export">匯出 JSON 備份</button>' +
-      '<button class="btn ghost" data-sync="import">匯入 JSON 備份</button></div>';
+    html += '<div class="settings-row" style="gap:8px;flex-wrap:wrap">' +
+      '<button class="btn sm ghost" data-sync="export">匯出備份</button>' +
+      '<button class="btn sm ghost" data-sync="import">匯入備份</button></div>';
     if (state.syncUpdatedAt) {
-      html += '<p class="tiny">上次更新：' + new Date(state.syncUpdatedAt).toLocaleString("zh-HK") + "</p>";
+      html += '<div class="settings-row"><span class="settings-row-value">上次更新：' +
+        new Date(state.syncUpdatedAt).toLocaleString("zh-HK") + "</span></div>";
     }
-    html += '<details class="advanced-sync"><summary>進階／舊版同步（Apps Script）</summary>' +
-      '<p class="muted tiny">舊版手動拉取／推送方式，一般情況毋須使用。</p>' +
+    html += '<details class="advanced-sync" style="margin:0 16px 16px"><summary>進階／舊版同步</summary>' +
+      '<p class="muted tiny">舊版 Apps Script 手動拉取／推送。</p>' +
       '<div class="field"><label>Apps Script URL</label><input id="cloudUrl" value="' +
       escAttr(state.settings.cloudUrl || "") + '" placeholder="https://script.google.com/macros/s/..." /></div>' +
       '<div class="field"><label>Token</label><input id="cloudToken" type="password" value="' +
@@ -1579,7 +1760,7 @@
 
   function goMoreTab(tab) {
     ui.view = "settings";
-    ui.settingsTab = tab === "goals" || tab === "money" || tab === "theme" || tab === "sync" ? tab : "sync";
+    ui.settingsTab = tab === "goals" || tab === "theme" || tab === "sync" ? tab : "goals";
     if (tab === "countdown") {
       setView("countdown");
       return;
@@ -1604,6 +1785,7 @@
 
   function render() {
     applyTheme();
+    renderAppBar();
     renderTopChips();
     if (ui.view === "habits") renderHabits();
     else if (ui.view === "calendar") renderCalendar();
@@ -1624,6 +1806,9 @@
     var navSettings = t.closest("[data-settings]");
     if (navSettings) {
       ui.settingsTab = navSettings.getAttribute("data-settings");
+      document.querySelectorAll("[data-settings]").forEach(function (btn) {
+        btn.classList.toggle("on", btn.getAttribute("data-settings") === ui.settingsTab);
+      });
       renderSettingsBody();
       return;
     }
@@ -1635,23 +1820,45 @@
       return;
     }
 
-    var hcalNav = t.closest("[data-hcal]");
-    if (hcalNav) {
-      ui.habitCalMonth = addMonths(ui.habitCalMonth, hcalNav.getAttribute("data-hcal") === "prev" ? -1 : 1);
-      renderHabits();
+    var hdetailNav = t.closest("[data-hdetail-cal]");
+    if (hdetailNav) {
+      ui.habitDetailMonth = addMonths(ui.habitDetailMonth, hdetailNav.getAttribute("data-hdetail-cal") === "prev" ? -1 : 1);
+      refreshHabitDetail();
+      return;
+    }
+
+    var toggle = t.closest("[data-toggle]");
+    if (toggle) {
+      var dateAttr = toggle.getAttribute("data-toggle-date");
+      toggleHabit(toggle.getAttribute("data-toggle"), dateAttr || (ui.view === "calendar" ? ui.calSelected : null));
+      return;
+    }
+
+    var habitOpen = t.closest("[data-habit-open]");
+    if (habitOpen) {
+      var hid = habitOpen.getAttribute("data-habit-open");
+      var habit = state.habits.find(function (x) { return x.id === hid; });
+      if (habit) openHabitDetail(habit, startOfMonth(new Date()));
       return;
     }
 
     var go = t.closest("[data-go]");
     if (go) {
       goMoreTab(go.getAttribute("data-go"));
-      if (go.getAttribute("data-go") === "money") setTimeout(function () { openMoneyEditor(); }, 50);
       return;
     }
 
-    var toggle = t.closest("[data-toggle]");
-    if (toggle) {
-      toggleHabit(toggle.getAttribute("data-toggle"));
+    var archiveHabit = t.closest("[data-archive-habit]");
+    if (archiveHabit) {
+      var ah = state.habits.find(function (x) { return x.id === archiveHabit.getAttribute("data-archive-habit"); });
+      if (ah) {
+        ah.archived = true;
+        touch(ah);
+        saveState();
+        closeModal();
+        toast("已封存");
+        render();
+      }
       return;
     }
 
@@ -1663,7 +1870,6 @@
       else if (act === "add-countdown") openCountdownEditor();
       else if (act === "add-goal-short") openGoalEditor("short");
       else if (act === "add-goal-long") openGoalEditor("long");
-      else if (act === "add-money") openMoneyEditor();
       return;
     }
 
@@ -1708,13 +1914,6 @@
       return;
     }
 
-    var editMoney = t.closest("[data-edit-money]");
-    if (editMoney) {
-      var tx = state.transactions.find(function (x) { return x.id === editMoney.getAttribute("data-edit-money"); });
-      if (tx) openMoneyEditor(tx);
-      return;
-    }
-
     var dayBtn = t.closest("[data-day]");
     if (dayBtn) {
       ui.calSelected = dayBtn.getAttribute("data-day");
@@ -1726,6 +1925,20 @@
     if (calNav) {
       ui.calMonth = addMonths(ui.calMonth, calNav.getAttribute("data-cal") === "prev" ? -1 : 1);
       renderCalendar();
+      return;
+    }
+
+    var calMode = t.closest("[data-cal-mode]");
+    if (calMode) {
+      ui.calMode = calMode.getAttribute("data-cal-mode");
+      renderCalendar();
+      return;
+    }
+
+    var ttDow = t.closest("[data-tt-dow]");
+    if (ttDow) {
+      ui.timetableDow = Number(ttDow.getAttribute("data-tt-dow"));
+      renderTimetable();
       return;
     }
 

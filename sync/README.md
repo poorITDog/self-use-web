@@ -80,4 +80,4 @@ Solara 預設使用 **Google Identity Services (GIS)** + **Drive API `appDataFol
 
 - OAuth Client ID 可公開（僅識別應用程式），但請勿分享 refresh token
 - `appDataFolder` 只有本應用可讀寫，其他 Drive 用戶看不到
-- 敏感記帳資料請自行評估是否使用雲端同步
+- 敏感個人資料請自行評估是否使用雲端同步
