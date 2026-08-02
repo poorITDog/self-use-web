@@ -174,7 +174,31 @@ await page.waitForSelector(".countdown-cards, .empty");
 const hasFocusOnCountdown = await page.$("#view-countdown .focus-ring");
 await assert(!hasFocusOnCountdown, "countdown view has no pomodoro");
 
-// focus / pomodoro
+// focus page sound toggle
+await page.click('[data-nav="focus"]');
+await page.waitForSelector("#view-focus .focus-ring");
+const focusSoundToggle = await page.$("#focusSoundEnabled");
+await assert(!!focusSoundToggle, "focus page has sound toggle");
+
+// calendar add-event modal
+await page.reload({ waitUntil: "networkidle0" });
+await page.click('[data-nav="calendar"]');
+await page.waitForSelector('[data-action="add-event"]');
+await page.click('[data-action="add-event"]');
+await page.waitForSelector("#eTitle");
+const eventTitleField = await page.$("#eTitle");
+await assert(!!eventTitleField, "add-event modal opens with eTitle field");
+await page.evaluate(() => document.getElementById("eCancel").click());
+await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
+
+// settings notify tab has focus sound option
+await page.click('[data-nav="settings"]');
+await page.click('[data-settings="notify"]');
+await page.waitForSelector("#settingsBody");
+const notifySound = await page.$("#settingsBody #focusSoundEnabled");
+await assert(!!notifySound, "settings notify tab has focusSound toggle");
+
+// focus / pomodoro (revisit)
 await page.click('[data-nav="focus"]');
 await page.waitForSelector("#view-focus .focus-ring");
 const focusRing = await page.$("#view-focus .focus-ring");

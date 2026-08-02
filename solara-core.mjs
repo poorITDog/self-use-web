@@ -45,6 +45,7 @@ export function defaultState() {
       habitsBoardMode: "month",
       notifyEnabled: false,
       notifyHabits: true,
+      focusSoundEnabled: true,
     },
     habits: [],
     checkins: [],
@@ -52,6 +53,7 @@ export function defaultState() {
     countdowns: [],
     focusSessions: [],
     goals: [],
+    events: [],
     transactions: [],
   };
 }
@@ -61,6 +63,7 @@ export function normalizeState(data) {
   if (!data || typeof data !== "object") return base;
   const out = { ...base, ...data };
   out.settings = { ...base.settings, ...(data.settings || {}) };
+  if (out.settings.focusSoundEnabled === undefined) out.settings.focusSoundEnabled = true;
   for (const k of [
     "habits",
     "checkins",
@@ -68,6 +71,7 @@ export function normalizeState(data) {
     "countdowns",
     "focusSessions",
     "goals",
+    "events",
     "transactions",
   ]) {
     if (!Array.isArray(out[k])) out[k] = [];
