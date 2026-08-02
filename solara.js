@@ -36,6 +36,15 @@
   var uploadDebounce = null;
   var googleTokenClient = null;
   var tokenPromiseResolve = null;
+  var notifyTimers = [];
+  var notifyIntervalId = null;
+
+  var THEME_COLORS = {
+    sunshine: "#FFF8F0",
+    sea: "#E8F4FA",
+    fire: "#FFF0EB",
+    photo: "#FAFAF8"
+  };
 
   function colors() {
     if (state.settings.palette && state.settings.palette.length) {
@@ -118,7 +127,9 @@
         currencyLabel: "HKD",
         calShowHabits: true,
         calShowCountdowns: true,
-        habitsBoardMode: "month"
+        habitsBoardMode: "month",
+        notifyEnabled: false,
+        notifyHabits: true
       },
       habits: [],
       checkins: [],
@@ -137,6 +148,8 @@
     if (out.settings.calShowHabits === undefined) out.settings.calShowHabits = true;
     if (out.settings.calShowCountdowns === undefined) out.settings.calShowCountdowns = true;
     if (!out.settings.habitsBoardMode) out.settings.habitsBoardMode = "month";
+    if (out.settings.notifyEnabled === undefined) out.settings.notifyEnabled = false;
+    if (out.settings.notifyHabits === undefined) out.settings.notifyHabits = true;
     out.countdowns = (Array.isArray(out.countdowns) ? out.countdowns : []).map(function (c) {
       var kind = c.kind || "countdown";
       return Object.assign({
@@ -418,8 +431,12 @@
   function applyTheme() {
     var t = state.settings.theme || "sunshine";
     document.body.setAttribute("data-theme", t);
+    var scene = document.getElementById("themeScene");
+    if (scene) scene.setAttribute("data-scene", t);
+    var metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) metaTheme.setAttribute("content", THEME_COLORS[t] || THEME_COLORS.sunshine);
     if (t === "photo" && state.settings.photoDataUrl) {
-      document.body.style.setProperty("--photo", "linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,248,240,0.72)), url('" + state.settings.photoDataUrl + "')");
+      document.body.style.setProperty("--photo", "linear-gradient(180deg, rgba(255,255,255,0.45), rgba(0,0,0,0.25)), url('" + state.settings.photoDataUrl + "')");
       if (state.settings.palette && state.settings.palette[0]) {
         document.documentElement.style.setProperty("--accent", state.settings.palette[0]);
         document.documentElement.style.setProperty("--accent-2", state.settings.palette[1] || state.settings.palette[0]);
@@ -431,6 +448,69 @@
       document.documentElement.style.removeProperty("--accent-2");
       document.documentElement.style.removeProperty("--accent-soft");
     }
+  }
+
+  function clearNotifyTimers() {
+    notifyTimers.forEach(function (id) { clearTimeout(id); });
+    notifyTimers = [];
+    if (notifyIntervalId) {
+      clearInterval(notifyIntervalId);
+      notifyIntervalId = null;
+    }
+  }
+
+  function scheduleHabitNotifications() {
+    clearNotifyTimers();
+    if (!state.settings.notifyEnabled || !state.settings.notifyHabits) return;
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    var now = Date.now();
+    state.habits.filter(function (h) { return !h.archived && h.timeOfDay; }).forEach(function (h) {
+      var parts = String(h.timeOfDay).split(":");
+      var target = new Date();
+      target.setHours(Number(parts[0]) || 0, Number(parts[1]) || 0, 0, 0);
+      if (target.getTime() <= now) target.setDate(target.getDate() + 1);
+      var key = dateKey(target);
+      if (!habitDueOn(h, key)) return;
+      if (isHabitDone(h, key)) return;
+      var ms = target.getTime() - now;
+      var tid = setTimeout(function () {
+        if (Notification.permission === "granted") {
+          try {
+            new Notification("Solara 習慣提醒", {
+              body: h.name + " 的時間到了",
+              tag: "habit-" + h.id + "-" + key,
+              silent: false
+            });
+          } catch (e) { /* ignore */ }
+        }
+      }, ms);
+      notifyTimers.push(tid);
+    });
+    notifyIntervalId = setInterval(scheduleHabitNotifications, 3600000);
+  }
+
+  function requestNotifyPermission(cb) {
+    if (!("Notification" in window)) {
+      toast("此瀏覽器不支援通知");
+      if (cb) cb("unsupported");
+      return;
+    }
+    if (Notification.permission === "granted") {
+      if (cb) cb("granted");
+      return;
+    }
+    if (Notification.permission === "denied") {
+      toast("通知權限已被拒絕，請在瀏覽器設定中開啟");
+      if (cb) cb("denied");
+      return;
+    }
+    Notification.requestPermission().then(function (perm) {
+      if (perm === "granted") toast("已允許通知");
+      else toast("未允許通知");
+      if (cb) cb(perm);
+      if (state.settings.notifyEnabled) scheduleHabitNotifications();
+      renderSettingsBody();
+    });
   }
 
   function extractPalette(dataUrl, cb) {
@@ -616,8 +696,8 @@
   var VIEW_TITLES = {
     habits: "習慣",
     calendar: "日曆",
-    timetable: "時間表",
     countdown: "倒數",
+    focus: "專注",
     settings: "設定"
   };
 
@@ -626,10 +706,10 @@
       return '<button type="button" class="icon-btn" data-action="add-habit" aria-label="新增習慣">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>';
     }
-    if (view === "calendar") return "";
-    if (view === "timetable") {
+    if (view === "calendar" && ui.calMode === "timetable") {
       return '<button type="button" class="btn sm soft" data-action="add-block">+ 時段</button>';
     }
+    if (view === "calendar") return "";
     if (view === "countdown") {
       return '<button type="button" class="btn sm soft" data-action="add-countdown">+ 新增</button>';
     }
@@ -1426,14 +1506,24 @@
     var selected = ui.calSelected;
     var y = month.getFullYear();
     var m = month.getMonth();
-    var html = '<div class="cal-toolbar">' +
-      '<button class="btn sm ghost icon-only" data-cal="prev" aria-label="上個月">‹</button>' +
-      '<h2>' + y + " 年 " + (m + 1) + " 月</h2>" +
-      '<button class="btn sm ghost icon-only" data-cal="next" aria-label="下個月">›</button></div>';
+    var html = "";
+    if (ui.calMode !== "timetable") {
+      html += '<div class="cal-toolbar">' +
+        '<button class="btn sm ghost icon-only" data-cal="prev" aria-label="上個月">‹</button>' +
+        '<h2>' + y + " 年 " + (m + 1) + " 月</h2>" +
+        '<button class="btn sm ghost icon-only" data-cal="next" aria-label="下個月">›</button></div>';
+    }
 
-    html += '<div class="seg"><button type="button" data-cal-mode="month" class="' +
+    html += '<div class="seg seg-3"><button type="button" data-cal-mode="month" class="' +
       (ui.calMode === "month" ? "on" : "") + '">月</button><button type="button" data-cal-mode="week" class="' +
-      (ui.calMode === "week" ? "on" : "") + '">週</button></div>';
+      (ui.calMode === "week" ? "on" : "") + '">週</button><button type="button" data-cal-mode="timetable" class="' +
+      (ui.calMode === "timetable" ? "on" : "") + '">時間表</button></div>';
+
+    if (ui.calMode === "timetable") {
+      html += renderTimetablePanel();
+      document.getElementById("view-calendar").innerHTML = html;
+      return;
+    }
 
     html += '<div class="cal-view-opts">' +
       '<label class="cal-opt"><input type="checkbox" data-cal-opt="habits"' +
@@ -1567,19 +1657,23 @@
   }
 
   function renderTimetable() {
-    document.getElementById("view-timetable").innerHTML = renderTimetablePanel();
+    if (ui.view === "calendar") renderCalendar();
   }
 
   function renderCountdown() {
-    var html = renderCountdownPanel();
-    html += '<div class="focus-panel">' + renderFocusPanelInner() + "</div>";
-    document.getElementById("view-countdown").innerHTML = html;
+    document.getElementById("view-countdown").innerHTML = renderCountdownPanel();
+  }
+
+  function renderFocus() {
+    document.getElementById("view-focus").innerHTML =
+      '<div class="focus-view"><div class="focus-panel">' + renderFocusPanelInner() + "</div></div>";
   }
 
   function renderSettings() {
     var tabs = [
       ["goals", "目標"],
       ["theme", "主題"],
+      ["notify", "提醒"],
       ["sync", "同步"]
     ];
     var html = '<div class="settings-wrap"><div class="seg settings-seg">';
@@ -1598,7 +1692,8 @@
     var map = {
       sync: renderSyncPanel,
       goals: renderGoalsPanel,
-      theme: renderThemePanel
+      theme: renderThemePanel,
+      notify: renderNotifyPanel
     };
     el.innerHTML = (map[ui.settingsTab] || renderGoalsPanel)();
   }
@@ -1843,11 +1938,11 @@
         ui.focus.totalMs = (state.settings.focusMin || 25) * 60000;
         ui.focus.remainMs = ui.focus.totalMs;
       }
-      if (ui.view === "countdown") render();
+      if (ui.view === "focus") renderFocus();
       else renderTopChips();
       return;
     }
-    if (ui.view === "countdown") {
+    if (ui.view === "focus") {
       var ring = document.querySelector(".focus-ring");
       var time = document.querySelector(".focus-ring .time");
       if (ring && time) {
@@ -1982,19 +2077,43 @@
     }
   }
 
+  function renderNotifyPanel() {
+    var supported = "Notification" in window;
+    var perm = supported ? Notification.permission : "unsupported";
+    var permLabel = { granted: "已允許", denied: "已拒絕", default: "尚未詢問", unsupported: "不支援" };
+    var html = '<div class="settings-group"><div class="settings-group-title">提醒</div>';
+    html += '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
+      '<p class="muted tiny" style="margin:0">本機提醒僅在 App 開啟時有效。iOS 背景通知有限；加到主畫面後 iOS 16.4+ 可支援 Web Push。</p></div>';
+    html += '<div class="settings-row"><span class="settings-row-label">通知權限</span>' +
+      '<span class="settings-row-value">' + (permLabel[perm] || perm) + "</span></div>";
+    if (supported && perm !== "granted") {
+      html += '<div class="settings-row"><button class="btn sm soft block" data-notify="request">請求通知權限</button></div>';
+    }
+    html += '<div class="settings-row"><label class="settings-row-label"><input type="checkbox" id="notifyEnabled"' +
+      (state.settings.notifyEnabled ? " checked" : "") + (supported ? "" : " disabled") +
+      " /> 啟用提醒</label></div>";
+    html += '<div class="settings-row"><label class="settings-row-label"><input type="checkbox" id="notifyHabits"' +
+      (state.settings.notifyHabits !== false ? " checked" : "") +
+      (state.settings.notifyEnabled && supported ? "" : " disabled") +
+      " /> 習慣提醒（使用習慣的建議時段）</label></div>";
+    html += "</div>";
+    return html;
+  }
+
   function renderThemePanel() {
     var cur = state.settings.theme || "sunshine";
     var themes = [
-      { id: "sunshine", name: "Sunshine", grad: "linear-gradient(135deg,#FFE8C8,#F4A261,#2A9D8F)" },
-      { id: "sea", name: "Blue Sea", grad: "linear-gradient(135deg,#B8E4E8,#1D8A99,#0E5F6B)" },
-      { id: "fire", name: "Warm Fire", grad: "linear-gradient(135deg,#FFD2B8,#E76F51,#F4A261)" },
-      { id: "photo", name: "自訂相片", grad: state.settings.photoDataUrl ? "url(" + state.settings.photoDataUrl + ") center/cover" : "linear-gradient(135deg,#ddd,#bbb)" }
+      { id: "sunshine", name: "Sunshine", previewClass: "preview-sunshine" },
+      { id: "sea", name: "Blue Sea", previewClass: "preview-sea" },
+      { id: "fire", name: "Warm Fire", previewClass: "preview-fire" },
+      { id: "photo", name: "自訂相片", previewClass: "preview-photo", photo: state.settings.photoDataUrl }
     ];
     var html = '<div class="settings-group"><div class="settings-group-title">主題</div>';
     html += '<div style="padding:12px 16px"><div class="theme-grid">';
     themes.forEach(function (th) {
+      var previewStyle = th.photo ? ' style="background-image:linear-gradient(180deg,rgba(255,255,255,0.4),rgba(0,0,0,0.3)),url(' + th.photo + ');background-size:cover"' : "";
       html += '<button type="button" class="theme-card' + (cur === th.id ? " on" : "") + '" data-theme-pick="' + th.id + '">' +
-        '<div class="preview" style="background:' + th.grad + '"></div><strong>' + esc(th.name) + '</strong></button>';
+        '<div class="preview ' + th.previewClass + '"' + previewStyle + '></div><strong>' + esc(th.name) + '</strong></button>';
     });
     html += '</div></div>';
     html += '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
@@ -2144,13 +2263,13 @@
 
   function goMoreTab(tab) {
     ui.view = "settings";
-    ui.settingsTab = tab === "goals" || tab === "theme" || tab === "sync" ? tab : "goals";
+    ui.settingsTab = tab === "goals" || tab === "theme" || tab === "sync" || tab === "notify" ? tab : "goals";
     if (tab === "countdown") {
       setView("countdown");
       return;
     }
     if (tab === "focus") {
-      setView("countdown");
+      setView("focus");
       return;
     }
     setView("settings");
@@ -2173,9 +2292,10 @@
     renderTopChips();
     if (ui.view === "habits") renderHabits();
     else if (ui.view === "calendar") renderCalendar();
-    else if (ui.view === "timetable") renderTimetable();
     else if (ui.view === "countdown") renderCountdown();
+    else if (ui.view === "focus") renderFocus();
     else if (ui.view === "settings") renderSettings();
+    if (state.settings.notifyEnabled) scheduleHabitNotifications();
   }
 
   document.getElementById("nav").addEventListener("click", function (e) {
@@ -2352,7 +2472,14 @@
     var ttDow = t.closest("[data-tt-dow]");
     if (ttDow) {
       ui.timetableDow = Number(ttDow.getAttribute("data-tt-dow"));
-      renderTimetable();
+      if (ui.view === "calendar") renderCalendar();
+      else renderTimetable();
+      return;
+    }
+
+    var notifyBtn = t.closest("[data-notify]");
+    if (notifyBtn) {
+      requestNotifyPermission(function () { renderSettingsBody(); });
       return;
     }
 
@@ -2393,6 +2520,32 @@
       if (opt === "countdowns") state.settings.calShowCountdowns = e.target.checked;
       saveStateLocal();
       renderCalendar();
+      return;
+    }
+    if (e.target.id === "notifyEnabled") {
+      state.settings.notifyEnabled = e.target.checked;
+      saveStateLocal();
+      if (state.settings.notifyEnabled) {
+        requestNotifyPermission(function (perm) {
+          if (perm !== "granted") {
+            state.settings.notifyEnabled = false;
+            saveStateLocal();
+          }
+          scheduleHabitNotifications();
+          renderSettingsBody();
+        });
+      } else {
+        clearNotifyTimers();
+        renderSettingsBody();
+      }
+      toast(state.settings.notifyEnabled ? "已開啟提醒" : "已關閉提醒");
+      return;
+    }
+    if (e.target.id === "notifyHabits") {
+      state.settings.notifyHabits = e.target.checked;
+      saveStateLocal();
+      scheduleHabitNotifications();
+      toast(state.settings.notifyHabits ? "已開啟習慣提醒" : "已關閉習慣提醒");
       return;
     }
     if (e.target.id === "autoSyncToggle") {
@@ -2464,6 +2617,7 @@
   }
 
   applyTheme();
+  if (state.settings.notifyEnabled) scheduleHabitNotifications();
   bootSync();
   render();
 })();

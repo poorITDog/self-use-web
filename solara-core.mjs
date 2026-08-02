@@ -43,6 +43,8 @@ export function defaultState() {
       calShowHabits: true,
       calShowCountdowns: true,
       habitsBoardMode: "month",
+      notifyEnabled: false,
+      notifyHabits: true,
     },
     habits: [],
     checkins: [],

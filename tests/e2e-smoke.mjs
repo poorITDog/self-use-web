@@ -160,15 +160,28 @@ await page.waitForSelector(".cal-day.today");
 const dayRate = await page.$eval(".day-panel-stats .value", (el) => el.textContent);
 await assert(!!dayRate, "calendar day stats render");
 
-// timetable
-await page.click('[data-nav="timetable"]');
-await page.waitForSelector("#view-timetable");
-const timetableBody = await page.$eval("#view-timetable", (el) => el.textContent.length > 0);
-await assert(timetableBody, "timetable view renders");
+// timetable inside calendar (月 | 週 | 時間表)
+await page.click('[data-nav="calendar"]');
+await page.waitForSelector('[data-cal-mode="timetable"]');
+await page.click('[data-cal-mode="timetable"]');
+await page.waitForSelector(".timetable-wrap");
+const timetableBody = await page.$eval("#view-calendar", (el) => el.textContent.length > 0);
+await assert(timetableBody, "calendar timetable mode renders");
+
+// countdown (no focus ring)
+await page.click('[data-nav="countdown"]');
+await page.waitForSelector(".countdown-cards, .empty");
+const hasFocusOnCountdown = await page.$("#view-countdown .focus-ring");
+await assert(!hasFocusOnCountdown, "countdown view has no pomodoro");
+
+// focus / pomodoro
+await page.click('[data-nav="focus"]');
+await page.waitForSelector("#view-focus .focus-ring");
+const focusRing = await page.$("#view-focus .focus-ring");
+await assert(!!focusRing, "focus view renders pomodoro");
 
 // countdown with yearly birthday repeat
 await page.click('[data-nav="countdown"]');
-await page.waitForSelector(".focus-ring");
 await clickAction("add-countdown");
 await page.waitForSelector("#cTitle");
 await page.type("#cTitle", "生日");
@@ -183,7 +196,7 @@ await assert(countdownBody.includes("生日"), "countdown view renders birthday 
 
 // settings tabs smoke (no money tab)
 await page.click('[data-nav="settings"]');
-for (const tab of ["goals", "theme", "sync"]) {
+for (const tab of ["goals", "theme", "notify", "sync"]) {
   await page.click('[data-settings="' + tab + '"]');
   await page.waitForSelector("#settingsBody");
   const body = await page.$eval("#settingsBody", (el) => el.textContent.length > 0);
