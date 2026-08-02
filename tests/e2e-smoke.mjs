@@ -180,7 +180,7 @@ await page.waitForSelector("#view-focus .focus-ring");
 const focusSoundToggle = await page.$("#focusSoundEnabled");
 await assert(!!focusSoundToggle, "focus page has sound toggle");
 
-// calendar add-event modal
+// calendar add-event modal with weekly repeat
 await page.reload({ waitUntil: "networkidle0" });
 await page.click('[data-nav="calendar"]');
 await page.waitForSelector('[data-action="add-event"]');
@@ -188,8 +188,32 @@ await page.click('[data-action="add-event"]');
 await page.waitForSelector("#eTitle");
 const eventTitleField = await page.$("#eTitle");
 await assert(!!eventTitleField, "add-event modal opens with eTitle field");
-await page.evaluate(() => document.getElementById("eCancel").click());
+const repeatField = await page.$("#eRepeat");
+await assert(!!repeatField, "event editor has repeat select");
+await page.type("#eTitle", "每週站會");
+await page.select("#eRepeat", "weekly");
+await page.evaluate(() => document.getElementById("eSave").click());
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
+const dayPanel = await page.$eval(".day-panel", (el) => el.textContent);
+await assert(dayPanel.includes("每週站會"), "recurring event appears on selected day");
+await assert(dayPanel.includes("每週"), "recurring event shows weekly label");
+
+// goals can link to habits
+await page.click('[data-nav="settings"]');
+await page.click('[data-settings="goals"]');
+await page.waitForSelector('[data-action="add-goal-short"]');
+await page.click('[data-action="add-goal-short"]');
+await page.waitForSelector("#gHabit");
+await page.type("#gTitle", "跑步目標");
+const habitOpts = await page.$$eval("#gHabit option", (opts) => opts.map((o) => o.value).filter(Boolean));
+await assert(habitOpts.length > 0, "goal editor lists habits to link");
+await page.select("#gHabit", habitOpts[0]);
+await page.evaluate(() => document.getElementById("gSave").click());
+await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
+const goalsBody = await page.$eval("#settingsBody", (el) => el.textContent);
+await assert(goalsBody.includes("跑步目標"), "goal saved");
+await assert(goalsBody.includes("連結習慣"), "goal shows linked habit");
+await assert(!!(await page.$("[data-goal-check]")), "goal has check-and-plus when habit linked");
 
 // settings notify tab has focus sound option
 await page.click('[data-nav="settings"]');

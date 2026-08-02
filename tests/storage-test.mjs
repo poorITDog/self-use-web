@@ -12,6 +12,8 @@ import {
   isHabitDone,
   countdownNextAt,
   countdownDaysLeft,
+  eventOccursOn,
+  eventRepeatLabel,
 } from "../solara-core.mjs";
 
 function test(name, fn) {
@@ -118,6 +120,33 @@ run("countdownDaysLeft yearly birthday", () => {
   };
   const days = countdownDaysLeft(item, now);
   assert.ok(days > 0 && days < 400);
+});
+
+run("eventOccursOn none/weekly/monthly", () => {
+  const once = { date: "2026-08-03", repeat: "none" };
+  assert.equal(eventOccursOn(once, "2026-08-03"), true);
+  assert.equal(eventOccursOn(once, "2026-08-10"), false);
+  const weekly = { date: "2026-08-03", repeat: "weekly" }; // Monday
+  assert.equal(eventOccursOn(weekly, "2026-08-10"), true);
+  assert.equal(eventOccursOn(weekly, "2026-08-11"), false);
+  const monthly = { date: "2026-08-15", repeat: "monthly", until: "2026-10-01" };
+  assert.equal(eventOccursOn(monthly, "2026-09-15"), true);
+  assert.equal(eventOccursOn(monthly, "2026-10-15"), false);
+});
+
+run("eventRepeatLabel", () => {
+  assert.equal(eventRepeatLabel("weekly"), "每週");
+  assert.equal(eventRepeatLabel("none"), "");
+});
+
+run("normalizeState fills event repeat and goal habitId", () => {
+  const s = normalizeState({
+    events: [{ id: "e1", date: "2026-08-02", title: "開會" }],
+    goals: [{ id: "g1", title: "讀完書", target: 10, current: 1 }],
+  });
+  assert.equal(s.events[0].repeat, "none");
+  assert.equal(s.goals[0].habitId, "");
+  assert.equal(s.settings.notifyEvents, true);
 });
 
 console.log("\n" + passed + " passed, " + failed + " failed");
