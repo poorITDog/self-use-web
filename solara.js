@@ -6,7 +6,8 @@
   var DRIVE_FILE = "solara-v1.json";
   var DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.appdata";
   var BASE_COLORS = ["#F4A261", "#2A9D8F", "#E76F51", "#457B9D", "#E9C46A", "#90BE6D", "#F28482", "#1D8A99"];
-  var GROUPS = ["朝早", "下午", "晚上", "健康", "工作", "生活"];
+  var GROUPS = ["早上", "下午", "晚上", "健康", "工作", "生活"];
+  var TIME_GROUPS = ["早上", "下午", "晚上", "其他"];
   var DOW = ["日", "一", "二", "三", "四", "五", "六"];
 
   var state = loadState();
@@ -19,6 +20,8 @@
     timetableDow: new Date().getDay(),
     habitDetailId: "",
     habitDetailMonth: startOfMonth(new Date()),
+    habitsPanel: "board",
+    countdownUnit: "days",
     focus: {
       running: false,
       mode: "focus",
@@ -112,7 +115,10 @@
         autoSync: true,
         focusMin: 25,
         breakMin: 5,
-        currencyLabel: "HKD"
+        currencyLabel: "HKD",
+        calShowHabits: true,
+        calShowCountdowns: true,
+        habitsBoardMode: "month"
       },
       habits: [],
       checkins: [],
@@ -128,8 +134,29 @@
     if (!data || typeof data !== "object") return base;
     var out = Object.assign({}, base, data);
     out.settings = Object.assign({}, base.settings, data.settings || {});
+    if (out.settings.calShowHabits === undefined) out.settings.calShowHabits = true;
+    if (out.settings.calShowCountdowns === undefined) out.settings.calShowCountdowns = true;
+    if (!out.settings.habitsBoardMode) out.settings.habitsBoardMode = "month";
+    out.countdowns = (Array.isArray(out.countdowns) ? out.countdowns : []).map(function (c) {
+      var kind = c.kind || "countdown";
+      return Object.assign({
+        kind: kind,
+        repeat: kind === "birthday" ? "yearly" : "none",
+        showAge: false,
+        note: "",
+        color: BASE_COLORS[0],
+        emoji: "🎯"
+      }, c, {
+        kind: kind,
+        repeat: c.repeat || (kind === "birthday" ? "yearly" : "none")
+      });
+    });
     ["habits", "checkins", "blocks", "countdowns", "focusSessions", "goals"].forEach(function (k) {
       if (!Array.isArray(out[k])) out[k] = [];
+    });
+    out.habits = out.habits.map(function (h) {
+      if (h && h.group === "朝早") return Object.assign({}, h, { group: "早上" });
+      return h;
     });
     if (Array.isArray(data.transactions)) out.transactions = data.transactions;
     out.syncUpdatedAt = Number(out.syncUpdatedAt) || 0;
@@ -477,6 +504,30 @@
     return n;
   }
 
+  function bestStreakFor(habit) {
+    var best = 0;
+    var cur = 0;
+    var end = new Date();
+    var start = new Date();
+    start.setDate(start.getDate() - 730);
+    var d = new Date(start);
+    while (d <= end) {
+      var key = dateKey(d);
+      if (!habitDueOn(habit, key)) {
+        d.setDate(d.getDate() + 1);
+        continue;
+      }
+      if (isHabitDone(habit, key)) {
+        cur++;
+        if (cur > best) best = cur;
+      } else {
+        cur = 0;
+      }
+      d.setDate(d.getDate() + 1);
+    }
+    return best;
+  }
+
   function minutesOnDate(key) {
     var total = 0;
     state.checkins.forEach(function (c) {
@@ -632,7 +683,7 @@
 
   function progressRingHtml(pct, size) {
     size = size || 72;
-    return '<div class="progress-ring" style="--p:' + pct + '%;--ring-size:' + size + 'px" aria-label="今日完成 ' + pct + '%">' +
+    return '<div class="progress-ring" style="--p:' + pct + '%;--ring-size:' + size + 'px" aria-label="今天完成 ' + pct + '%">' +
       '<div class="progress-ring-inner"><strong>' + pct + '</strong><span>%</span></div></div>';
   }
 
@@ -706,15 +757,35 @@
     return '<article class="habit-card habit-row' + (done ? " done" : "") + '" style="--hcolor:' + h.color + '">' +
       checkBtnHtml(h, key, "check check-lg") +
       '<button type="button" class="habit-row-body" data-habit-open="' + h.id + '">' +
-      '<div class="habit-row-name">' + esc(h.name) + "</div>" +
-      '<div class="habit-row-meta">連續日 ' + streakFor(h) + " · 本月 " + rate + "%</div>" +
+      '<div class="habit-row-name">' + habitEmoji(h) + esc(h.name) + "</div>" +
+      '<div class="habit-row-meta">連續天數 ' + streakFor(h) + " · 本月完成率 " + rate + "%</div>" +
       weekStripHtml(h) + "</button>" +
       '<button type="button" class="habit-row-chevron" data-habit-open="' + h.id + '" aria-label="詳情">' +
       chevronSvg + "</button></article>";
   }
 
-  function monthDoneDays(habit) {
-    var month = ui.habitDetailMonth || startOfMonth(new Date());
+  function habitEmoji(h) {
+    return (h && h.emoji) ? h.emoji + " " : "";
+  }
+
+  function periodDoneCount(habit, mode) {
+    var now = new Date();
+    var count = 0;
+    if (mode === "week") {
+      var start = new Date(now);
+      start.setDate(now.getDate() - now.getDay());
+      for (var i = 0; i < 7; i++) {
+        var cur = new Date(start);
+        cur.setDate(start.getDate() + i);
+        var key = dateKey(cur);
+        if (habitDueOn(habit, key) && isHabitDone(habit, key)) count++;
+      }
+      return count;
+    }
+    return monthDoneDaysFor(habit, startOfMonth(now));
+  }
+
+  function monthDoneDaysFor(habit, month) {
     var y = month.getFullYear();
     var m = month.getMonth();
     var days = new Date(y, m + 1, 0).getDate();
@@ -726,6 +797,235 @@
       if (isHabitDone(habit, key)) count++;
     }
     return count;
+  }
+
+  function monthRateFor(habit, month) {
+    var y = month.getFullYear();
+    var m = month.getMonth();
+    var days = new Date(y, m + 1, 0).getDate();
+    var due = 0;
+    var done = 0;
+    for (var d = 1; d <= days; d++) {
+      var key = dateKey(new Date(y, m, d));
+      if (key > todayKey()) break;
+      if (!habitDueOn(habit, key)) continue;
+      due++;
+      if (isHabitDone(habit, key)) done++;
+    }
+    return due ? Math.round((done / due) * 100) : 0;
+  }
+
+  function habitBoxDayCellHtml(habit, key, dayLabel) {
+    var due = habitDueOn(habit, key);
+    var done = isHabitDone(habit, key);
+    var cls = "habit-box-day";
+    if (key === todayKey()) cls += " today";
+    if (!due) cls += " off";
+    else if (done) cls += " done";
+    else if (key > todayKey()) cls += " future";
+    else cls += " missed";
+    var inner = !due ? "–" : String(dayLabel);
+    var style = ' style="--hcolor:' + habit.color + '"';
+    if (due && key <= todayKey()) {
+      return '<button type="button" class="' + cls + '"' + style +
+        ' data-habit-day="' + habit.id + "|" + key + '" aria-label="' + key + '">' + inner + "</button>";
+    }
+    return '<span class="' + cls + '"' + style + '>' + inner + "</span>";
+  }
+
+  function habitBoxMonthCalHtml(habit) {
+    var month = startOfMonth(new Date());
+    var y = month.getFullYear();
+    var m = month.getMonth();
+    var firstDow = new Date(y, m, 1).getDay();
+    var daysInMonth = new Date(y, m + 1, 0).getDate();
+    var html = '<div class="habit-box-cal habit-box-cal-month" style="--hcolor:' + habit.color + '"><div class="habit-box-grid">';
+    for (var i = 0; i < firstDow; i++) html += '<span class="habit-box-day pad" aria-hidden="true"></span>';
+    for (var day = 1; day <= daysInMonth; day++) {
+      var key = dateKey(new Date(y, m, day));
+      html += habitBoxDayCellHtml(habit, key, day);
+    }
+    html += "</div></div>";
+    return html;
+  }
+
+  function habitBoxWeekCalHtml(habit) {
+    var d = new Date();
+    var start = new Date(d);
+    start.setDate(d.getDate() - d.getDay());
+    var html = '<div class="habit-box-cal habit-box-cal-week" style="--hcolor:' + habit.color + '"><div class="habit-box-grid week">';
+    for (var i = 0; i < 7; i++) {
+      var cur = new Date(start);
+      cur.setDate(start.getDate() + i);
+      var key = dateKey(cur);
+      html += habitBoxDayCellHtml(habit, key, cur.getDate());
+    }
+    html += "</div></div>";
+    return html;
+  }
+
+  function habitBoxMonthLabel() {
+    var month = startOfMonth(new Date());
+    return month.getFullYear() + "年" + (month.getMonth() + 1) + "月";
+  }
+
+  function habitBoxHtml(habit, mode) {
+    mode = mode || state.settings.habitsBoardMode || "month";
+    var rate = mode === "week"
+      ? (function () {
+        var now = new Date();
+        var start = new Date(now);
+        start.setDate(now.getDate() - now.getDay());
+        var due = 0;
+        var done = 0;
+        for (var i = 0; i < 7; i++) {
+          var cur = new Date(start);
+          cur.setDate(start.getDate() + i);
+          var key = dateKey(cur);
+          if (!habitDueOn(habit, key)) continue;
+          due++;
+          if (isHabitDone(habit, key)) done++;
+        }
+        return due ? Math.round((done / due) * 100) : 0;
+      })()
+      : monthRate(habit);
+    var checks = periodDoneCount(habit, mode === "week" ? "week" : "month");
+    var streak = streakFor(habit);
+    var best = bestStreakFor(habit);
+    var cal = mode === "week" ? habitBoxWeekCalHtml(habit) : habitBoxMonthCalHtml(habit);
+    var key = todayKey();
+    return '<article class="habit-box" style="--hcolor:' + habit.color + '">' +
+      '<div class="habit-box-top">' +
+      '<button type="button" class="habit-box-head" data-habit-box-open="' + habit.id + '">' +
+      '<span class="habit-box-emoji">' + esc(habit.emoji || "✓") + "</span>" +
+      '<span class="habit-box-name">' + esc(habit.name) + "</span></button>" +
+      checkBtnHtml(habit, key, "check check-lg") + "</div>" +
+      '<div class="habit-box-month-label">' + habitBoxMonthLabel() + "</div>" +
+      cal +
+      '<div class="habit-box-stats">' +
+      '<div class="habit-box-rate-wrap" style="--p:' + rate + '%;--hcolor:' + habit.color + '" aria-label="完成率 ' + rate + '%">' +
+      '<span class="habit-box-rate">' + rate + "%</span></div>" +
+      '<div class="habit-box-stat-items">' +
+      '<span class="habit-box-checks" aria-label="完成次數">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' +
+      checks + "</span>" +
+      '<span class="habit-box-streak" aria-label="當前連續">連續 ' + streak + "</span>" +
+      '<span class="habit-box-best" aria-label="最佳連續">最佳 ' + best + "</span>" +
+      "</div></div></article>";
+  }
+
+  function todayCheckinRowHtml(h) {
+    var key = todayKey();
+    var done = isHabitDone(h, key);
+    return '<article class="habit-card habit-checkin-row' + (done ? " done" : "") + '" style="--hcolor:' + h.color + '">' +
+      checkBtnHtml(h, key, "check check-lg") +
+      '<button type="button" class="habit-row-body" data-habit-open="' + h.id + '">' +
+      '<div class="habit-row-name">' + habitEmoji(h) + esc(h.name) + "</div>" +
+      '<div class="habit-row-meta">' + todayStatusText(h, key) + "</div></button>" +
+      '<button type="button" class="habit-row-chevron" data-habit-open="' + h.id + '" aria-label="詳情">' +
+      chevronSvg + "</button></article>";
+  }
+
+  function todayCheckinHtml(todayHabits) {
+    if (!todayHabits.length) {
+      return '<div class="empty compact"><p>今天沒有需要完成的習慣</p></div>';
+    }
+    var html = '<div class="today-checkin">';
+    var grouped = {};
+    todayHabits.forEach(function (h) {
+      var g = TIME_GROUPS.indexOf(h.group) >= 0 ? h.group : "其他";
+      if (!grouped[g]) grouped[g] = [];
+      grouped[g].push(h);
+    });
+    TIME_GROUPS.forEach(function (g) {
+      if (!grouped[g] || !grouped[g].length) return;
+      html += '<div class="habit-group-section"><div class="habit-group-label">' + g + "</div>";
+      html += grouped[g].map(todayCheckinRowHtml).join("");
+      html += "</div>";
+    });
+    html += "</div>";
+    return html;
+  }
+
+  function habitBoardHtml(active) {
+    var mode = state.settings.habitsBoardMode || "month";
+    var html = '<div class="habits-board">';
+    html += '<div class="habits-board-toolbar">' +
+      '<span class="section-title">儀表板</span>' +
+      '<div class="seg seg-inline">' +
+      '<button type="button" data-habits-board-mode="month" class="' + (mode === "month" ? "on" : "") + '">每月</button>' +
+      '<button type="button" data-habits-board-mode="week" class="' + (mode === "week" ? "on" : "") + '">每週</button>' +
+      '<button type="button" data-habits-board-mode="overview" class="' + (mode === "overview" ? "on" : "") + '">總覽</button>' +
+      "</div></div>";
+    if (mode === "overview") {
+      html += '<div class="habit-groups">';
+      groupHabits(active).forEach(function (section) {
+        html += '<div class="habit-group-section"><div class="habit-group-label">' + esc(section.group) + "</div>";
+        html += section.habits.map(habitListRowHtml).join("");
+        html += "</div>";
+      });
+      html += "</div>";
+    } else if (!active.length) {
+      html += '<div class="empty compact board-empty"><p>還沒有習慣。新增一個開始追蹤。</p>' +
+        '<button class="btn sm" data-action="add-habit">+ 新增習慣</button></div>';
+    } else {
+      html += '<div class="habit-box-grid-wrap">';
+      active.forEach(function (h) { html += habitBoxHtml(h, mode); });
+      html += "</div>";
+    }
+    html += "</div>";
+    return html;
+  }
+
+  function countdownNextAt(c) {
+    var now = Date.now();
+    var target = new Date(c.targetAt || 0);
+    var repeat = c.repeat || (c.kind === "birthday" ? "yearly" : "none");
+    if (!c.targetAt || repeat === "none") return c.targetAt || 0;
+    var nowD = new Date(now);
+    if (repeat === "yearly") {
+      var next = new Date(nowD.getFullYear(), target.getMonth(), target.getDate(), target.getHours(), target.getMinutes(), 0, 0);
+      if (next.getTime() <= now) next.setFullYear(next.getFullYear() + 1);
+      return next.getTime();
+    }
+    if (repeat === "monthly") {
+      var nextM = new Date(nowD.getFullYear(), nowD.getMonth(), target.getDate(), target.getHours(), target.getMinutes(), 0, 0);
+      if (nextM.getTime() <= now) nextM.setMonth(nextM.getMonth() + 1);
+      return nextM.getTime();
+    }
+    if (repeat === "weekly") {
+      var targetDow = target.getDay();
+      var nextW = new Date(nowD);
+      nextW.setHours(target.getHours(), target.getMinutes(), 0, 0);
+      var diff = (targetDow - nowD.getDay() + 7) % 7;
+      if (diff === 0 && nextW.getTime() <= now) diff = 7;
+      nextW.setDate(nextW.getDate() + diff);
+      return nextW.getTime();
+    }
+    return c.targetAt;
+  }
+
+  function countdownDaysLeft(c) {
+    var diff = countdownNextAt(c) - Date.now();
+    if (diff <= 0) return 0;
+    return Math.ceil(diff / 86400000);
+  }
+
+  function countdownDisplayAmount(days, unit) {
+    if (unit === "weeks") return { value: Math.max(0, Math.ceil(days / 7)), label: "週" };
+    if (unit === "months") return { value: Math.max(0, Math.ceil(days / 30)), label: "月" };
+    return { value: days, label: "天" };
+  }
+
+  function birthdayAge(c) {
+    if (!c.showAge || c.kind !== "birthday") return null;
+    var birth = new Date(c.targetAt);
+    var next = new Date(countdownNextAt(c));
+    return next.getFullYear() - birth.getFullYear();
+  }
+
+  function monthDoneDays(habit) {
+    return monthDoneDaysFor(habit, ui.habitDetailMonth || startOfMonth(new Date()));
   }
 
   function totalDoneDays(habit) {
@@ -783,8 +1083,8 @@
       "<h3>" + esc(habit.name) + "</h3>" +
       '<p class="muted">' + typeLabel(habit.type) + " · " + esc(habit.group || "未分組") + "</p></div>" +
       '<div class="habit-detail-stats">' +
-      '<div class="detail-stat"><div class="label">連續日</div><div class="value">' + streakFor(habit) + "</div></div>" +
-      '<div class="detail-stat"><div class="label">本月達成率</div><div class="value">' + monthRate(habit) + "%</div></div>" +
+      '<div class="detail-stat"><div class="label">連續天數</div><div class="value">' + streakFor(habit) + "</div></div>" +
+      '<div class="detail-stat"><div class="label">本月完成率</div><div class="value">' + monthRate(habit) + "%</div></div>" +
       '<div class="detail-stat"><div class="label">本月完成</div><div class="value">' + monthDoneDays(habit) + " 日</div></div>" +
       '<div class="detail-stat"><div class="label">' + stat.label + '</div><div class="value">' + stat.value + "</div></div>" +
       "</div>" +
@@ -811,7 +1111,7 @@
   function emptyHabitsHtml() {
     return '<div class="empty">' +
       '<div class="empty-illus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>' +
-      "<p>未有習慣。建立一個，開始記錄生活。</p>" +
+      "<p>目前沒有習慣。新增一個，開始記錄生活。</p>" +
       '<button class="btn" data-action="add-habit">+ 新增習慣</button></div>';
   }
 
@@ -819,18 +1119,17 @@
     var key = todayKey();
     var todayHabits = state.habits.filter(function (h) { return !h.archived && habitDueOn(h, key); });
     var active = state.habits.filter(function (h) { return !h.archived; });
+    var panel = ui.habitsPanel || "board";
     var html = todayStripHtml(todayHabits);
+    html += '<div class="seg habits-seg"><button type="button" data-habits-panel="today" class="' +
+      (panel === "today" ? "on" : "") + '">今天</button><button type="button" data-habits-panel="board" class="' +
+      (panel === "board" ? "on" : "") + '">儀表板</button></div>';
     if (!active.length) {
       html += emptyHabitsHtml();
+    } else if (panel === "board") {
+      html += habitBoardHtml(active);
     } else {
-      html += '<div class="habit-groups">';
-      groupHabits(active).forEach(function (section) {
-        html += '<div class="habit-group-section">';
-        html += '<div class="habit-group-label">' + esc(section.group) + "</div>";
-        html += section.habits.map(habitListRowHtml).join("");
-        html += "</div>";
-      });
-      html += "</div>";
+      html += todayCheckinHtml(todayHabits);
     }
     document.getElementById("view-habits").innerHTML = html;
   }
@@ -893,20 +1192,23 @@
     ui.habitDetailId = "";
     var h = habit || {
       id: "", name: "", color: colors()[0], type: "yesno",
-      frequency: [0, 1, 2, 3, 4, 5, 6], group: "朝早", target: 1, timeOfDay: ""
+      frequency: [0, 1, 2, 3, 4, 5, 6], group: "早上", target: 1, timeOfDay: "",
+      emoji: "", note: ""
     };
     var freq = h.frequency || [];
     var palette = colors();
     openModal(
       "<h3>" + (h.id ? "編輯習慣" : "新增習慣") + "</h3>" +
       '<div class="field"><label>名稱</label><input id="hName" value="' + escAttr(h.name) + '" placeholder="例如：晨跑" /></div>' +
+      '<div class="grid-2"><div class="field"><label>圖示 Emoji</label><input id="hEmoji" value="' + escAttr(h.emoji || "") + '" maxlength="4" placeholder="🏃" /></div>' +
       '<div class="field"><label>類型</label><select id="hType">' +
       opt("yesno", "是 / 否", h.type) + opt("count", "數量", h.type) + opt("duration", "計時（分鐘）", h.type) +
-      "</select></div>" +
+      "</select></div></div>" +
       '<div class="field"><label>目標（數量或分鐘）</label><input id="hTarget" type="number" min="1" value="' + (h.target || 1) + '" /></div>' +
       '<div class="field"><label>分組</label><select id="hGroup">' +
       GROUPS.map(function (g) { return opt(g, g, h.group); }).join("") + "</select></div>" +
       '<div class="field"><label>建議時段（可選）</label><input id="hTime" type="time" value="' + escAttr(h.timeOfDay || "") + '" /></div>' +
+      '<div class="field"><label>備註（可選）</label><input id="hNote" value="' + escAttr(h.note || "") + '" placeholder="補充說明" /></div>' +
       '<div class="field"><label>顏色</label><div class="swatches" id="hColors">' +
       palette.map(function (c) {
         return '<button type="button" class="swatch' + (c === h.color ? " active" : "") +
@@ -952,6 +1254,8 @@
         target: Number(document.getElementById("hTarget").value) || 1,
         group: document.getElementById("hGroup").value,
         timeOfDay: document.getElementById("hTime").value,
+        note: document.getElementById("hNote").value.trim(),
+        emoji: document.getElementById("hEmoji").value.trim(),
         color: document.getElementById("hColor").value || colors()[0],
         frequency: frequency,
         archived: false
@@ -1018,7 +1322,7 @@
   function calDayHabitsHtml(selected) {
     var due = state.habits.filter(function (h) { return !h.archived && habitDueOn(h, selected); });
     if (!due.length) {
-      return '<div class="empty compact">呢日未有要完成的習慣</div>';
+      return '<div class="empty compact">當日沒有需要完成的習慣</div>';
     }
     var html = '<div class="cal-habit-list">';
     due.forEach(function (h) {
@@ -1059,7 +1363,7 @@
       return String(a.start).localeCompare(String(b.start));
     });
     if (!flow.length) {
-      return '<div class="empty compact" style="padding:20px">呢日未有時間區塊</div>';
+      return '<div class="empty compact" style="padding:20px">當日沒有時間區塊</div>';
     }
     var startHour = 6;
     var endHour = 23;
@@ -1131,6 +1435,12 @@
       (ui.calMode === "month" ? "on" : "") + '">月</button><button type="button" data-cal-mode="week" class="' +
       (ui.calMode === "week" ? "on" : "") + '">週</button></div>';
 
+    html += '<div class="cal-view-opts">' +
+      '<label class="cal-opt"><input type="checkbox" data-cal-opt="habits"' +
+      (state.settings.calShowHabits !== false ? " checked" : "") + " /> 顯示習慣</label>" +
+      '<label class="cal-opt"><input type="checkbox" data-cal-opt="countdowns"' +
+      (state.settings.calShowCountdowns !== false ? " checked" : "") + " /> 顯示倒數</label></div>";
+
     if (ui.calMode === "week") {
       html += calWeekViewHtml();
     } else {
@@ -1166,8 +1476,24 @@
       '<div class="stat-cell"><div class="label">投入時數</div><div class="value">' + fmtMin(selMins) + "</div></div>" +
       "</div>";
     html += timelineFlowHtml(selected);
-    html += '<div class="section-title" style="padding-top:8px">當日習慣</div>';
-    html += calDayHabitsHtml(selected);
+    if (state.settings.calShowCountdowns !== false) {
+      var cds = state.countdowns.filter(function (c) {
+        return countdownDaysLeft(c) >= 0 && countdownDaysLeft(c) <= 30;
+      });
+      if (cds.length) {
+        html += '<div class="section-title" style="padding-top:8px">近期倒數</div><div class="cal-countdown-list">';
+        cds.slice(0, 4).forEach(function (c) {
+          var days = countdownDaysLeft(c);
+          html += '<div class="cal-countdown-item"><span>' + esc(c.emoji || "🎯") + "</span><strong>" +
+            esc(c.title) + '</strong><span class="muted">還有 ' + days + " 天</span></div>";
+        });
+        html += "</div>";
+      }
+    }
+    if (state.settings.calShowHabits !== false) {
+      html += '<div class="section-title" style="padding-top:8px">當日習慣</div>';
+      html += calDayHabitsHtml(selected);
+    }
     html += "</div>";
 
     document.getElementById("view-calendar").innerHTML = html;
@@ -1186,6 +1512,9 @@
       id: "", title: "", dayOfWeek: new Date().getDay(), date: "",
       start: "09:00", end: "10:00", color: colors()[1], habitId: ""
     };
+    var habitOpts = '<option value="">—</option>' + state.habits.filter(function (h) { return !h.archived; }).map(function (h) {
+      return opt(h.id, h.name, b.habitId || "");
+    }).join("");
     openModal(
       "<h3>" + (b.id ? "編輯時段" : "新增時段") + "</h3>" +
       '<div class="field"><label>標題</label><input id="bTitle" value="' + escAttr(b.title) + '" /></div>' +
@@ -1196,6 +1525,7 @@
       '<option value="once"' + (b.date ? " selected" : "") + ">只限選定日期</option></select></div>" +
       '<div class="field"><label>顏色</label><select id="bColor">' +
       colors().map(function (c) { return opt(c, c, b.color); }).join("") + "</select></div>" +
+      '<div class="field"><label>連結習慣（可選）</label><select id="bHabit">' + habitOpts + "</select></div>" +
       '<div class="row-actions"><button class="btn" id="bSave">儲存</button>' +
       (b.id ? '<button class="btn warn" id="bDel">刪除</button>' : "") +
       '<button class="btn ghost" id="bCancel">取消</button></div>'
@@ -1210,6 +1540,7 @@
         start: document.getElementById("bStart").value,
         end: document.getElementById("bEnd").value,
         color: document.getElementById("bColor").value,
+        habitId: document.getElementById("bHabit").value || "",
         dayOfWeek: dowVal === "once" ? null : Number(dowVal),
         date: dowVal === "once" ? ui.calSelected : ""
       };
@@ -1286,7 +1617,12 @@
     }).sort(function (a, b) { return String(a.start).localeCompare(String(b.start)); });
     html += '<div class="schedule-day">';
     if (!blocks.length) {
-      html += '<div class="empty compact"><p>呢日未有時間區塊</p>' +
+      html += '<div class="timetable-skeleton" aria-hidden="true">';
+      ["06:00", "09:00", "12:00", "15:00", "18:00", "21:00"].forEach(function (h) {
+        html += '<div class="tt-skel-row"><span class="tt-skel-hour">' + h + '</span><span class="tt-skel-block"></span></div>';
+      });
+      html += "</div>";
+      html += '<div class="empty compact timetable-empty"><p>當日沒有時間區塊</p>' +
         '<button class="btn sm" data-action="add-block">+ 新增時段</button></div>';
     } else {
       blocks.forEach(function (b) {
@@ -1308,31 +1644,47 @@
     if (diff <= 0) return "已到達";
     var days = Math.floor(diff / 86400000);
     var hours = Math.floor((diff % 86400000) / 3600000);
-    if (days > 0) return "仲有 " + days + " 日 " + hours + " 小時";
+    if (days > 0) return "還有 " + days + " 天 " + hours + " 小時";
     var mins = Math.floor((diff % 3600000) / 60000);
-    return "仲有 " + hours + " 小時 " + mins + " 分";
+    return "還有 " + hours + " 小時 " + mins + " 分";
   }
 
-  function countdownDaysLeft(ts) {
-    var diff = ts - Date.now();
-    if (diff <= 0) return 0;
-    return Math.ceil(diff / 86400000);
+  function countdownKindLabel(kind) {
+    if (kind === "birthday") return "生日";
+    if (kind === "anniversary") return "紀念日";
+    return "倒數";
   }
 
   function renderCountdownPanel() {
-    var html = '<div class="countdown-cards">';
+    var unit = ui.countdownUnit || "days";
+    var html = '<div class="countdown-unit-seg seg seg-inline">' +
+      '<button type="button" data-countdown-unit="days" class="' + (unit === "days" ? "on" : "") + '">天</button>' +
+      '<button type="button" data-countdown-unit="weeks" class="' + (unit === "weeks" ? "on" : "") + '">週</button>' +
+      '<button type="button" data-countdown-unit="months" class="' + (unit === "months" ? "on" : "") + '">月</button>' +
+      "</div>";
+    html += '<div class="countdown-cards">';
     if (!state.countdowns.length) {
       html += '<div class="empty"><div class="empty-illus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="13" r="8"/><polyline points="12 9 12 13 15 15"/></svg></div>' +
-        "<p>未有倒數。考試、旅行、deadline 都可以加。</p>" +
+        "<p>目前沒有倒數。考試、旅行、deadline 都可以新增。</p>" +
         '<button class="btn" data-action="add-countdown">+ 新增倒數</button></div>';
     } else {
-      state.countdowns.slice().sort(function (a, b) { return a.targetAt - b.targetAt; }).forEach(function (c) {
-        var days = countdownDaysLeft(c.targetAt);
-        html += '<div class="countdown-card"><div class="countdown-hero">' + days + '</div><div><strong>' +
-          esc(c.title) + '</strong><div class="muted">' +
-          new Date(c.targetAt).toLocaleDateString("zh-HK", { year: "numeric", month: "long", day: "numeric" }) +
-          (days <= 0 ? " · 已到達" : " · 仲有 " + days + " 日") +
-          '</div></div><button class="btn sm ghost" data-edit-countdown="' + c.id + '">編輯</button></div>';
+      state.countdowns.slice().sort(function (a, b) {
+        return countdownNextAt(a) - countdownNextAt(b);
+      }).forEach(function (c) {
+        var days = countdownDaysLeft(c);
+        var disp = countdownDisplayAmount(days, unit);
+        var nextAt = countdownNextAt(c);
+        var age = birthdayAge(c);
+        html += '<div class="countdown-card" style="--cdcolor:' + (c.color || colors()[0]) + '">' +
+          '<div class="countdown-hero">' + disp.value + '<span class="countdown-unit">' + disp.label + "</span></div>" +
+          "<div><strong>" + esc(c.emoji || "🎯") + " " + esc(c.title) + "</strong>" +
+          '<div class="muted">' + countdownKindLabel(c.kind || "countdown") +
+          " · " + new Date(nextAt).toLocaleDateString("zh-HK", { year: "numeric", month: "long", day: "numeric" }) +
+          (days <= 0 ? " · 已到達" : " · 還有 " + days + " 天") +
+          (age != null ? " · " + age + " 歲" : "") +
+          (c.repeat && c.repeat !== "none" ? " · " + ({ yearly: "每年", monthly: "每月", weekly: "每週" }[c.repeat] || "") : "") +
+          "</div></div>" +
+          '<button class="btn sm ghost" data-edit-countdown="' + c.id + '">編輯</button></div>';
       });
     }
     html += "</div>";
@@ -1340,29 +1692,61 @@
   }
 
   function openCountdownEditor(item) {
-    var c = item || { id: "", title: "", targetAt: Date.now() + 86400000 * 7, emoji: "🎯", color: colors()[0] };
+    var c = item || {
+      id: "", title: "", targetAt: Date.now() + 86400000 * 7,
+      emoji: "🎯", color: colors()[0], kind: "countdown", repeat: "none", showAge: false, note: ""
+    };
     var local = new Date(c.targetAt);
     var localVal = local.getFullYear() + "-" + pad(local.getMonth() + 1) + "-" + pad(local.getDate()) +
       "T" + pad(local.getHours()) + ":" + pad(local.getMinutes());
+    var palette = colors();
     openModal(
       "<h3>" + (c.id ? "編輯倒數" : "新增倒數") + "</h3>" +
       '<div class="field"><label>標題</label><input id="cTitle" value="' + escAttr(c.title) + '" /></div>' +
+      '<div class="grid-2"><div class="field"><label>類型</label><select id="cKind">' +
+      opt("countdown", "倒數", c.kind || "countdown") +
+      opt("birthday", "生日", c.kind || "countdown") +
+      opt("anniversary", "紀念日", c.kind || "countdown") +
+      "</select></div>" +
+      '<div class="field"><label>重複</label><select id="cRepeat">' +
+      opt("none", "不重複", c.repeat || "none") +
+      opt("yearly", "每年", c.repeat || "none") +
+      opt("monthly", "每月", c.repeat || "none") +
+      opt("weekly", "每週", c.repeat || "none") +
+      "</select></div></div>" +
       '<div class="field"><label>目標時間</label><input id="cAt" type="datetime-local" value="' + localVal + '" /></div>' +
-      '<div class="field"><label>Emoji</label><input id="cEmoji" value="' + escAttr(c.emoji || "🎯") + '" maxlength="4" /></div>' +
+      '<div class="grid-2"><div class="field"><label>Emoji</label><input id="cEmoji" value="' + escAttr(c.emoji || "🎯") + '" maxlength="4" /></div>' +
+      '<div class="field"><label>顏色</label><select id="cColor">' +
+      palette.map(function (col) { return opt(col, col, c.color || palette[0]); }).join("") +
+      "</select></div></div>" +
+      '<div class="field"><label><input type="checkbox" id="cShowAge"' + (c.showAge ? " checked" : "") + " /> 顯示年齡（生日）</label></div>" +
+      '<div class="field"><label>備註（可選）</label><input id="cNote" value="' + escAttr(c.note || "") + '" /></div>' +
       '<div class="row-actions"><button class="btn" id="cSave">儲存</button>' +
       (c.id ? '<button class="btn warn" id="cDel">刪除</button>' : "") +
       '<button class="btn ghost" id="cCancel">取消</button></div>'
     );
+    var kindEl = document.getElementById("cKind");
+    var repeatEl = document.getElementById("cRepeat");
+    kindEl.onchange = function () {
+      if (kindEl.value === "birthday" && repeatEl.value === "none") repeatEl.value = "yearly";
+    };
     document.getElementById("cCancel").onclick = closeModal;
     document.getElementById("cSave").onclick = function () {
       var title = document.getElementById("cTitle").value.trim();
       var at = new Date(document.getElementById("cAt").value).getTime();
       if (!title || !at) return toast("請填齊資料");
+      var kind = document.getElementById("cKind").value;
+      var repeat = document.getElementById("cRepeat").value;
+      if (kind === "birthday" && repeat === "none") repeat = "yearly";
       var payload = {
         title: title,
         targetAt: at,
         emoji: document.getElementById("cEmoji").value || "🎯",
-        color: c.color || colors()[0]
+        color: document.getElementById("cColor").value || colors()[0],
+        kind: kind,
+        repeat: repeat,
+        showAge: !!document.getElementById("cShowAge").checked,
+        note: document.getElementById("cNote").value.trim()
       };
       if (c.id) {
         Object.assign(c, payload);
@@ -1411,7 +1795,7 @@
       (ui.focus.mode === "focus" ? "切去休息" : "切去專注") + "</button></div>";
     var todayFocus = state.focusSessions.filter(function (s) { return dateKey(s.startedAt) === todayKey(); });
     var sum = todayFocus.reduce(function (a, s) { return a + Number(s.minutes || 0); }, 0);
-    html += '<div class="focus-stats">今日專注 ' + todayFocus.length + " 次 · " + fmtMin(sum) + "</div>";
+    html += '<div class="focus-stats">今天專注 ' + todayFocus.length + " 次 · " + fmtMin(sum) + "</div>";
     return html;
   }
 
@@ -1522,12 +1906,12 @@
   function renderGoalsPanel() {
     var html = '<div class="settings-group"><div class="settings-group-title">短期目標</div>';
     var shorts = state.goals.filter(function (g) { return g.kind === "short"; });
-    if (!shorts.length) html += '<div class="settings-row"><span class="settings-row-label muted">未有短期目標</span></div>';
+    if (!shorts.length) html += '<div class="settings-row"><span class="settings-row-label muted">尚無短期目標</span></div>';
     else shorts.forEach(function (g) { html += goalRow(g); });
     html += '<div class="settings-row"><button class="btn sm soft block" data-action="add-goal-short">+ 新增短期目標</button></div>';
     html += '</div><div class="settings-group"><div class="settings-group-title">長期目標</div>';
     var longs = state.goals.filter(function (g) { return g.kind === "long"; });
-    if (!longs.length) html += '<div class="settings-row"><span class="settings-row-label muted">未有長期目標</span></div>';
+    if (!longs.length) html += '<div class="settings-row"><span class="settings-row-label muted">尚無長期目標</span></div>';
     else longs.forEach(function (g) { html += goalRow(g); });
     html += '<div class="settings-row"><button class="btn sm soft block" data-action="add-goal-long">+ 新增長期目標</button></div>';
     html += "</div>";
@@ -1813,10 +2197,40 @@
       return;
     }
 
+    var habitsPanel = t.closest("[data-habits-panel]");
+    if (habitsPanel) {
+      ui.habitsPanel = habitsPanel.getAttribute("data-habits-panel");
+      renderHabits();
+      return;
+    }
+
+    var boardMode = t.closest("[data-habits-board-mode]");
+    if (boardMode) {
+      state.settings.habitsBoardMode = boardMode.getAttribute("data-habits-board-mode");
+      saveStateLocal();
+      renderHabits();
+      return;
+    }
+
     var habitDay = t.closest("[data-habit-day]");
     if (habitDay) {
       var parts = habitDay.getAttribute("data-habit-day").split("|");
       toggleHabit(parts[0], parts[1]);
+      return;
+    }
+
+    var habitBoxOpen = t.closest("[data-habit-box-open]");
+    if (habitBoxOpen) {
+      var boxId = habitBoxOpen.getAttribute("data-habit-box-open");
+      var boxHabit = state.habits.find(function (x) { return x.id === boxId; });
+      if (boxHabit) openHabitDetail(boxHabit, startOfMonth(new Date()));
+      return;
+    }
+
+    var cdUnit = t.closest("[data-countdown-unit]");
+    if (cdUnit) {
+      ui.countdownUnit = cdUnit.getAttribute("data-countdown-unit");
+      renderCountdown();
       return;
     }
 
@@ -1973,6 +2387,14 @@
   });
 
   document.getElementById("app").addEventListener("change", function (e) {
+    if (e.target.matches("[data-cal-opt]")) {
+      var opt = e.target.getAttribute("data-cal-opt");
+      if (opt === "habits") state.settings.calShowHabits = e.target.checked;
+      if (opt === "countdowns") state.settings.calShowCountdowns = e.target.checked;
+      saveStateLocal();
+      renderCalendar();
+      return;
+    }
     if (e.target.id === "autoSyncToggle") {
       state.settings.autoSync = e.target.checked;
       saveStateLocal();
