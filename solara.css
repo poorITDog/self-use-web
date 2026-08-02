@@ -1234,6 +1234,134 @@ main {
 
 .fab svg { width: 24px; height: 24px; }
 
+.global-fab {
+  z-index: 40;
+  animation: fab-in 0.35s var(--ease) both;
+}
+
+@keyframes fab-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+
+.quick-add-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.quick-add-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.quick-add-btn span {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.quick-add-btn small {
+  color: var(--text-mute);
+  font-size: 0.72rem;
+}
+
+.quick-add-btn:active {
+  transform: scale(0.98);
+  border-color: var(--accent);
+}
+
+.habit-goal-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.habit-goal-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 8px;
+  border-radius: var(--radius-xs);
+  background: var(--accent-soft);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.today-timeline {
+  margin: 0 16px 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.today-timeline .section-title {
+  margin: 0 0 4px;
+  padding: 0;
+}
+
+.today-timeline-item {
+  display: grid;
+  grid-template-columns: 44px 10px 1fr;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 8px 6px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.today-timeline-item:active {
+  background: var(--surface-2);
+}
+
+.today-timeline-time {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.today-timeline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.today-timeline-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.today-timeline-body strong {
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
 /* ── Countdown ── */
 .countdown-cards {
   display: grid;

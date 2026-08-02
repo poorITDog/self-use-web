@@ -215,7 +215,18 @@ await assert(goalsBody.includes("跑步目標"), "goal saved");
 await assert(goalsBody.includes("連結習慣"), "goal shows linked habit");
 await assert(!!(await page.$("[data-goal-check]")), "goal has check-and-plus when habit linked");
 
+// global quick-add FAB
+await page.click('[data-nav="habits"]');
+await page.waitForSelector("#globalFab");
+await page.evaluate(() => document.getElementById("globalFab").click());
+await page.waitForSelector("#qaHabit");
+const quickAdd = await page.$("#qaEvent");
+await assert(!!quickAdd, "quick-add sheet offers event option");
+await page.evaluate(() => document.getElementById("qaCancel").click());
+await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
+
 // settings notify tab has focus sound + event remind options
+await page.click('[data-nav="settings"]');
 await page.evaluate(() => document.querySelector('[data-settings="notify"]').click());
 await page.waitForSelector("#notifyEvents");
 const notifySound = await page.$("#settingsFocusSound");
