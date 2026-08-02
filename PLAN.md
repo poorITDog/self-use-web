@@ -12,7 +12,6 @@
 | 倒數 | 考試、旅行、deadline |
 | 專注計時 | Pomodoro（可自訂） |
 | 目標 | 短期 + 長期進度 |
-| 記帳 | 收支、分類、月結 |
 
 **不做（自用 YAGNI）：** 多用戶協作、Siri、Widget、NLP、訂閱其他日曆。
 
@@ -54,7 +53,7 @@
 日曆 Calendar  — 月曆總覽 + 當日時間軸
 時間表         — 時間區塊
 倒數           — 倒數日子 + 專注番茄鐘
-設定           — 目標、記帳、主題、Google Drive 自動同步
+設定           — 目標、主題、Google Drive 自動同步
 ```
 
 ---
@@ -84,8 +83,9 @@ blocks[]: { id, title, dayOfWeek|date, start, end, color, habitId?, updatedAt }
 countdowns[]: { id, title, targetAt, color, emoji?, updatedAt }
 focusSessions[]: { id, startedAt, minutes, habitId?, label?, updatedAt }
 goals[]: { id, title, kind: short|long, target, current, unit, dueAt?, updatedAt }
-transactions[]: { id, type: in|out, amount, category, note, date, updatedAt }
 ```
+
+（舊版備份可能含 `transactions[]`，App 不再顯示記帳 UI。）
 
 全部包喺一個 `solara-v1` localStorage key，方便整包備份。
 
@@ -97,7 +97,7 @@ transactions[]: { id, type: in|out, amount, category, note, date, updatedAt }
 2. 習慣 CRUD + 每習慣月曆格 + 連續日／時數  
 3. 日曆總覽 + 時間表（獨立分頁）  
 4. 倒數 + 專注  
-5. 目標、記帳、主題  
+5. 目標、主題  
 6. Google Drive 自動同步（GIS + appDataFolder）  
 
 ---
@@ -106,7 +106,7 @@ transactions[]: { id, type: in|out, amount, category, note, date, updatedAt }
 
 - 手機／桌面瀏覽器可用；可 Add to Home Screen  
 - 離線可讀寫本機資料  
-- 四大主功能 + 目標 + 記帳可用  
+- 四大主功能 + 目標可用  
 - 主題預設同自訂相片可用  
 - 備份匯出／匯入成功；雲端 URL 可選配置  
 - 唔依賴帳號即可用  

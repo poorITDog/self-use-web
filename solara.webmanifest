@@ -1,7 +1,7 @@
 {
   "name": "Solara — 日暖生活",
   "short_name": "Solara",
-  "description": "習慣、日曆、時間表、倒數、專注、目標與記帳（本機優先，可雲端備份）",
+  "description": "習慣、日曆、時間表、倒數、專注、目標（本機優先，可雲端備份）",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

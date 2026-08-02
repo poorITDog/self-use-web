@@ -57,6 +57,11 @@ await assert(brand === "Solara", "brand visible");
 const activeNav = await page.$eval("#nav button.active", (el) => el.getAttribute("data-nav"));
 await assert(activeNav === "habits", "default nav is habits");
 
+// today strip renders
+await page.waitForSelector(".today-strip");
+const todayStrip = await page.$(".today-strip");
+await assert(!!todayStrip, "today strip renders");
+
 // create yes/no habit
 await page.click('[data-action="add-habit"]');
 await page.waitForSelector("#hName");
@@ -65,20 +70,28 @@ await page.select("#hType", "yesno");
 await page.click("#hSave");
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
 
-// complete it
-await page.waitForSelector('[data-toggle]');
-await page.click('[data-toggle]');
+// complete it via large check button
+await page.waitForSelector(".check-lg");
+await page.click(".check-lg");
 await page.waitForFunction(() => {
-  const chip = document.querySelector("#topChips strong");
-  return chip && chip.textContent.includes("100");
+  const ring = document.querySelector(".progress-ring-inner strong");
+  return ring && ring.textContent.includes("100");
 });
-const rate = await page.$eval("#topChips strong", (el) => el.textContent);
+const rate = await page.$eval(".progress-ring-inner strong", (el) => el.textContent);
 await assert(rate.includes("100"), "completion rate updates to 100% after yes/no checkin");
 
-// habit card with mini calendar
-await page.waitForSelector(".habit-card");
-const card = await page.$(".habit-card");
-await assert(!!card, "habit calendar card renders");
+// habit card with own month calendar
+await page.waitForSelector(".habit-card .habit-mini-cal");
+const cardCal = await page.$(".habit-card .habit-mini-cal");
+await assert(!!cardCal, "habit card calendar renders");
+
+// open habit detail with full calendar
+await page.click('[data-habit-open]');
+await page.waitForSelector(".habit-full-cal");
+const detailCal = await page.$(".habit-full-cal");
+await assert(!!detailCal, "habit detail calendar renders");
+await page.click("#hdClose");
+await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
 
 // duration habit + log minutes
 await page.click('[data-action="add-habit"]');
@@ -90,9 +103,13 @@ await page.evaluate(() => { document.getElementById("hTarget").value = "30"; });
 await page.click("#hSave");
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
 
-const toggles = await page.$$('[data-toggle]');
-await toggles[toggles.length - 1].click();
-await page.waitForSelector("#logVal");
+await page.waitForFunction(() => document.querySelectorAll(".habit-card").length >= 2);
+await page.evaluate(() => {
+  const btn = document.querySelectorAll(".habit-card")[1].querySelector(".check-lg");
+  btn.scrollIntoView({ block: "center" });
+  btn.click();
+});
+await page.waitForSelector("#logVal", { visible: true });
 await page.evaluate(() => { document.getElementById("logVal").value = "30"; });
 await page.click("#logSave");
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
@@ -103,8 +120,8 @@ await assert(minsText.includes("30") || minsText.includes("時"), "duration minu
 // calendar
 await page.click('[data-nav="calendar"]');
 await page.waitForSelector(".cal-day.today");
-const dayHours = await page.$eval(".stat .value", (el) => el.textContent);
-await assert(!!dayHours, "calendar day stats render");
+const dayRate = await page.$eval(".cal-day-summary .value", (el) => el.textContent);
+await assert(!!dayRate, "calendar day stats render");
 
 // timetable
 await page.click('[data-nav="timetable"]');
@@ -118,14 +135,16 @@ await page.waitForSelector(".focus-ring");
 const countdownBody = await page.$eval("#view-countdown", (el) => el.textContent.length > 0);
 await assert(countdownBody, "countdown view renders");
 
-// settings tabs smoke
+// settings tabs smoke (no money tab)
 await page.click('[data-nav="settings"]');
-for (const tab of ["sync", "goals", "money", "theme"]) {
+for (const tab of ["goals", "theme", "sync"]) {
   await page.click('[data-settings="' + tab + '"]');
   await page.waitForSelector("#settingsBody");
   const body = await page.$eval("#settingsBody", (el) => el.textContent.length > 0);
   await assert(body, "settings tab renders: " + tab);
 }
+const moneyTab = await page.$('[data-settings="money"]');
+await assert(!moneyTab, "money settings tab removed");
 
 // theme switch
 await page.click('[data-settings="theme"]');
