@@ -40,6 +40,9 @@ export function defaultState() {
       focusMin: 25,
       breakMin: 5,
       currencyLabel: "HKD",
+      calShowHabits: true,
+      calShowCountdowns: true,
+      habitsBoardMode: "month",
     },
     habits: [],
     checkins: [],
@@ -98,4 +101,56 @@ export function isHabitDone(habit, checkin) {
     return Number(checkin.minutes || checkin.value || 0) >= Number(habit.target || 1);
   }
   return !!checkin.value;
+}
+
+/** Next occurrence timestamp for recurring countdowns. */
+export function countdownNextAt(item, nowMs) {
+  const c = item || {};
+  const now = nowMs != null ? new Date(nowMs) : new Date();
+  const target = new Date(c.targetAt || 0);
+  const repeat = c.repeat || (c.kind === "birthday" ? "yearly" : "none");
+  if (!c.targetAt || repeat === "none") return c.targetAt || 0;
+  if (repeat === "yearly") {
+    const next = new Date(
+      now.getFullYear(),
+      target.getMonth(),
+      target.getDate(),
+      target.getHours(),
+      target.getMinutes(),
+      0,
+      0
+    );
+    if (next.getTime() <= now.getTime()) next.setFullYear(next.getFullYear() + 1);
+    return next.getTime();
+  }
+  if (repeat === "monthly") {
+    const next = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      target.getDate(),
+      target.getHours(),
+      target.getMinutes(),
+      0,
+      0
+    );
+    if (next.getTime() <= now.getTime()) next.setMonth(next.getMonth() + 1);
+    return next.getTime();
+  }
+  if (repeat === "weekly") {
+    const targetDow = target.getDay();
+    const next = new Date(now);
+    next.setHours(target.getHours(), target.getMinutes(), 0, 0);
+    let diff = (targetDow - now.getDay() + 7) % 7;
+    if (diff === 0 && next.getTime() <= now.getTime()) diff = 7;
+    next.setDate(next.getDate() + diff);
+    return next.getTime();
+  }
+  return c.targetAt;
+}
+
+export function countdownDaysLeft(item, nowMs) {
+  const next = countdownNextAt(item, nowMs);
+  const diff = next - (nowMs != null ? nowMs : Date.now());
+  if (diff <= 0) return 0;
+  return Math.ceil(diff / 86400000);
 }

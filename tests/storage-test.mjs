@@ -10,6 +10,8 @@ import {
   mergeSyncState,
   habitDueOn,
   isHabitDone,
+  countdownNextAt,
+  countdownDaysLeft,
 } from "../solara-core.mjs";
 
 function test(name, fn) {
@@ -103,6 +105,17 @@ run("isHabitDone yesno/count/duration", () => {
   assert.equal(isHabitDone({ type: "count", target: 5 }, { value: 5 }), true);
   assert.equal(isHabitDone({ type: "duration", target: 30 }, { minutes: 20 }), false);
   assert.equal(isHabitDone({ type: "duration", target: 30 }, { minutes: 30 }), true);
+});
+
+run("countdownDaysLeft yearly birthday", () => {
+  const now = new Date(2026, 7, 2, 12, 0, 0).getTime();
+  const item = {
+    kind: "birthday",
+    repeat: "yearly",
+    targetAt: new Date(1990, 2, 15).getTime(),
+  };
+  const days = countdownDaysLeft(item, now);
+  assert.ok(days > 0 && days < 400);
 });
 
 console.log("\n" + passed + " passed, " + failed + " failed");

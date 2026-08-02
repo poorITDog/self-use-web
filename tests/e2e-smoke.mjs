@@ -53,14 +53,24 @@ async function assert(cond, name) {
 const brand = await page.$eval(".solara-mark", (el) => el.getAttribute("aria-label"));
 await assert(brand === "Solara", "brand mark visible on habits");
 
-// default tab is habits
+// default tab is habits; dashboard (儀表板) is default habits panel
 const activeNav = await page.$eval("#nav button.active", (el) => el.getAttribute("data-nav"));
 await assert(activeNav === "habits", "default nav is habits");
+
+// board panel is default — habit boxes appear after creating a habit
+await page.waitForSelector('[data-habits-panel="board"].on');
+const boardDefault = await page.$eval('[data-habits-panel="board"]', (el) => el.classList.contains("on"));
+await assert(boardDefault, "habits board panel is default");
 
 // today summary renders
 await page.waitForSelector(".today-strip");
 const todayStrip = await page.$(".today-strip");
 await assert(!!todayStrip, "today summary strip renders");
+
+// habits segment: 今天 | 儀表板
+await page.waitForSelector('[data-habits-panel="board"]');
+const boardTab = await page.$eval('[data-habits-panel="board"]', (el) => el.textContent);
+await assert(boardTab.includes("儀表板"), "habits board tab label is Traditional Chinese");
 
 async function clickAction(action) {
   await page.waitForSelector('[data-action="' + action + '"]');
@@ -78,9 +88,9 @@ await page.select("#hType", "yesno");
 await page.evaluate(() => document.getElementById("hSave").click());
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
 
-// complete it via large check button
-await page.waitForSelector(".check-lg");
-await page.evaluate(() => document.querySelector(".check-lg").click());
+// complete via large check button on habit box (board is default)
+await page.waitForSelector(".habit-box .check-lg");
+await page.evaluate(() => document.querySelector(".habit-box .check-lg").click());
 await page.waitForFunction(() => {
   const ring = document.querySelector(".progress-ring-inner strong");
   return ring && ring.textContent.includes("100");
@@ -88,18 +98,36 @@ await page.waitForFunction(() => {
 const rate = await page.$eval(".progress-ring-inner strong", (el) => el.textContent);
 await assert(rate.includes("100"), "completion rate updates to 100% after yes/no checkin");
 
-// habit row with week strip (compact list)
-await page.waitForSelector(".habit-row .week-strip");
-const weekStrip = await page.$(".habit-row .week-strip");
-await assert(!!weekStrip, "habit row week strip renders");
+// habit dashboard boxes visible (already on board)
+await page.waitForSelector(".habit-box");
+const habitBox = await page.$(".habit-box");
+await assert(!!habitBox, "habit dashboard box renders");
+const boxCal = await page.$(".habit-box-cal");
+await assert(!!boxCal, "habit box calendar grid renders");
+const monthLabel = await page.$(".habit-box-month-label");
+await assert(!!monthLabel, "habit box month label renders");
+const dayBtn = await page.$(".habit-box-day[data-habit-day]");
+await assert(!!dayBtn, "habit box day cells are clickable buttons");
 
-// open habit detail with full calendar
-await page.click('[data-habit-open]');
+// switch to today panel still works
+await page.click('[data-habits-panel="today"]');
+await page.waitForSelector(".habit-checkin-row, .habit-row");
+await page.click('[data-habits-panel="board"]');
+await page.waitForSelector(".habit-box");
+
+// open habit detail from box
+await page.click('[data-habit-box-open]');
 await page.waitForSelector(".habit-full-cal");
 const detailCal = await page.$(".habit-full-cal");
 await assert(!!detailCal, "habit detail calendar renders");
 await page.evaluate(() => document.getElementById("hdClose").click());
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
+
+// overview mode week strip
+await page.click('[data-habits-board-mode="overview"]');
+await page.waitForSelector(".habit-row .week-strip");
+const weekStrip = await page.$(".habit-row .week-strip");
+await assert(!!weekStrip, "habit row week strip renders in overview");
 
 // duration habit + log minutes
 await clickAction("add-habit");
@@ -111,9 +139,10 @@ await page.evaluate(() => { document.getElementById("hTarget").value = "30"; });
 await page.evaluate(() => document.getElementById("hSave").click());
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
 
-await page.waitForFunction(() => document.querySelectorAll(".habit-row").length >= 2);
+await page.click('[data-habits-panel="today"]');
+await page.waitForFunction(() => document.querySelectorAll(".habit-checkin-row, .habit-row").length >= 2);
 await page.evaluate(() => {
-  const btn = document.querySelectorAll(".habit-row")[1].querySelector(".check-lg");
+  const btn = document.querySelectorAll(".check-lg")[1];
   btn.scrollIntoView({ block: "center" });
   btn.click();
 });
@@ -137,11 +166,20 @@ await page.waitForSelector("#view-timetable");
 const timetableBody = await page.$eval("#view-timetable", (el) => el.textContent.length > 0);
 await assert(timetableBody, "timetable view renders");
 
-// countdown + focus
+// countdown with yearly birthday repeat
 await page.click('[data-nav="countdown"]');
 await page.waitForSelector(".focus-ring");
-const countdownBody = await page.$eval("#view-countdown", (el) => el.textContent.length > 0);
-await assert(countdownBody, "countdown view renders");
+await clickAction("add-countdown");
+await page.waitForSelector("#cTitle");
+await page.type("#cTitle", "生日");
+await page.select("#cKind", "birthday");
+await page.waitForFunction(() => document.getElementById("cRepeat").value === "yearly");
+const repeatVal = await page.$eval("#cRepeat", (el) => el.value);
+await assert(repeatVal === "yearly", "birthday defaults to yearly repeat");
+await page.evaluate(() => document.getElementById("cSave").click());
+await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
+const countdownBody = await page.$eval("#view-countdown", (el) => el.textContent);
+await assert(countdownBody.includes("生日"), "countdown view renders birthday item");
 
 // settings tabs smoke (no money tab)
 await page.click('[data-nav="settings"]');
