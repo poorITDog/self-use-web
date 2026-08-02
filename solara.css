@@ -307,10 +307,10 @@ button {
   transform: translateX(-50%);
   width: min(920px, 100%);
   height: calc(var(--nav-h) + env(safe-area-inset-bottom));
-  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
   background: color-mix(in srgb, var(--surface-strong) 88%, white);
   border-top: 1px solid var(--line);
   backdrop-filter: blur(16px);
@@ -318,14 +318,14 @@ button {
 }
 
 .nav button {
-  border-radius: 16px;
+  border-radius: 14px;
   display: grid;
   place-items: center;
   gap: 2px;
   color: var(--text-mute);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  padding: 6px 4px;
+  padding: 6px 2px;
 }
 
 .nav button.active {
@@ -631,7 +631,175 @@ button {
   font-size: 0.95rem;
 }
 
+/* Habit calendar cards (TickTick-style) */
+.habit-cards { display: grid; gap: 14px; }
+
+.habit-card {
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--surface-strong);
+  border: 1px solid var(--line);
+}
+
+.habit-card-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.habit-card-head .check {
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+}
+
+.habit-card-title strong {
+  display: block;
+  font-size: 1rem;
+}
+
+.habit-card-title span {
+  font-size: 0.78rem;
+  color: var(--text-soft);
+}
+
+.habit-card-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.habit-card-stats .stat-pill {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.habit-card-stats .stat-pill strong {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.habit-mini-cal {
+  margin-top: 6px;
+  padding: 10px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--hcolor, var(--accent)) 8%, #fff);
+  border: 1px solid color-mix(in srgb, var(--hcolor, var(--accent)) 22%, var(--line));
+}
+
+.habit-mini-dow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.habit-mini-dow span {
+  text-align: center;
+  font-size: 0.68rem;
+  color: var(--text-mute);
+  font-weight: 700;
+}
+
+.habit-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.habit-day {
+  aspect-ratio: 1;
+  min-width: 0;
+  min-height: 28px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(31, 42, 36, 0.14);
+  background: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-soft);
+  padding: 0;
+  display: grid;
+  place-items: center;
+  position: relative;
+  transition: transform 0.15s var(--ease), background 0.15s, border-color 0.15s;
+}
+
+.habit-day:active { transform: scale(0.92); }
+
+.habit-day.today {
+  box-shadow: inset 0 0 0 2px var(--hcolor, var(--accent));
+}
+
+.habit-day.done {
+  background: var(--hcolor, var(--good));
+  border-color: transparent;
+  color: #fff;
+  font-weight: 800;
+}
+
+.habit-day.missed {
+  border-color: color-mix(in srgb, var(--warn) 45%, #ccc);
+  background: #fffaf8;
+  color: var(--text-mute);
+}
+
+.habit-day.pad {
+  border-color: transparent;
+  background: transparent;
+  pointer-events: none;
+}
+
+.habit-day.off {
+  opacity: 0.35;
+  background: rgba(0, 0, 0, 0.04);
+  border-color: transparent;
+  pointer-events: none;
+}
+
+.habit-day.future {
+  opacity: 0.55;
+  color: var(--text-mute);
+  pointer-events: none;
+}
+
+/* Sync status chip */
+.sync-chip {
+  font-weight: 600;
+}
+
+.sync-chip.sync-synced { color: var(--good); }
+.sync-chip.sync-syncing { color: var(--accent); }
+.sync-chip.sync-failed { color: var(--warn); }
+.sync-chip.sync-disconnected { color: var(--text-mute); }
+
+.sync-chip.sync-synced strong,
+.sync-chip.sync-syncing strong,
+.sync-chip.sync-failed strong { color: inherit; }
+
+details.advanced-sync {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.4);
+}
+
+details.advanced-sync summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--text-soft);
+}
+
 @media (min-width: 720px) {
   .app { padding-top: 28px; }
   .hero-stats { grid-template-columns: repeat(4, 1fr); }
+  .habit-day { border-radius: 8px; }
 }

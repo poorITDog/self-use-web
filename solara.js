@@ -2,6 +2,9 @@
   "use strict";
 
   var STORAGE_KEY = "solara-v1";
+  var TOKEN_KEY = "solara-google-token";
+  var DRIVE_FILE = "solara-v1.json";
+  var DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.appdata";
   var BASE_COLORS = ["#F4A261", "#2A9D8F", "#E76F51", "#457B9D", "#E9C46A", "#90BE6D", "#F28482", "#1D8A99"];
   var GROUPS = ["朝早", "下午", "晚上", "健康", "工作", "生活"];
   var MONEY_CATS = ["飲食", "交通", "住屋", "娛樂", "購物", "薪資", "其他"];
@@ -9,10 +12,11 @@
 
   var state = loadState();
   var ui = {
-    view: "today",
-    moreTab: "timetable",
+    view: "habits",
+    settingsTab: "sync",
     calMonth: startOfMonth(new Date()),
     calSelected: dateKey(new Date()),
+    habitCalMonth: startOfMonth(new Date()),
     focus: {
       running: false,
       mode: "focus",
@@ -22,6 +26,11 @@
       habitId: ""
     }
   };
+
+  var syncStatus = "disconnected";
+  var uploadDebounce = null;
+  var googleTokenClient = null;
+  var tokenPromiseResolve = null;
 
   function colors() {
     if (state.settings.palette && state.settings.palette.length) {
@@ -101,6 +110,9 @@
         palette: [],
         cloudUrl: "",
         cloudToken: "",
+        googleClientId: "",
+        googleConnected: false,
+        autoSync: true,
         focusMin: 25,
         breakMin: 5,
         currencyLabel: "HKD"
@@ -140,6 +152,226 @@
   function saveState() {
     state.syncUpdatedAt = Date.now();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    scheduleDriveUpload();
+  }
+
+  function saveStateLocal() {
+    state.syncUpdatedAt = Date.now();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function setSyncStatus(s) {
+    syncStatus = s;
+    renderSyncChip();
+  }
+
+  function syncStatusLabel() {
+    if (!state.settings.googleConnected) return "未連接";
+    if (syncStatus === "syncing") return "同步中";
+    if (syncStatus === "failed") return "失敗";
+    if (syncStatus === "synced") return "已同步";
+    return "未連接";
+  }
+
+  function renderSyncChip() {
+    var el = document.getElementById("syncChip");
+    if (!el) return;
+    el.className = "chip sync-chip sync-" + syncStatus;
+    el.innerHTML = "雲端 <strong>" + syncStatusLabel() + "</strong>";
+  }
+
+  function getStoredToken() {
+    try {
+      var raw = localStorage.getItem(TOKEN_KEY);
+      if (!raw) return null;
+      var t = JSON.parse(raw);
+      if (t.expiresAt && Date.now() > t.expiresAt - 60000) return null;
+      return t.accessToken;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function storeToken(accessToken, expiresIn) {
+    localStorage.setItem(TOKEN_KEY, JSON.stringify({
+      accessToken: accessToken,
+      expiresAt: Date.now() + (expiresIn || 3600) * 1000
+    }));
+  }
+
+  function clearStoredToken() {
+    localStorage.removeItem(TOKEN_KEY);
+  }
+
+  function initGoogleAuth() {
+    if (!window.google || !state.settings.googleClientId) return;
+    googleTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: state.settings.googleClientId,
+      scope: DRIVE_SCOPE,
+      callback: function (resp) {
+        if (resp.error) {
+          setSyncStatus("failed");
+          if (tokenPromiseResolve) {
+            tokenPromiseResolve(null);
+            tokenPromiseResolve = null;
+          }
+          return;
+        }
+        storeToken(resp.access_token, resp.expires_in);
+        state.settings.googleConnected = true;
+        if (state.settings.autoSync === undefined) state.settings.autoSync = true;
+        saveStateLocal();
+        if (tokenPromiseResolve) {
+          tokenPromiseResolve(resp.access_token);
+          tokenPromiseResolve = null;
+        }
+      }
+    });
+  }
+
+  function getAccessToken(prompt) {
+    var existing = getStoredToken();
+    if (existing) return Promise.resolve(existing);
+    return new Promise(function (resolve) {
+      if (!googleTokenClient) initGoogleAuth();
+      if (!googleTokenClient) {
+        resolve(null);
+        return;
+      }
+      tokenPromiseResolve = resolve;
+      googleTokenClient.requestAccessToken({ prompt: prompt || "" });
+    });
+  }
+
+  function driveFindFile(token) {
+    var q = "name='" + DRIVE_FILE + "' and 'appDataFolder' in parents and trashed=false";
+    return fetch(
+      "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=" +
+      encodeURIComponent(q) + "&fields=files(id,modifiedTime)",
+      { headers: { Authorization: "Bearer " + token } }
+    ).then(function (r) { return r.json(); }).then(function (data) {
+      return data.files && data.files[0] ? data.files[0] : null;
+    });
+  }
+
+  function driveCreateFile(token, payload) {
+    var boundary = "solara_boundary";
+    var meta = JSON.stringify({ name: DRIVE_FILE, parents: ["appDataFolder"] });
+    var body = "--" + boundary + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" +
+      meta + "\r\n--" + boundary + "\r\nContent-Type: application/json\r\n\r\n" +
+      JSON.stringify(payload) + "\r\n--" + boundary + "--";
+    return fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + token,
+        "Content-Type": "multipart/related; boundary=" + boundary
+      },
+      body: body
+    }).then(function (r) { return r.json(); });
+  }
+
+  function driveUpdateFile(token, fileId, payload) {
+    return fetch(
+      "https://www.googleapis.com/upload/drive/v3/files/" + fileId + "?uploadType=media",
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: "Bearer " + token,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+  }
+
+  function drivePull() {
+    if (!state.settings.googleConnected) return Promise.resolve();
+    setSyncStatus("syncing");
+    return getAccessToken("").then(function (token) {
+      if (!token) {
+        setSyncStatus("disconnected");
+        return;
+      }
+      return driveFindFile(token).then(function (file) {
+        if (!file) {
+          setSyncStatus("synced");
+          return;
+        }
+        return fetch(
+          "https://www.googleapis.com/drive/v3/files/" + file.id + "?alt=media",
+          { headers: { Authorization: "Bearer " + token } }
+        ).then(function (r) { return r.json(); }).then(function (remote) {
+          var remoteTs = new Date(file.modifiedTime).getTime();
+          var merged = mergeSyncState(state, remote, remoteTs);
+          state = merged.state;
+          saveStateLocal();
+          applyTheme();
+          render();
+          setSyncStatus("synced");
+        });
+      });
+    }).catch(function () {
+      setSyncStatus("failed");
+    });
+  }
+
+  function drivePush() {
+    if (!state.settings.googleConnected || state.settings.autoSync === false) return;
+    setSyncStatus("syncing");
+    getAccessToken("").then(function (token) {
+      if (!token) {
+        setSyncStatus("disconnected");
+        return;
+      }
+      var payload = state;
+      return driveFindFile(token).then(function (file) {
+        if (file) return driveUpdateFile(token, file.id, payload);
+        return driveCreateFile(token, payload);
+      }).then(function () {
+        setSyncStatus("synced");
+      });
+    }).catch(function () {
+      setSyncStatus("failed");
+    });
+  }
+
+  function scheduleDriveUpload() {
+    if (!state.settings.googleConnected || state.settings.autoSync === false) return;
+    clearTimeout(uploadDebounce);
+    uploadDebounce = setTimeout(drivePush, 1500);
+  }
+
+  function connectGoogleDrive() {
+    var idEl = document.getElementById("googleClientId");
+    if (idEl) state.settings.googleClientId = idEl.value.trim();
+    if (!state.settings.googleClientId) return toast("請輸入 OAuth Client ID");
+    saveStateLocal();
+    initGoogleAuth();
+    if (!googleTokenClient) return toast("Google 登入載入中，請稍後再試");
+    setSyncStatus("syncing");
+    getAccessToken("consent").then(function (token) {
+      if (!token) {
+        setSyncStatus("failed");
+        toast("連接失敗");
+        return;
+      }
+      state.settings.googleConnected = true;
+      state.settings.autoSync = true;
+      saveStateLocal();
+      drivePull().then(function () {
+        toast("已連接 Google Drive");
+        render();
+      });
+    });
+  }
+
+  function disconnectGoogleDrive() {
+    state.settings.googleConnected = false;
+    clearStoredToken();
+    saveStateLocal();
+    setSyncStatus("disconnected");
+    toast("已中斷連接");
+    render();
   }
 
   function touch(obj) {
@@ -271,10 +503,16 @@
     return Math.round((done / due.length) * 100);
   }
 
-  function toggleHabit(habitId) {
+  function typeLabel(t) {
+    if (t === "count") return "次數";
+    if (t === "duration") return "計時";
+    return "完成";
+  }
+
+  function toggleHabit(habitId, dateStr) {
     var habit = state.habits.find(function (h) { return h.id === habitId; });
     if (!habit) return;
-    var key = todayKey();
+    var key = dateStr || todayKey();
     var existing = getCheckin(habitId, key);
     if (habit.type === "yesno") {
       if (existing && existing.value) {
@@ -291,7 +529,7 @@
       render();
       return;
     }
-    openHabitLogModal(habit);
+    openHabitLogModal(habit, key);
   }
 
   function openModal(html) {
@@ -314,57 +552,12 @@
 
   function renderTopChips() {
     var key = todayKey();
-    document.getElementById("topChips").innerHTML =
-      '<span class="chip">今日達成 <strong>' + completionRate(key) + '%</strong></span>' +
-      '<span class="chip">投入 <strong>' + fmtMin(minutesOnDate(key)) + '</strong></span>';
-  }
-
-  function renderToday() {
-    var key = todayKey();
-    var habits = state.habits.filter(function (h) { return !h.archived && habitDueOn(h, key); });
-    var nextCd = state.countdowns
-      .filter(function (c) { return c.targetAt > Date.now(); })
-      .sort(function (a, b) { return a.targetAt - b.targetAt; })[0];
-    var shortGoals = state.goals.filter(function (g) { return g.kind === "short"; }).slice(0, 2);
-
-    var html = '<div class="grid-2 hero-stats">' +
-      '<div class="stat"><div class="label">今日完成</div><div class="value">' + completionRate(key) + '%</div></div>' +
-      '<div class="stat"><div class="label">今日時數</div><div class="value">' + fmtMin(minutesOnDate(key)) + '</div></div>' +
-      '</div>';
-
-    if (nextCd) {
-      html += '<div class="panel"><div class="section-head"><h2>下一個倒數</h2></div>' +
-        '<div class="list-item"><div style="font-size:1.4rem">' + (nextCd.emoji || "⏳") + '</div>' +
-        '<div><strong>' + esc(nextCd.title) + '</strong><div class="muted">' + countdownLabel(nextCd.targetAt) + '</div></div>' +
-        '<button class="btn sm ghost" data-go="countdown">查看</button></div></div>';
-    }
-
-    html += '<div class="panel"><div class="section-head"><h2>今日習慣</h2>' +
-      '<button class="btn sm soft" data-action="add-habit">+ 新增</button></div>';
-    if (!habits.length) {
-      html += '<div class="empty">今日未有習慣。去「習慣」建立第一個吧。</div>';
-    } else {
-      html += '<div class="habit-list">' + habits.map(habitRowHtml).join("") + "</div>";
-    }
-    html += "</div>";
-
-    if (shortGoals.length) {
-      html += '<div class="panel"><div class="section-head"><h2>短期目標</h2>' +
-        '<button class="btn sm ghost" data-go="goals">全部</button></div><div class="list">';
-      shortGoals.forEach(function (g) {
-        var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
-        html += '<div class="list-item" style="grid-template-columns:1fr"><div><strong>' + esc(g.title) +
-          '</strong><div class="muted">' + g.current + " / " + g.target + " " + esc(g.unit || "") +
-          '</div><div class="progress"><i style="width:' + pct + '%"></i></div></div></div>';
-      });
-      html += "</div></div>";
-    }
-
-    html += '<div class="row-actions" style="margin-top:14px">' +
-      '<button class="btn" data-go="focus">開始專注</button>' +
-      '<button class="btn ghost" data-go="money">記一筆</button></div>';
-
-    document.getElementById("view-today").innerHTML = html;
+    var html =
+      '<span class="chip">今日完成 <strong>' + completionRate(key) + '%</strong></span>' +
+      '<span class="chip">投入 <strong>' + fmtMin(minutesOnDate(key)) + '</strong></span>' +
+      '<span class="chip sync-chip sync-' + syncStatus + '" id="syncChip">雲端 <strong>' +
+      syncStatusLabel() + "</strong></span>";
+    document.getElementById("topChips").innerHTML = html;
   }
 
   function habitRowHtml(h) {
@@ -378,37 +571,115 @@
       ? '<button class="btn sm soft" data-toggle="' + h.id + '">' + (done ? "取消" : "完成") + "</button>"
       : '<button class="btn sm soft" data-toggle="' + h.id + '">記錄</button>';
     return '<div class="habit-item' + (done ? " done" : "") + '" data-habit="' + h.id + '">' +
-      '<button type="button" class="check' + (done ? " on" : "") + '" style="--hcolor:' + h.color + '" data-toggle="' + h.id + '" aria-label="打卡">' +
+      '<button type="button" class="check' + (done ? " on" : "") + '" style="--hcolor:' + h.color + '" data-toggle="' + h.id + '" aria-label="完成今日">' +
       (done ? "✓" : "") + "</button>" +
       '<div class="habit-meta"><strong><span class="dot" style="--hcolor:' + h.color + '"></span>' + esc(h.name) +
-      "</strong><span>" + esc(h.group || "") + " · " + detail + " · 連擊 " + streakFor(h) + "</span></div>" +
+      "</strong><span>" + esc(h.group || "") + " · " + detail + " · 連續日 " + streakFor(h) + "</span></div>" +
       '<div class="row-actions" style="flex-direction:column;gap:6px">' + actionBtn +
       '<button class="btn sm ghost" data-edit-habit="' + h.id + '">編輯</button></div></div>';
   }
 
+  function monthDoneDays(habit) {
+    var month = ui.habitCalMonth || startOfMonth(new Date());
+    var y = month.getFullYear();
+    var m = month.getMonth();
+    var days = new Date(y, m + 1, 0).getDate();
+    var count = 0;
+    for (var d = 1; d <= days; d++) {
+      var key = dateKey(new Date(y, m, d));
+      if (key > todayKey()) break;
+      if (!habitDueOn(habit, key)) continue;
+      if (isHabitDone(habit, key)) count++;
+    }
+    return count;
+  }
+
+  function totalCount(habit) {
+    return state.checkins.reduce(function (sum, c) {
+      if (c.habitId !== habit.id) return sum;
+      return sum + Number(c.value || 0);
+    }, 0);
+  }
+
+  function habitStatPill(h) {
+    if (h.type === "duration") return '累計時數 <strong>' + fmtMin(totalMinutes(h)) + "</strong>";
+    if (h.type === "count") return '累計次數 <strong>' + totalCount(h) + " 次</strong>";
+    return '累計 <strong>' + monthDoneDays(h) + " 日</strong>";
+  }
+
+  function habitMiniCalHtml(habit) {
+    var month = ui.habitCalMonth;
+    var y = month.getFullYear();
+    var m = month.getMonth();
+    var firstDow = new Date(y, m, 1).getDay();
+    var daysInMonth = new Date(y, m + 1, 0).getDate();
+    var html = '<div class="habit-mini-cal" style="--hcolor:' + habit.color + '">';
+    html += '<div class="habit-mini-dow">';
+    DOW.forEach(function (d) { html += "<span>" + d + "</span>"; });
+    html += '</div><div class="habit-mini-grid">';
+    for (var i = 0; i < firstDow; i++) html += '<span class="habit-day pad" aria-hidden="true"></span>';
+    for (var day = 1; day <= daysInMonth; day++) {
+      var key = dateKey(new Date(y, m, day));
+      var due = habitDueOn(habit, key);
+      var done = isHabitDone(habit, key);
+      var cls = "habit-day";
+      if (key === todayKey()) cls += " today";
+      if (!due) cls += " off";
+      else if (key > todayKey()) cls += " future";
+      else if (done) cls += " done";
+      else cls += " missed";
+      var label = done ? "✓" : String(day);
+      html += '<button type="button" class="' + cls + '" style="--hcolor:' + habit.color +
+        '" data-habit-day="' + habit.id + "|" + key + '" aria-label="' + key + '"' +
+        (due && key <= todayKey() ? "" : " tabindex=\"-1\"") + ">" + label + "</button>";
+    }
+    html += "</div></div>";
+    return html;
+  }
+
+  function habitCardHtml(h) {
+    var key = todayKey();
+    var done = isHabitDone(h, key);
+    return '<div class="habit-card" data-habit="' + h.id + '">' +
+      '<div class="habit-card-head">' +
+      '<button type="button" class="check' + (done ? " on" : "") + '" style="--hcolor:' + h.color +
+      '" data-toggle="' + h.id + '" aria-label="完成今日">' + (done ? "✓" : "") + "</button>" +
+      '<div class="habit-card-title"><strong><span class="dot" style="--hcolor:' + h.color + '"></span>' +
+      esc(h.name) + '</strong><span>' + typeLabel(h.type) + " · " + esc(h.group || "未分組") + "</span></div>" +
+      '<button class="btn sm ghost" data-edit-habit="' + h.id + '">編輯</button></div>' +
+      '<div class="habit-card-stats">' +
+      '<span class="stat-pill">本月日數 <strong>' + monthDoneDays(h) + "</strong></span>" +
+      '<span class="stat-pill">' + habitStatPill(h) + "</span>" +
+      '<span class="stat-pill">連續日 <strong>' + streakFor(h) + "</strong></span></div>" +
+      habitMiniCalHtml(h) + "</div>";
+  }
+
   function renderHabits() {
+    var key = todayKey();
+    var todayHabits = state.habits.filter(function (h) { return !h.archived && habitDueOn(h, key); });
     var active = state.habits.filter(function (h) { return !h.archived; });
-    var html = '<div class="panel"><div class="section-head"><h2>我的習慣</h2>' +
-      '<button class="btn sm" data-action="add-habit">+ 新增習慣</button></div>';
-    if (!active.length) {
-      html += '<div class="empty">未有習慣。建立一個，開始累積日照。</div>';
+    var ym = ui.habitCalMonth;
+    var html = '<div class="panel"><div class="section-head"><h2>今日記錄</h2>' +
+      '<button class="btn sm soft" data-action="add-habit">+ 新增</button></div>';
+    if (!todayHabits.length) {
+      html += '<div class="empty">今日未有要完成的習慣。</div>';
     } else {
-      html += '<div class="habit-list">' + active.map(function (h) {
-        var rate = monthRate(h);
-        return '<div class="habit-item" data-habit="' + h.id + '">' +
-          '<div class="check on" style="--hcolor:' + h.color + ';width:38px;height:38px">' + typeIcon(h.type) + '</div>' +
-          '<div class="habit-meta"><strong>' + esc(h.name) + '</strong><span>' +
-          esc(h.group || "未分組") + " · 本月 " + rate + "% · 連擊 " + streakFor(h) + " · 累計 " +
-          fmtMin(totalMinutes(h)) + "</span></div>" +
-          '<button class="btn sm ghost" data-edit-habit="' + h.id + '">編輯</button></div>';
-      }).join("") + "</div>";
+      html += '<div class="habit-list">' + todayHabits.map(habitRowHtml).join("") + "</div>";
     }
     html += "</div>";
 
-    html += '<div class="panel"><div class="section-head"><h2>本月時數</h2></div><div class="grid-2">';
-    html += '<div class="stat"><div class="label">本月投入</div><div class="value">' + fmtMin(monthTotalMinutes()) + '</div></div>';
-    html += '<div class="stat"><div class="label">最佳連擊</div><div class="value">' + bestStreak() + ' 日</div></div>';
-    html += "</div></div>";
+    html += '<div class="panel bare"><div class="section-head"><h2>我的習慣</h2>' +
+      '<div class="row-actions" style="margin:0">' +
+      '<button class="btn sm ghost" data-hcal="prev">‹</button>' +
+      '<span class="muted" style="font-weight:700">' + ym.getFullYear() + " 年 " + (ym.getMonth() + 1) + " 月</span>" +
+      '<button class="btn sm ghost" data-hcal="next">›</button>' +
+      '<button class="btn sm" data-action="add-habit">+ 新增習慣</button></div></div>';
+    if (!active.length) {
+      html += '<div class="empty">未有習慣。建立一個，開始記錄生活。</div>';
+    } else {
+      html += '<div class="habit-cards">' + active.map(habitCardHtml).join("") + "</div>";
+    }
+    html += "</div>";
 
     document.getElementById("view-habits").innerHTML = html;
   }
@@ -549,8 +820,8 @@
     }
   }
 
-  function openHabitLogModal(habit) {
-    var key = todayKey();
+  function openHabitLogModal(habit, dateStr) {
+    var key = dateStr || todayKey();
     var c = getCheckin(habit.id, key);
     openModal(
       "<h3>記錄：" + esc(habit.name) + "</h3>" +
@@ -729,38 +1000,43 @@
     }
   }
 
-  function renderMore() {
-    var tabs = [
-      ["timetable", "時間表"],
-      ["countdown", "倒數"],
-      ["focus", "專注"],
-      ["goals", "目標"],
-      ["money", "記帳"],
-      ["theme", "主題"],
-      ["sync", "同步"]
-    ];
-    var html = '<div class="seg">';
-    tabs.forEach(function (t) {
-      html += '<button type="button" data-more="' + t[0] + '" class="' + (ui.moreTab === t[0] ? "on" : "") + '">' + t[1] + "</button>";
-    });
-    html += '</div><div id="moreBody"></div>';
-    document.getElementById("view-more").innerHTML = html;
-    renderMoreBody();
+  function renderTimetable() {
+    document.getElementById("view-timetable").innerHTML = renderTimetablePanel();
   }
 
-  function renderMoreBody() {
-    var el = document.getElementById("moreBody");
+  function renderCountdown() {
+    var html = renderCountdownPanel();
+    html += '<div class="panel" style="margin-top:14px">' + renderFocusPanelInner() + "</div>";
+    document.getElementById("view-countdown").innerHTML = html;
+  }
+
+  function renderSettings() {
+    var tabs = [
+      ["sync", "同步"],
+      ["goals", "目標"],
+      ["money", "記帳"],
+      ["theme", "主題"]
+    ];
+    var html = '<div class="seg" style="grid-template-columns:repeat(4,1fr)">';
+    tabs.forEach(function (t) {
+      html += '<button type="button" data-settings="' + t[0] + '" class="' +
+        (ui.settingsTab === t[0] ? "on" : "") + '">' + t[1] + "</button>";
+    });
+    html += '</div><div id="settingsBody"></div>';
+    document.getElementById("view-settings").innerHTML = html;
+    renderSettingsBody();
+  }
+
+  function renderSettingsBody() {
+    var el = document.getElementById("settingsBody");
     if (!el) return;
     var map = {
-      timetable: renderTimetablePanel,
-      countdown: renderCountdownPanel,
-      focus: renderFocusPanel,
+      sync: renderSyncPanel,
       goals: renderGoalsPanel,
       money: renderMoneyPanel,
-      theme: renderThemePanel,
-      sync: renderSyncPanel
+      theme: renderThemePanel
     };
-    el.innerHTML = (map[ui.moreTab] || renderTimetablePanel)();
+    el.innerHTML = (map[ui.settingsTab] || renderSyncPanel)();
   }
 
   function renderTimetablePanel() {
@@ -855,11 +1131,11 @@
     }
   }
 
-  function renderFocusPanel() {
+  function renderFocusPanelInner() {
     var p = 100 - Math.round((ui.focus.remainMs / Math.max(1, ui.focus.totalMs)) * 100);
     var mm = Math.floor(ui.focus.remainMs / 60000);
     var ss = Math.floor((ui.focus.remainMs % 60000) / 1000);
-    var html = '<div class="panel"><div class="section-head"><h2>' +
+    var html = '<div class="section-head"><h2>' +
       (ui.focus.mode === "focus" ? "專注番茄鐘" : "休息一下") + "</h2></div>";
     html += '<div class="focus-ring" style="--p:' + p + '%"><div style="text-align:center">' +
       '<div class="time">' + pad(mm) + ":" + pad(ss) + '</div>' +
@@ -882,7 +1158,7 @@
 
     var todayFocus = state.focusSessions.filter(function (s) { return dateKey(s.startedAt) === todayKey(); });
     var sum = todayFocus.reduce(function (a, s) { return a + Number(s.minutes || 0); }, 0);
-    html += '<div class="muted" style="margin-top:12px">今日專注 ' + todayFocus.length + " 次 · " + fmtMin(sum) + "</div></div>";
+    html += '<div class="muted" style="margin-top:12px">今日專注 ' + todayFocus.length + " 次 · " + fmtMin(sum) + "</div>";
     return html;
   }
 
@@ -930,11 +1206,11 @@
         ui.focus.totalMs = (state.settings.focusMin || 25) * 60000;
         ui.focus.remainMs = ui.focus.totalMs;
       }
-      if (ui.view === "more" && ui.moreTab === "focus") render();
+      if (ui.view === "countdown") render();
       else renderTopChips();
       return;
     }
-    if (ui.view === "more" && ui.moreTab === "focus") {
+    if (ui.view === "countdown") {
       var ring = document.querySelector(".focus-ring");
       var time = document.querySelector(".focus-ring .time");
       if (ring && time) {
@@ -1174,20 +1450,39 @@
   }
 
   function renderSyncPanel() {
-    var html = '<div class="panel"><div class="section-head"><h2>備份與同步</h2></div>' +
-      '<p class="muted">本機資料儲存於瀏覽器。可匯出 JSON 備份，或使用 Google Apps Script 雲端同步（Last-Write-Wins）。</p>' +
-      '<div class="field"><label>Apps Script URL</label><input id="cloudUrl" value="' + escAttr(state.settings.cloudUrl || "") + '" placeholder="https://script.google.com/macros/s/..." /></div>' +
-      '<div class="field"><label>Token</label><input id="cloudToken" type="password" value="' + escAttr(state.settings.cloudToken || "") + '" placeholder="SOLARA_TOKEN" /></div>' +
-      '<div class="row-actions">' +
-      '<button class="btn" data-sync="pull">從雲端拉取</button>' +
-      '<button class="btn soft" data-sync="push">推送到雲端</button>' +
-      '</div><div class="row-actions">' +
-      '<button class="btn ghost" data-sync="export">匯出 JSON</button>' +
-      '<button class="btn ghost" data-sync="import">匯入 JSON</button>' +
-      '</div>';
-    if (state.syncUpdatedAt) {
-      html += '<p class="tiny">上次同步：' + new Date(state.syncUpdatedAt).toLocaleString("zh-HK") + "</p>";
+    var connected = state.settings.googleConnected;
+    var autoOn = state.settings.autoSync !== false;
+    var html = '<div class="panel"><div class="section-head"><h2>Google Drive 自動同步</h2>' +
+      '<span class="chip sync-chip sync-' + syncStatus + '">' + syncStatusLabel() + "</span></div>" +
+      '<p class="muted">連接後，資料會自動儲存到 Google Drive 的 appDataFolder（檔名：' + DRIVE_FILE +
+      "）。多裝置以較新時間為準。</p>" +
+      '<div class="field"><label>Google OAuth Client ID（Web）</label>' +
+      '<input id="googleClientId" value="' + escAttr(state.settings.googleClientId || "") +
+      '" placeholder="123456789.apps.googleusercontent.com" /></div>';
+    if (connected) {
+      html += '<div class="field"><label><input type="checkbox" id="autoSyncToggle"' +
+        (autoOn ? " checked" : "") + " /> 自動同步（建議開啟）</label></div>" +
+        '<div class="row-actions">' +
+        '<button class="btn soft" data-sync="drive-pull">立即同步</button>' +
+        '<button class="btn ghost" data-sync="disconnect">中斷連接</button></div>';
+    } else {
+      html += '<div class="row-actions"><button class="btn" data-sync="connect">連接 Google Drive</button></div>';
     }
+    html += '<div class="row-actions" style="margin-top:14px">' +
+      '<button class="btn ghost" data-sync="export">匯出 JSON 備份</button>' +
+      '<button class="btn ghost" data-sync="import">匯入 JSON 備份</button></div>';
+    if (state.syncUpdatedAt) {
+      html += '<p class="tiny">上次更新：' + new Date(state.syncUpdatedAt).toLocaleString("zh-HK") + "</p>";
+    }
+    html += '<details class="advanced-sync"><summary>進階／舊版同步（Apps Script）</summary>' +
+      '<p class="muted tiny">舊版手動拉取／推送方式，一般情況毋須使用。</p>' +
+      '<div class="field"><label>Apps Script URL</label><input id="cloudUrl" value="' +
+      escAttr(state.settings.cloudUrl || "") + '" placeholder="https://script.google.com/macros/s/..." /></div>' +
+      '<div class="field"><label>Token</label><input id="cloudToken" type="password" value="' +
+      escAttr(state.settings.cloudToken || "") + '" placeholder="SOLARA_TOKEN" /></div>' +
+      '<div class="row-actions">' +
+      '<button class="btn sm ghost" data-sync="pull">從雲端拉取</button>' +
+      '<button class="btn sm ghost" data-sync="push">推送到雲端</button></div></details>';
     html += '<input type="file" id="importFile" accept="application/json,.json" style="display:none" /></div>';
     return html;
   }
@@ -1283,15 +1578,17 @@
   }
 
   function goMoreTab(tab) {
-    ui.view = "more";
-    ui.moreTab = tab;
-    document.querySelectorAll(".view").forEach(function (v) {
-      v.classList.toggle("active", v.getAttribute("data-view") === "more");
-    });
-    document.querySelectorAll("#nav button").forEach(function (b) {
-      b.classList.toggle("active", b.getAttribute("data-nav") === "more");
-    });
-    renderMore();
+    ui.view = "settings";
+    ui.settingsTab = tab === "goals" || tab === "money" || tab === "theme" || tab === "sync" ? tab : "sync";
+    if (tab === "countdown") {
+      setView("countdown");
+      return;
+    }
+    if (tab === "focus") {
+      setView("countdown");
+      return;
+    }
+    setView("settings");
   }
 
   function setView(name) {
@@ -1308,12 +1605,11 @@
   function render() {
     applyTheme();
     renderTopChips();
-    if (ui.view === "today") renderToday();
-    else if (ui.view === "habits") renderHabits();
+    if (ui.view === "habits") renderHabits();
     else if (ui.view === "calendar") renderCalendar();
-    else if (ui.view === "more") {
-      renderMore();
-    }
+    else if (ui.view === "timetable") renderTimetable();
+    else if (ui.view === "countdown") renderCountdown();
+    else if (ui.view === "settings") renderSettings();
   }
 
   document.getElementById("nav").addEventListener("click", function (e) {
@@ -1325,10 +1621,24 @@
   document.getElementById("app").addEventListener("click", function (e) {
     var t = e.target;
 
-    var navMore = t.closest("[data-more]");
-    if (navMore) {
-      ui.moreTab = navMore.getAttribute("data-more");
-      renderMore();
+    var navSettings = t.closest("[data-settings]");
+    if (navSettings) {
+      ui.settingsTab = navSettings.getAttribute("data-settings");
+      renderSettingsBody();
+      return;
+    }
+
+    var habitDay = t.closest("[data-habit-day]");
+    if (habitDay) {
+      var parts = habitDay.getAttribute("data-habit-day").split("|");
+      toggleHabit(parts[0], parts[1]);
+      return;
+    }
+
+    var hcalNav = t.closest("[data-hcal]");
+    if (hcalNav) {
+      ui.habitCalMonth = addMonths(ui.habitCalMonth, hcalNav.getAttribute("data-hcal") === "prev" ? -1 : 1);
+      renderHabits();
       return;
     }
 
@@ -1424,7 +1734,7 @@
       state.settings.theme = themePick.getAttribute("data-theme-pick");
       saveState();
       applyTheme();
-      renderMore();
+      renderSettingsBody();
       toast("主題已切換");
       return;
     }
@@ -1442,11 +1752,26 @@
       else if (mode === "import") document.getElementById("importFile").click();
       else if (mode === "pull") cloudPull();
       else if (mode === "push") cloudPush();
+      else if (mode === "connect") connectGoogleDrive();
+      else if (mode === "disconnect") disconnectGoogleDrive();
+      else if (mode === "drive-pull") drivePull();
       return;
     }
   });
 
   document.getElementById("app").addEventListener("change", function (e) {
+    if (e.target.id === "autoSyncToggle") {
+      state.settings.autoSync = e.target.checked;
+      saveStateLocal();
+      toast(state.settings.autoSync ? "已開啟自動同步" : "已關閉自動同步");
+      return;
+    }
+    if (e.target.id === "googleClientId") {
+      state.settings.googleClientId = e.target.value.trim();
+      saveStateLocal();
+      initGoogleAuth();
+      return;
+    }
     if (e.target.id === "photoUpload" && e.target.files && e.target.files[0]) {
       var file = e.target.files[0];
       var reader = new FileReader();
@@ -1458,7 +1783,7 @@
           state.settings.theme = "photo";
           saveState();
           applyTheme();
-          renderMore();
+          renderSettingsBody();
           toast("相片主題已套用");
         });
       };
@@ -1470,6 +1795,40 @@
     }
   });
 
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible" && state.settings.googleConnected && state.settings.autoSync !== false) {
+      drivePull();
+    }
+  });
+
+  function bootSync() {
+    function start() {
+      if (state.settings.googleClientId) initGoogleAuth();
+      if (state.settings.googleConnected) {
+        setSyncStatus("syncing");
+        drivePull();
+      } else {
+        setSyncStatus("disconnected");
+      }
+    }
+    if (window.google && window.google.accounts) {
+      start();
+      return;
+    }
+    var tries = 0;
+    var timer = setInterval(function () {
+      tries++;
+      if (window.google && window.google.accounts) {
+        clearInterval(timer);
+        start();
+      } else if (tries > 60) {
+        clearInterval(timer);
+        setSyncStatus("disconnected");
+      }
+    }, 100);
+  }
+
   applyTheme();
+  bootSync();
   render();
 })();

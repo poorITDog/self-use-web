@@ -53,6 +53,10 @@ async function assert(cond, name) {
 const brand = await page.$eval("h1", (el) => el.textContent.trim());
 await assert(brand === "Solara", "brand visible");
 
+// default tab is habits
+const activeNav = await page.$eval("#nav button.active", (el) => el.getAttribute("data-nav"));
+await assert(activeNav === "habits", "default nav is habits");
+
 // create yes/no habit
 await page.click('[data-action="add-habit"]');
 await page.waitForSelector("#hName");
@@ -70,6 +74,11 @@ await page.waitForFunction(() => {
 });
 const rate = await page.$eval("#topChips strong", (el) => el.textContent);
 await assert(rate.includes("100"), "completion rate updates to 100% after yes/no checkin");
+
+// habit card with mini calendar
+await page.waitForSelector(".habit-card");
+const card = await page.$(".habit-card");
+await assert(!!card, "habit calendar card renders");
 
 // duration habit + log minutes
 await page.click('[data-action="add-habit"]');
@@ -97,20 +106,37 @@ await page.waitForSelector(".cal-day.today");
 const dayHours = await page.$eval(".stat .value", (el) => el.textContent);
 await assert(!!dayHours, "calendar day stats render");
 
-// more tabs smoke
-await page.click('[data-nav="more"]');
-for (const tab of ["timetable", "countdown", "focus", "goals", "money", "theme", "sync"]) {
-  await page.click('[data-more="' + tab + '"]');
-  await page.waitForSelector("#moreBody");
-  const body = await page.$eval("#moreBody", (el) => el.textContent.length > 0);
-  await assert(body, "more tab renders: " + tab);
+// timetable
+await page.click('[data-nav="timetable"]');
+await page.waitForSelector("#view-timetable");
+const timetableBody = await page.$eval("#view-timetable", (el) => el.textContent.length > 0);
+await assert(timetableBody, "timetable view renders");
+
+// countdown + focus
+await page.click('[data-nav="countdown"]');
+await page.waitForSelector(".focus-ring");
+const countdownBody = await page.$eval("#view-countdown", (el) => el.textContent.length > 0);
+await assert(countdownBody, "countdown view renders");
+
+// settings tabs smoke
+await page.click('[data-nav="settings"]');
+for (const tab of ["sync", "goals", "money", "theme"]) {
+  await page.click('[data-settings="' + tab + '"]');
+  await page.waitForSelector("#settingsBody");
+  const body = await page.$eval("#settingsBody", (el) => el.textContent.length > 0);
+  await assert(body, "settings tab renders: " + tab);
 }
 
 // theme switch
-await page.click('[data-more="theme"]');
+await page.click('[data-settings="theme"]');
 await page.click('[data-theme-pick="sea"]');
 const theme = await page.evaluate(() => document.body.getAttribute("data-theme"));
 await assert(theme === "sea", "theme switches to sea");
+
+// sync chip visible
+await page.click('[data-nav="habits"]');
+const syncChip = await page.$("#syncChip");
+await assert(!!syncChip, "sync status chip visible");
 
 await assert(errors.filter((e) => !e.includes("favicon")).length === 0, "no page errors: " + JSON.stringify(errors));
 
