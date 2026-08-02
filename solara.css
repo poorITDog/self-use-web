@@ -764,7 +764,51 @@ main {
 
 .cal-day.selected .cal-day-pct { color: rgba(255, 255, 255, 0.85); }
 
-/* Week calendar view */
+.cal-day-dots {
+  display: flex;
+  gap: 2px;
+  justify-content: center;
+  margin-top: 1px;
+}
+
+.cal-day-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cal-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 12px 8px;
+}
+
+.cal-event-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border-radius: var(--radius-xs);
+}
+
+.cal-event-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cal-event-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .cal-week-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -818,8 +862,14 @@ main {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--line);
+}
+
+.day-panel-head .btn {
+  margin-left: auto;
 }
 
 .day-panel-head strong {

@@ -67,6 +67,8 @@ run("normalizeState fills defaults", () => {
   assert.equal(s.habits.length, 1);
   assert.equal(s.settings.theme, "sunshine");
   assert.deepEqual(s.checkins, []);
+  assert.deepEqual(s.events, []);
+  assert.equal(s.settings.focusSoundEnabled, true);
 });
 
 run("mergeSyncState picks remote when newer", () => {

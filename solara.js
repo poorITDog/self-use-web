@@ -38,6 +38,7 @@
   var tokenPromiseResolve = null;
   var notifyTimers = [];
   var notifyIntervalId = null;
+  var audioCtx = null;
 
   var THEME_COLORS = {
     sunshine: "#FFF8F0",
@@ -129,14 +130,16 @@
         calShowCountdowns: true,
         habitsBoardMode: "month",
         notifyEnabled: false,
-        notifyHabits: true
+        notifyHabits: true,
+        focusSoundEnabled: true
       },
       habits: [],
       checkins: [],
       blocks: [],
       countdowns: [],
       focusSessions: [],
-      goals: []
+      goals: [],
+      events: []
     };
   }
 
@@ -150,6 +153,7 @@
     if (!out.settings.habitsBoardMode) out.settings.habitsBoardMode = "month";
     if (out.settings.notifyEnabled === undefined) out.settings.notifyEnabled = false;
     if (out.settings.notifyHabits === undefined) out.settings.notifyHabits = true;
+    if (out.settings.focusSoundEnabled === undefined) out.settings.focusSoundEnabled = true;
     out.countdowns = (Array.isArray(out.countdowns) ? out.countdowns : []).map(function (c) {
       var kind = c.kind || "countdown";
       return Object.assign({
@@ -164,7 +168,7 @@
         repeat: c.repeat || (kind === "birthday" ? "yearly" : "none")
       });
     });
-    ["habits", "checkins", "blocks", "countdowns", "focusSessions", "goals"].forEach(function (k) {
+    ["habits", "checkins", "blocks", "countdowns", "focusSessions", "goals", "events"].forEach(function (k) {
       if (!Array.isArray(out[k])) out[k] = [];
     });
     out.habits = out.habits.map(function (h) {
@@ -513,6 +517,48 @@
     });
   }
 
+  function ensureAudio() {
+    try {
+      if (!audioCtx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audioCtx = new AC();
+      }
+      if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    } catch (e) { /* ignore */ }
+  }
+
+  function playFocusChime() {
+    if (state.settings.focusSoundEnabled === false) return;
+    ensureAudio();
+    if (!audioCtx) return;
+    try {
+      var now = audioCtx.currentTime;
+      [523.25, 659.25].forEach(function (freq, i) {
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        var t0 = now + i * 0.15;
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.exponentialRampToValueAtTime(0.28, t0 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.42);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t0);
+        osc.stop(t0 + 0.45);
+      });
+    } catch (e) { /* ignore */ }
+  }
+
+  function notifyFocusDone(mode) {
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    var title = mode === "focus" ? "專注完成" : "休息結束";
+    var body = mode === "focus" ? "休息一下，你做得很棒！" : "準備好繼續專注了嗎？";
+    try {
+      new Notification(title, { body: body, tag: "focus-done-" + mode, silent: false });
+    } catch (e) { /* ignore */ }
+  }
+
   function extractPalette(dataUrl, cb) {
     var img = new Image();
     img.onload = function () {
@@ -709,7 +755,9 @@
     if (view === "calendar" && ui.calMode === "timetable") {
       return '<button type="button" class="btn sm soft" data-action="add-block">+ 時段</button>';
     }
-    if (view === "calendar") return "";
+    if (view === "calendar") {
+      return '<button type="button" class="btn sm soft" data-action="add-event">+ 行程</button>';
+    }
     if (view === "countdown") {
       return '<button type="button" class="btn sm soft" data-action="add-countdown">+ 新增</button>';
     }
@@ -1424,6 +1472,7 @@
 
   function timelineFlowHtml(selected) {
     var dayBlocks = blocksForDate(selected);
+    var dayEvents = eventsForDate(selected);
     var dayHabits = state.habits.filter(function (h) {
       return !h.archived && habitDueOn(h, selected) && h.timeOfDay;
     }).map(function (h) {
@@ -1434,16 +1483,29 @@
         end: "",
         color: h.color,
         kind: "habit",
-        done: isHabitDone(h, selected)
+        done: isHabitDone(h, selected),
+        allDay: false
       };
     });
     var flow = dayBlocks.map(function (b) {
-      return { id: b.id, title: b.title, start: b.start, end: b.end, color: b.color, kind: "block" };
-    }).concat(dayHabits).sort(function (a, b) {
+      return { id: b.id, title: b.title, start: b.start, end: b.end, color: b.color, kind: "block", allDay: false };
+    }).concat(dayEvents.map(function (ev) {
+      return {
+        id: ev.id,
+        title: ev.title,
+        start: ev.allDay ? "00:00" : (ev.start || "09:00"),
+        end: ev.allDay ? "" : (ev.end || ""),
+        color: ev.color,
+        kind: "event",
+        allDay: !!ev.allDay
+      };
+    })).concat(dayHabits).sort(function (a, b) {
+      if (a.allDay && !b.allDay) return -1;
+      if (!a.allDay && b.allDay) return 1;
       return String(a.start).localeCompare(String(b.start));
     });
     if (!flow.length) {
-      return '<div class="empty compact" style="padding:20px">當日沒有時間區塊</div>';
+      return '<div class="empty compact" style="padding:20px">當日沒有行程</div>';
     }
     var startHour = 6;
     var endHour = 23;
@@ -1459,11 +1521,14 @@
     flow.forEach(function (item) {
       var mins = timeToMinutes(item.start);
       var top = Math.max(0, (mins - startHour * 60) * pxPerMin);
-      var dur = item.end ? Math.max(30, timeToMinutes(item.end) - mins) : 45;
+      var dur = item.allDay ? 30 : (item.end ? Math.max(30, timeToMinutes(item.end) - mins) : 45);
       var height = Math.max(28, dur * pxPerMin);
+      var kindLabel = item.kind === "habit"
+        ? (item.done ? "習慣 · 已完成" : "習慣 · 未完成")
+        : (item.kind === "event" ? (item.allDay ? "行程 · 全天" : "行程 · " + esc(item.start) + (item.end ? "–" + esc(item.end) : "")) : esc(item.start) + (item.end ? "–" + esc(item.end) : ""));
       html += '<div class="timeline-block" style="top:' + top + "px;height:" + height +
         "px;background:" + item.color + '">' + esc(item.title) +
-        '<div class="tiny">' + (item.kind === "habit" ? (item.done ? "習慣 · 已完成" : "習慣 · 未完成") : esc(item.start) + (item.end ? "–" + esc(item.end) : "")) +
+        '<div class="tiny">' + kindLabel +
         "</div></div>";
     });
     html += "</div>";
@@ -1494,6 +1559,9 @@
       });
       blocksForDate(key).slice(0, 2).forEach(function (b) {
         html += '<div class="cal-week-item" style="background:' + b.color + '">' + esc(b.title) + "</div>";
+      });
+      eventsForDate(key).slice(0, 2).forEach(function (ev) {
+        html += '<div class="cal-week-item" style="background:' + (ev.color || colors()[0]) + '">' + esc(ev.title) + "</div>";
       });
       html += "</button>";
     }
@@ -1547,9 +1615,19 @@
         if (key === selected) cls += " selected";
         if (rate > 0) cls += " has-heat";
         var heatStyle = rate > 0 ? ' style="--heat:' + Math.max(0.12, rate / 100) + '"' : "";
+        var dayEvts = eventsForDate(key);
+        var dotsHtml = "";
+        if (dayEvts.length) {
+          dotsHtml = '<span class="cal-day-dots">';
+          dayEvts.slice(0, 3).forEach(function (ev) {
+            dotsHtml += '<span class="cal-day-dot" style="background:' + (ev.color || colors()[0]) + '"></span>';
+          });
+          dotsHtml += "</span>";
+        }
         html += '<button type="button" class="' + cls + '" data-day="' + key + '"' + heatStyle + ">" +
           '<span class="cal-day-num">' + day + "</span>" +
           (rate > 0 ? '<span class="cal-day-pct">' + rate + "%</span>" : "") +
+          dotsHtml +
           "</button>";
       }
       html += "</div></div>";
@@ -1560,11 +1638,25 @@
     var selLabel = selected === todayKey() ? "今天" : selected.slice(5).replace("-", "月") + "日";
     html += '<div class="day-panel">';
     html += '<div class="day-panel-head"><strong>' + selLabel + '</strong>' +
-      '<span class="muted">星期' + DOW[parseKey(selected).getDay()] + "</span></div>";
+      '<span class="muted">星期' + DOW[parseKey(selected).getDay()] + '</span>' +
+      '<button type="button" class="btn sm soft" data-action="add-event">+ 行程</button></div>';
     html += '<div class="day-panel-stats">' +
       '<div class="stat-cell"><div class="label">達成率</div><div class="value">' + selRate + '%</div></div>' +
       '<div class="stat-cell"><div class="label">投入時數</div><div class="value">' + fmtMin(selMins) + "</div></div>" +
       "</div>";
+    var selEvents = eventsForDate(selected);
+    if (selEvents.length) {
+      html += '<div class="section-title" style="padding-top:4px">當日行程</div><div class="cal-event-list">';
+      selEvents.forEach(function (ev) {
+        var timeLabel = ev.allDay ? "全天" : ((ev.start || "") + (ev.end ? "–" + ev.end : ""));
+        html += '<div class="cal-event-row">' +
+          '<span class="cal-event-dot" style="background:' + (ev.color || colors()[0]) + '"></span>' +
+          '<div class="cal-event-info"><strong>' + esc(ev.title) + '</strong>' +
+          '<span class="muted tiny">' + esc(timeLabel) + "</span></div>" +
+          '<button type="button" class="btn sm ghost" data-edit-event="' + ev.id + '">編輯</button></div>';
+      });
+      html += "</div>";
+    }
     html += timelineFlowHtml(selected);
     if (state.settings.calShowCountdowns !== false) {
       var cds = state.countdowns.filter(function (c) {
@@ -1595,6 +1687,14 @@
       if (b.date) return b.date === key;
       return Number(b.dayOfWeek) === dow;
     }).sort(function (a, b) { return String(a.start).localeCompare(String(b.start)); });
+  }
+
+  function eventsForDate(key) {
+    return state.events.filter(function (ev) { return ev.date === key; }).sort(function (a, b) {
+      if (a.allDay && !b.allDay) return -1;
+      if (!a.allDay && b.allDay) return 1;
+      return String(a.start || "").localeCompare(String(b.start || ""));
+    });
   }
 
   function openBlockEditor(block) {
@@ -1648,6 +1748,81 @@
     if (b.id) {
       document.getElementById("bDel").onclick = function () {
         state.blocks = state.blocks.filter(function (x) { return x.id !== b.id; });
+        saveState();
+        closeModal();
+        toast("已刪除");
+        render();
+      };
+    }
+  }
+
+  function openEventEditor(event) {
+    var ev = event || {
+      id: "",
+      title: "",
+      date: ui.calSelected || todayKey(),
+      start: "09:00",
+      end: "10:00",
+      allDay: false,
+      note: "",
+      color: colors()[2]
+    };
+    openModal(
+      "<h3>" + (ev.id ? "編輯行程" : "新增行程") + "</h3>" +
+      '<div class="field"><label>標題</label><input id="eTitle" value="' + escAttr(ev.title) + '" placeholder="約會、會議…" /></div>' +
+      '<div class="field"><label>日期</label><input id="eDate" type="date" value="' + escAttr(ev.date || ui.calSelected) + '" /></div>' +
+      '<div class="field"><label class="inline-check"><input type="checkbox" id="eAllDay"' +
+      (ev.allDay ? " checked" : "") + " /> 全天</label></div>" +
+      '<div class="grid-2" id="eTimeFields">' +
+      '<div class="field"><label>開始</label><input id="eStart" type="time" value="' + escAttr(ev.start || "09:00") + '"' +
+      (ev.allDay ? " disabled" : "") + " /></div>" +
+      '<div class="field"><label>結束</label><input id="eEnd" type="time" value="' + escAttr(ev.end || "10:00") + '"' +
+      (ev.allDay ? " disabled" : "") + " /></div></div>" +
+      '<div class="field"><label>備註</label><textarea id="eNote" rows="2">' + esc(ev.note || "") + "</textarea></div>" +
+      '<div class="field"><label>顏色</label><select id="eColor">' +
+      colors().map(function (c) { return opt(c, c, ev.color); }).join("") + "</select></div>" +
+      '<div class="row-actions"><button class="btn" id="eSave">儲存</button>' +
+      (ev.id ? '<button class="btn warn" id="eDel">刪除</button>' : "") +
+      '<button class="btn ghost" id="eCancel">取消</button></div>'
+    );
+    var allDayEl = document.getElementById("eAllDay");
+    var toggleTimes = function () {
+      var on = allDayEl.checked;
+      document.getElementById("eStart").disabled = on;
+      document.getElementById("eEnd").disabled = on;
+    };
+    allDayEl.onchange = toggleTimes;
+    document.getElementById("eCancel").onclick = closeModal;
+    document.getElementById("eSave").onclick = function () {
+      var title = document.getElementById("eTitle").value.trim();
+      if (!title) return toast("請輸入標題");
+      var dateVal = document.getElementById("eDate").value;
+      if (!dateVal) return toast("請選擇日期");
+      var allDay = allDayEl.checked;
+      var payload = {
+        title: title,
+        date: dateVal,
+        start: allDay ? "" : document.getElementById("eStart").value,
+        end: allDay ? "" : document.getElementById("eEnd").value,
+        allDay: allDay,
+        note: document.getElementById("eNote").value.trim(),
+        color: document.getElementById("eColor").value
+      };
+      if (ev.id) {
+        Object.assign(ev, payload);
+        touch(ev);
+      } else {
+        state.events.push(touch(Object.assign({ id: uid() }, payload)));
+      }
+      saveState();
+      closeModal();
+      toast("行程已儲存");
+      if (ui.view === "calendar") ui.calSelected = dateVal;
+      render();
+    };
+    if (ev.id) {
+      document.getElementById("eDel").onclick = function () {
+        state.events = state.events.filter(function (x) { return x.id !== ev.id; });
         saveState();
         closeModal();
         toast("已刪除");
@@ -1882,6 +2057,9 @@
       (state.settings.focusMin || 25) + '" /></div>' +
       '<div class="field"><label>休息（分）</label><input id="breakMin" type="number" min="1" value="' +
       (state.settings.breakMin || 5) + '" /></div></div>';
+    html += '<div class="settings-row" style="padding:0;margin-top:8px"><label class="settings-row-label">' +
+      '<input type="checkbox" id="focusSoundEnabled"' +
+      (state.settings.focusSoundEnabled !== false ? " checked" : "") + " /> 提示音</label></div>";
     html += '<div class="focus-actions">' +
       '<button class="btn" data-focus="' + (ui.focus.running ? "pause" : "start") + '">' +
       (ui.focus.running ? "暫停" : "開始") + "</button>" +
@@ -1897,11 +2075,14 @@
   function focusTick() {
     if (!ui.focus.running) return;
     ui.focus.remainMs -= 250;
-    if (ui.focus.remainMs <= 0) {
+      if (ui.focus.remainMs <= 0) {
       ui.focus.remainMs = 0;
       ui.focus.running = false;
       clearInterval(ui.focus.timerId);
       ui.focus.timerId = null;
+      var doneMode = ui.focus.mode;
+      playFocusChime();
+      notifyFocusDone(doneMode);
       if (ui.focus.mode === "focus") {
         var mins = Math.round(ui.focus.totalMs / 60000);
         state.focusSessions.push(touch({
@@ -1933,7 +2114,7 @@
         ui.focus.totalMs = (state.settings.breakMin || 5) * 60000;
         ui.focus.remainMs = ui.focus.totalMs;
       } else {
-        toast("休息完，繼續加油");
+        toast("休息結束，繼續加油");
         ui.focus.mode = "focus";
         ui.focus.totalMs = (state.settings.focusMin || 25) * 60000;
         ui.focus.remainMs = ui.focus.totalMs;
@@ -1957,6 +2138,7 @@
 
   function focusControl(cmd) {
     if (cmd === "start") {
+      ensureAudio();
       var fm = Number(document.getElementById("focusMin") && document.getElementById("focusMin").value) || state.settings.focusMin || 25;
       var bm = Number(document.getElementById("breakMin") && document.getElementById("breakMin").value) || state.settings.breakMin || 5;
       state.settings.focusMin = fm;
@@ -2096,6 +2278,9 @@
       (state.settings.notifyHabits !== false ? " checked" : "") +
       (state.settings.notifyEnabled && supported ? "" : " disabled") +
       " /> 習慣提醒（使用習慣的建議時段）</label></div>";
+    html += '<div class="settings-row"><label class="settings-row-label"><input type="checkbox" id="focusSoundEnabled"' +
+      (state.settings.focusSoundEnabled !== false ? " checked" : "") +
+      " /> 專注提示音</label></div>";
     html += "</div>";
     return html;
   }
@@ -2402,6 +2587,7 @@
       if (act === "add-habit") openHabitEditor();
       else if (act === "add-block") openBlockEditor();
       else if (act === "add-countdown") openCountdownEditor();
+      else if (act === "add-event") openEventEditor();
       else if (act === "add-goal-short") openGoalEditor("short");
       else if (act === "add-goal-long") openGoalEditor("long");
       return;
@@ -2425,6 +2611,13 @@
     if (editCd) {
       var c = state.countdowns.find(function (x) { return x.id === editCd.getAttribute("data-edit-countdown"); });
       if (c) openCountdownEditor(c);
+      return;
+    }
+
+    var editEvent = t.closest("[data-edit-event]");
+    if (editEvent) {
+      var ev = state.events.find(function (x) { return x.id === editEvent.getAttribute("data-edit-event"); });
+      if (ev) openEventEditor(ev);
       return;
     }
 
@@ -2546,6 +2739,12 @@
       saveStateLocal();
       scheduleHabitNotifications();
       toast(state.settings.notifyHabits ? "已開啟習慣提醒" : "已關閉習慣提醒");
+      return;
+    }
+    if (e.target.id === "focusSoundEnabled") {
+      state.settings.focusSoundEnabled = e.target.checked;
+      saveStateLocal();
+      toast(state.settings.focusSoundEnabled ? "已開啟提示音" : "已關閉提示音");
       return;
     }
     if (e.target.id === "autoSyncToggle") {
