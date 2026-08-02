@@ -28,18 +28,20 @@
     </header>
 
     <main>
-      <section class="view active" data-view="today" id="view-today"></section>
-      <section class="view" data-view="habits" id="view-habits"></section>
+      <section class="view active" data-view="habits" id="view-habits"></section>
       <section class="view" data-view="calendar" id="view-calendar"></section>
-      <section class="view" data-view="more" id="view-more"></section>
+      <section class="view" data-view="timetable" id="view-timetable"></section>
+      <section class="view" data-view="countdown" id="view-countdown"></section>
+      <section class="view" data-view="settings" id="view-settings"></section>
     </main>
   </div>
 
   <nav class="nav" id="nav">
-    <button type="button" data-nav="today" class="active"><span class="ico">☀</span>今日</button>
-    <button type="button" data-nav="habits"><span class="ico">✦</span>習慣</button>
+    <button type="button" data-nav="habits" class="active"><span class="ico">✦</span>習慣</button>
     <button type="button" data-nav="calendar"><span class="ico">▦</span>日曆</button>
-    <button type="button" data-nav="more"><span class="ico">☰</span>更多</button>
+    <button type="button" data-nav="timetable"><span class="ico">▤</span>時間表</button>
+    <button type="button" data-nav="countdown"><span class="ico">⏳</span>倒數</button>
+    <button type="button" data-nav="settings"><span class="ico">⚙</span>設定</button>
   </nav>
 
   <div class="modal-backdrop" id="modalBackdrop">
@@ -47,6 +49,7 @@
   </div>
   <div class="toast" id="toast"></div>
 
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="solara.js"></script>
 </body>
 </html>

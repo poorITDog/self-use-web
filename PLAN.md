@@ -6,7 +6,7 @@
 
 | 主功能 | 說明 |
 |--------|------|
-| 習慣追蹤 | 是/否、計時、數量；連擊、達成率、時數 |
+| 習慣追蹤 | 是/否、計時、數量；連續日、達成率、時數；每個習慣獨立月曆格 |
 | 日曆 | 月／週／日；顯示習慣完成同總時數 |
 | 時間表 | 一日時間區塊（朝早／下午／晚上） |
 | 倒數 | 考試、旅行、deadline |
@@ -35,28 +35,26 @@
 - Browser **冇**可靠 iCloud／CloudKit API。
 - 可行替代：匯出 JSON → iOS「檔案」App → iCloud Drive；或手動備份。
 
-### Google Drive（推薦）
-1. **Apps Script JSON 備份（首選自用）**  
-   一個 Web App URL + Token，上傳／下載成個 JSON（類似常見 self-host sync）。
-2. **Drive `appDataFolder` API**  
-   OAuth + 隱藏 App 資料夾；要 Google Cloud Client ID。
-3. **本機匯出／匯入**  
+### Google Drive（推薦：自動同步）
+1. **Drive `appDataFolder` + Google Identity Services（首選）**  
+   連線一次後，改動會自動上傳；開 App 會自動拉取合併。
+2. **本機匯出／匯入**  
    永遠可用，唔依賴帳號。
+3. **Apps Script（進階／舊版）**  
+   手動 URL + Token，只作後備。
 
-**實作優先級：**  
-`localStorage` → JSON 匯出／匯入 → Apps Script 雲端同步（可選填 URL）。
-
-衝突策略：Last-Write-Wins（`updatedAt`／`syncUpdatedAt`）。
+衝突策略：Last-Write-Wins（`syncUpdatedAt`／Drive `modifiedTime`）。
 
 ---
 
 ## 4. 資訊架構
 
 ```
-今日 Today     — 今日習慣、時數摘要、下一個倒數、快捷專注
-習慣 Habits    — 列表／建立／統計／熱力圖
-日曆 Calendar  — 月曆 + 當日時間軸（習慣＋時間區塊＋時數）
-更多 More      — 時間表｜倒數｜專注｜目標｜記帳｜主題｜同步
+習慣 Habits    — 今日記錄 + 每個習慣獨立月曆卡片（日數／時數／連續日）
+日曆 Calendar  — 月曆總覽 + 當日時間軸
+時間表         — 時間區塊
+倒數           — 倒數日子 + 專注番茄鐘
+設定           — 目標、記帳、主題、Google Drive 自動同步
 ```
 
 ---
@@ -96,14 +94,11 @@ transactions[]: { id, type: in|out, amount, category, note, date, updatedAt }
 ## 7. 功能落地順序（每步完先測再下一）
 
 1. Scaffold：shell、nav、storage、主題預設  
-2. 習慣 CRUD + check-in + 連擊／時數  
-3. 日曆（月視圖 + 當日時數／完成）+ 時間表  
-4. 倒數  
-5. 專注 Pomodoro  
-6. 短期／長期目標  
-7. 記帳  
-8. 自訂相片 + 抽色  
-9. 匯出／匯入 + Google Apps Script 同步  
+2. 習慣 CRUD + 每習慣月曆格 + 連續日／時數  
+3. 日曆總覽 + 時間表（獨立分頁）  
+4. 倒數 + 專注  
+5. 目標、記帳、主題  
+6. Google Drive 自動同步（GIS + appDataFolder）  
 
 ---
 
