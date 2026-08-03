@@ -1551,13 +1551,16 @@
     var ym = ui.habitDetailMonth;
     var stat = habitStatTotal(habit);
     var html = '<div class="habit-detail">' +
+      '<div class="sheet-topbar">' +
+      '<button type="button" class="sheet-back" id="hdBack" aria-label="返回習慣主頁">‹ 返回</button>' +
       '<div class="sheet-handle-wrap" aria-hidden="true"><span class="sheet-handle"></span></div>' +
+      '<span class="sheet-topbar-spacer" aria-hidden="true"></span></div>' +
       '<div class="habit-detail-hero" style="--hcolor:' + habit.color + '">' +
       '<span class="dot dot-lg" style="--hcolor:' + habit.color + '"></span>' +
       "<h3>" + esc(habit.name) + "</h3>" +
       '<p class="muted">' + typeLabel(habit.type) + " · " + esc(habit.group || "未分組") +
       (habitTimeLabel(habit) ? " · " + esc(habitTimeLabel(habit)) : "") + "</p>" +
-      '<p class="tiny sheet-pull-hint">向下拉可返回</p></div>' +
+      '<p class="sheet-pull-hint">向下拉亦可返回主頁</p></div>' +
       '<div class="habit-detail-stats">' +
       '<div class="detail-stat"><div class="label">連續天數</div><div class="value">' + streakFor(habit) + "</div></div>" +
       '<div class="detail-stat"><div class="label">本月完成率</div><div class="value">' + monthRate(habit) + "%</div></div>" +
@@ -1587,6 +1590,7 @@
       '<button class="btn warn" data-delete-habit="' + habit.id + '">永久刪除</button>' +
       '<button class="btn ghost" id="hdClose">關閉</button></div></div>';
     openModal(html);
+    document.getElementById("hdBack").onclick = closeModal;
     document.getElementById("hdClose").onclick = closeModal;
   }
 
