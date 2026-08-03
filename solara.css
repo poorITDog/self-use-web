@@ -529,20 +529,20 @@ main {
   font-weight: 700;
   vertical-align: middle;
   background: var(--surface-2);
-  color: var(--text-soft);
-  border: 1px solid var(--line);
+  color: var(--text);
+  border: 1px solid var(--line-strong);
 }
 
 .goal-type-badge.type-cert {
-  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
-  color: var(--accent-2);
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+  background: color-mix(in srgb, var(--accent) 22%, var(--surface));
+  color: #9a4e12;
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
 }
 
 .goal-type-badge.type-outcome {
-  background: color-mix(in srgb, var(--good) 14%, var(--surface));
-  color: var(--good);
-  border-color: color-mix(in srgb, var(--good) 30%, var(--line));
+  background: color-mix(in srgb, var(--good) 18%, var(--surface));
+  color: #17685e;
+  border-color: color-mix(in srgb, var(--good) 35%, var(--line));
 }
 
 .goal-outcome-preview {
