@@ -858,14 +858,79 @@
   }
 
   function openModal(html) {
-    document.getElementById("modal").innerHTML = html;
+    var modal = document.getElementById("modal");
+    modal.style.transform = "";
+    modal.classList.remove("sheet-dragging");
+    modal.innerHTML = html;
     document.getElementById("modalBackdrop").classList.add("open");
   }
 
   function closeModal() {
     ui.habitDetailId = "";
+    var modal = document.getElementById("modal");
+    modal.style.transform = "";
+    modal.classList.remove("sheet-dragging");
     document.getElementById("modalBackdrop").classList.remove("open");
-    document.getElementById("modal").innerHTML = "";
+    modal.innerHTML = "";
+  }
+
+  // Pull sheet down (at scroll top) to dismiss — like iOS bottom sheet back.
+  function bindModalPullDismiss() {
+    var modal = document.getElementById("modal");
+    var backdrop = document.getElementById("modalBackdrop");
+    var startY = 0;
+    var dragY = 0;
+    var tracking = false;
+    var dismissThreshold = 96;
+
+    function sheetScroller() {
+      return modal.querySelector(".habit-detail") || modal;
+    }
+
+    function onPointerDown(e) {
+      if (!backdrop.classList.contains("open")) return;
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      if (sheetScroller().scrollTop > 0) return;
+      startY = e.clientY;
+      dragY = 0;
+      tracking = true;
+    }
+
+    function onPointerMove(e) {
+      if (!tracking) return;
+      if (sheetScroller().scrollTop > 0) {
+        tracking = false;
+        dragY = 0;
+        modal.style.transform = "";
+        modal.classList.remove("sheet-dragging");
+        return;
+      }
+      var dy = e.clientY - startY;
+      if (dy < 0) dy = 0;
+      dragY = dy;
+      if (dy <= 0) return;
+      modal.classList.add("sheet-dragging");
+      modal.style.transform = "translateY(" + dy + "px)";
+      if (e.cancelable) e.preventDefault();
+    }
+
+    function onPointerUp() {
+      if (!tracking) return;
+      tracking = false;
+      modal.classList.remove("sheet-dragging");
+      if (dragY >= dismissThreshold) {
+        modal.style.transform = "";
+        closeModal();
+      } else {
+        modal.style.transform = "";
+      }
+      dragY = 0;
+    }
+
+    modal.addEventListener("pointerdown", onPointerDown);
+    modal.addEventListener("pointermove", onPointerMove, { passive: false });
+    modal.addEventListener("pointerup", onPointerUp);
+    modal.addEventListener("pointercancel", onPointerUp);
   }
 
   document.getElementById("modalBackdrop").addEventListener("click", function (e) {
@@ -876,6 +941,8 @@
     // Ignore Escape while IME is composing Chinese/Japanese input.
     if (e.key === "Escape" && !e.isComposing && e.keyCode !== 229) closeModal();
   });
+
+  bindModalPullDismiss();
 
   function renderTopChips() {
     var chip = document.getElementById("syncChip");
@@ -1484,11 +1551,13 @@
     var ym = ui.habitDetailMonth;
     var stat = habitStatTotal(habit);
     var html = '<div class="habit-detail">' +
+      '<div class="sheet-handle-wrap" aria-hidden="true"><span class="sheet-handle"></span></div>' +
       '<div class="habit-detail-hero" style="--hcolor:' + habit.color + '">' +
       '<span class="dot dot-lg" style="--hcolor:' + habit.color + '"></span>' +
       "<h3>" + esc(habit.name) + "</h3>" +
       '<p class="muted">' + typeLabel(habit.type) + " · " + esc(habit.group || "未分組") +
-      (habitTimeLabel(habit) ? " · " + esc(habitTimeLabel(habit)) : "") + "</p></div>" +
+      (habitTimeLabel(habit) ? " · " + esc(habitTimeLabel(habit)) : "") + "</p>" +
+      '<p class="tiny sheet-pull-hint">向下拉可返回</p></div>' +
       '<div class="habit-detail-stats">' +
       '<div class="detail-stat"><div class="label">連續天數</div><div class="value">' + streakFor(habit) + "</div></div>" +
       '<div class="detail-stat"><div class="label">本月完成率</div><div class="value">' + monthRate(habit) + "%</div></div>" +

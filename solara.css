@@ -1817,6 +1817,13 @@ main {
   border-radius: 20px 20px 0 0;
   padding: 18px;
   animation: slideUp 0.28s var(--ease);
+  transition: transform 0.22s var(--ease);
+  touch-action: pan-y;
+  will-change: transform;
+}
+
+.modal.sheet-dragging {
+  transition: none;
 }
 
 @keyframes slideUp {
@@ -1834,6 +1841,25 @@ main {
 .modal .habit-detail {
   overflow-y: auto;
   max-height: min(92vh, 820px);
+  overscroll-behavior: contain;
+}
+
+.sheet-handle-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 2px;
+}
+
+.sheet-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line-strong);
+}
+
+.sheet-pull-hint {
+  margin: 8px 0 0;
+  color: var(--text-mute);
 }
 
 .modal h3 {
