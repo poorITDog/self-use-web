@@ -1507,7 +1507,7 @@
     html += '<div class="row-actions">' +
       '<button class="btn" data-edit-habit="' + habit.id + '">編輯</button>' +
       '<button class="btn ghost" data-archive-habit="' + habit.id + '">封存</button>' +
-      '<button class="btn warn" data-delete-habit="' + habit.id + '">刪除</button>' +
+      '<button class="btn warn" data-delete-habit="' + habit.id + '">永久刪除</button>' +
       '<button class="btn ghost" id="hdClose">關閉</button></div></div>';
     openModal(html);
     document.getElementById("hdClose").onclick = closeModal;
@@ -1550,16 +1550,19 @@
 
   function archivedHabitsHtml() {
     var archived = state.habits.filter(function (h) { return h.archived; });
-    if (!archived.length) return "";
-    var html = '<div class="archived-habits"><div class="section-title">已封存</div>';
-    archived.forEach(function (h) {
-      html += '<div class="archived-habit-row">' +
-        '<span>' + habitEmoji(h) + esc(h.name) + "</span>" +
-        '<div class="row-actions">' +
-        '<button type="button" class="btn sm soft" data-restore-habit="' + h.id + '">還原</button>' +
-        '<button type="button" class="btn sm warn" data-delete-habit="' + h.id + '">刪除</button>' +
-        "</div></div>";
-    });
+    var html = '<div class="archived-habits"><div class="section-title">已封存（' + archived.length + "）</div>";
+    if (!archived.length) {
+      html += '<p class="muted tiny" style="margin:0">封存的習慣會顯示在這裡，可還原或永久刪除。</p>';
+    } else {
+      archived.forEach(function (h) {
+        html += '<div class="archived-habit-row">' +
+          '<span>' + habitEmoji(h) + esc(h.name) + "</span>" +
+          '<div class="row-actions">' +
+          '<button type="button" class="btn sm soft" data-restore-habit="' + h.id + '">還原</button>' +
+          '<button type="button" class="btn sm warn" data-delete-habit="' + h.id + '">永久刪除</button>' +
+          "</div></div>";
+      });
+    }
     html += "</div>";
     return html;
   }
@@ -1643,6 +1646,7 @@
       (panel === "board" ? "on" : "") + '">儀表板</button></div>';
     if (!active.length) {
       html += emptyHabitsHtml();
+      if (panel === "board") html += archivedHabitsHtml();
     } else if (panel === "board") {
       html += habitBoardHtml(active);
     } else {
@@ -1745,7 +1749,7 @@
       '<div class="row-actions">' +
       '<button class="btn" id="hSave">儲存</button>' +
       (h.id ? '<button class="btn ghost" id="hArchive">封存</button>' : "") +
-      (h.id ? '<button class="btn warn" id="hDelete">刪除</button>' : "") +
+      (h.id ? '<button class="btn warn" id="hDelete">永久刪除</button>' : "") +
       '<button class="btn ghost" id="hCancel">取消</button></div>'
     );
 
@@ -2333,7 +2337,9 @@
         html += '<div class="tt-skel-row"><span class="tt-skel-hour">' + h + '</span><span class="tt-skel-block"></span></div>';
       });
       html += "</div>";
-      html += '<div class="empty compact timetable-empty"><p>當日沒有時間區塊</p>' +
+      html += '<div class="empty compact timetable-empty">' +
+        '<p>這一天還沒有時間表區塊。</p>' +
+        '<p class="muted tiny">可新增上課、通勤、固定會議等每週重複時段。</p>' +
         '<button class="btn sm" data-action="add-block">+ 新增時段</button></div>';
     } else {
       blocks.forEach(function (b) {
@@ -2510,12 +2516,24 @@
       (ui.focus.mode === "focus" ? "切去休息" : "切去專注") + "</button></div>";
     var todayFocus = state.focusSessions.filter(function (s) { return dateKey(s.startedAt) === todayKey(); });
     var sum = todayFocus.reduce(function (a, s) { return a + Number(s.minutes || 0); }, 0);
-    html += '<div class="focus-stats">今天專注 ' + todayFocus.length + " 次 · " + fmtMin(sum) + "</div>";
+    var weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    var weekSum = 0;
+    var weekCount = 0;
+    state.focusSessions.forEach(function (s) {
+      var d = new Date(s.startedAt);
+      if (d >= weekStart) {
+        weekSum += Number(s.minutes || 0);
+        weekCount++;
+      }
+    });
+    html += '<div class="focus-stats">今天 ' + todayFocus.length + " 次 · " + fmtMin(sum) +
+      " · 本週 " + weekCount + " 次 · " + fmtMin(weekSum) + "</div>";
     var recent = state.focusSessions.slice().sort(function (a, b) {
       return Number(b.startedAt) - Number(a.startedAt);
     }).slice(0, 8);
+    html += '<div class="focus-history"><div class="section-title">最近專注</div>';
     if (recent.length) {
-      html += '<div class="focus-history"><div class="section-title">最近專注</div>';
       recent.forEach(function (s) {
         var habit = s.habitId ? state.habits.find(function (h) { return h.id === s.habitId; }) : null;
         html += '<div class="focus-history-row"><div><strong>' + fmtMin(s.minutes) + "</strong>" +
@@ -2523,10 +2541,12 @@
           (habit ? " · " + esc(habit.name) : "") + "</span></div>" +
           '<button type="button" class="btn sm ghost" data-delete-focus="' + s.id + '">刪除</button></div>';
       });
-      html += "</div>";
     } else {
-      html += '<div class="focus-history"><p class="muted tiny" style="margin:8px 0 0">完成一輪番茄鐘後，記錄會顯示在這裡。</p></div>';
+      html += '<div class="empty compact" style="padding:16px 8px">' +
+        "<p>尚無專注紀錄</p>" +
+        '<p class="muted tiny">按「開始」完成一輪番茄鐘後，這裡會列出時間與可刪除紀錄。</p></div>';
     }
+    html += "</div>";
     return html;
   }
 
@@ -2663,14 +2683,19 @@
     return '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%">' +
       '<span class="settings-row-label"><strong>' + esc(g.title) + "</strong></span>" +
-      '<span class="settings-row-value">' + g.current + " / " + g.target + " " + esc(g.unit || "") + "</span></div>" +
+      '<span class="settings-row-value">' + g.current + " / " + g.target + " " + esc(g.unit || "") +
+      " · " + pct + "%</span></div>" +
       (g.dueAt ? '<div class="tiny">期限 ' + dateKey(g.dueAt) + "</div>" : "") +
       habitLine +
+      '<div class="goal-progress-wrap">' +
       '<div class="progress"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="goal-pct-ring" style="--p:' + pct + '%" aria-label="完成 ' + pct + '%"><span>' + pct + "%</span></div>" +
+      "</div>" +
       '<div class="row-actions" style="margin-top:6px">' +
       '<button class="btn sm soft" data-goal-plus="' + g.id + '">+1</button>' +
       (habit ? '<button class="btn sm soft" data-goal-check="' + g.id + '">打卡並 +1</button>' : "") +
-      '<button class="btn sm ghost" data-edit-goal="' + g.id + '">編輯</button></div></div>';
+      '<button class="btn sm ghost" data-edit-goal="' + g.id + '">編輯</button>' +
+      '<button class="btn sm warn" data-delete-goal="' + g.id + '">刪除</button></div></div>';
   }
 
   function openGoalEditor(kind, item) {
@@ -3113,6 +3138,18 @@
       var fid = deleteFocus.getAttribute("data-delete-focus");
       if (window.confirm("刪除這筆專注紀錄？")) {
         state.focusSessions = state.focusSessions.filter(function (s) { return s.id !== fid; });
+        saveState();
+        toast("已刪除");
+        render();
+      }
+      return;
+    }
+
+    var deleteGoal = t.closest("[data-delete-goal]");
+    if (deleteGoal) {
+      var dgid = deleteGoal.getAttribute("data-delete-goal");
+      if (window.confirm("確定刪除此目標？")) {
+        state.goals = state.goals.filter(function (x) { return x.id !== dgid; });
         saveState();
         toast("已刪除");
         render();
