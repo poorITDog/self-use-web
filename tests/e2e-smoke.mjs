@@ -274,13 +274,17 @@ const dayPanel = await page.$eval(".day-panel", (el) => el.textContent);
 await assert(dayPanel.includes("每週站會"), "recurring event appears on selected day");
 await assert(dayPanel.includes("每週"), "recurring event shows weekly label");
 
-// goals can link to habits
+// goals can link to habits; cert/hours; finished → achievement list
 await page.click('[data-nav="settings"]');
 await page.click('[data-settings="goals"]');
 await page.waitForSelector('[data-action="add-goal-short"]');
 await page.click('[data-action="add-goal-short"]');
 await page.waitForSelector("#gHabit");
+await page.waitForSelector("#gType");
 await page.type("#gTitle", "跑步目標");
+await page.select("#gType", "outcome");
+await page.select("#gUnitMode", "count");
+await page.type("#gOutcome", "成為穩定完賽跑者");
 const habitOpts = await page.$$eval("#gHabit option", (opts) => opts.map((o) => o.value).filter(Boolean));
 await assert(habitOpts.length > 0, "goal editor lists habits to link");
 await page.select("#gHabit", habitOpts[0]);
@@ -289,7 +293,29 @@ await page.waitForFunction(() => !document.getElementById("modalBackdrop").class
 const goalsBody = await page.$eval("#settingsBody", (el) => el.textContent);
 await assert(goalsBody.includes("跑步目標"), "goal saved");
 await assert(goalsBody.includes("連結習慣"), "goal shows linked habit");
+await assert(goalsBody.includes("成果"), "goal shows outcome type badge");
 await assert(!!(await page.$("[data-goal-check]")), "goal has check-and-plus when habit linked");
+
+// hours + cert goal, finish into achievements
+await page.waitForSelector('[data-action="add-goal-long"]');
+await page.evaluate(() => document.querySelector('[data-action="add-goal-long"]').click());
+await page.waitForSelector("#modalBackdrop.open #gTitle");
+await page.evaluate(() => {
+  document.getElementById("gTitle").value = "AWS SAA 證書";
+  document.getElementById("gType").value = "cert";
+  document.getElementById("gUnitMode").value = "hours";
+  document.getElementById("gCur").value = "40";
+  document.getElementById("gTarget").value = "40";
+  document.getElementById("gOutcome").value = "取得 AWS Solutions Architect Associate";
+  document.getElementById("gSave").click();
+});
+await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
+await page.waitForSelector(".achievements-group");
+const achieveBody = await page.$eval("#settingsBody", (el) => el.textContent);
+await assert(achieveBody.includes("成就列表"), "achievements section renders");
+await assert(achieveBody.includes("AWS SAA 證書"), "finished cert goal appears in achievements");
+await assert(achieveBody.includes("取得 AWS Solutions Architect Associate"), "achievement shows outcome text");
+await assert(!!(await page.$("[data-goal-reopen]")), "achievement has reopen control");
 
 // global quick-add FAB
 await page.click('[data-nav="habits"]');

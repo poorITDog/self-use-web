@@ -520,6 +520,102 @@ main {
   color: var(--accent-2);
 }
 
+.goal-type-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: var(--radius-xs);
+  font-size: 0.68rem;
+  font-weight: 700;
+  vertical-align: middle;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+}
+
+.goal-type-badge.type-cert {
+  background: color-mix(in srgb, var(--accent) 22%, var(--surface));
+  color: #9a4e12;
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+}
+
+.goal-type-badge.type-outcome {
+  background: color-mix(in srgb, var(--good) 18%, var(--surface));
+  color: #17685e;
+  border-color: color-mix(in srgb, var(--good) 35%, var(--line));
+}
+
+.goal-outcome-preview {
+  color: var(--text-soft);
+  margin-top: 2px;
+}
+
+.achievements-group .achievement-row {
+  gap: 4px;
+}
+
+.achievement-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+}
+
+.achievement-mark {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, var(--accent), var(--accent-2));
+  color: #fff;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.achievement-body { min-width: 0; flex: 1; }
+
+.achievement-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.achievement-outcome {
+  margin-top: 4px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.achievement-row {
+  border-left: 3px solid var(--accent-2);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  transition: background 0.18s var(--ease), transform 0.18s var(--ease);
+}
+
+.achievement-row:hover {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
+.goal-row {
+  transition: background 0.15s var(--ease);
+}
+
+.goal-row .settings-row-label strong {
+  font-size: 0.98rem;
+}
+
+.achievement-mark {
+  transition: transform 0.18s var(--ease);
+}
+
+.achievement-row:hover .achievement-mark {
+  transform: scale(1.06);
+}
+
 .goals-strip {
   margin: 0 0 12px;
   padding: 12px 14px;

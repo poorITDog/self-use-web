@@ -16,6 +16,11 @@ import {
   countdownDaysLeft,
   eventOccursOn,
   eventRepeatLabel,
+  normalizeGoal,
+  maybeFinishGoal,
+  isGoalFinished,
+  goalUnitLabel,
+  goalTypeLabel,
 } from "../solara-core.mjs";
 
 function test(name, fn) {
@@ -217,7 +222,52 @@ run("normalizeState fills event repeat and goal habitId", () => {
   });
   assert.equal(s.events[0].repeat, "none");
   assert.equal(s.goals[0].habitId, "");
+  assert.equal(s.goals[0].goalType, "general");
+  assert.equal(s.goals[0].unitMode, "count");
   assert.equal(s.settings.notifyEvents, true);
+});
+
+run("normalizeGoal maps hours and cert fields", () => {
+  const g = normalizeGoal({ title: "AWS", unit: "小時", goalType: "cert", outcome: "SAA" });
+  assert.equal(g.unitMode, "hours");
+  assert.equal(goalUnitLabel(g), "小時");
+  assert.equal(goalTypeLabel(g.goalType), "證書");
+  assert.equal(g.outcome, "SAA");
+});
+
+run("maybeFinishGoal marks achievement when target reached", () => {
+  const g = normalizeGoal({ title: "Pro", current: 9, target: 10, goalType: "outcome" });
+  assert.equal(maybeFinishGoal(g, 1_700_000_000_000), false);
+  g.current = 10;
+  assert.equal(maybeFinishGoal(g, 1_700_000_000_000), true);
+  assert.equal(isGoalFinished(g), true);
+  assert.equal(g.finishedAt, 1_700_000_000_000);
+});
+
+run("hours goal same-day delta math accumulates", () => {
+  // Mirrors bumpLinkedGoals hours path: replace previous same-day amount.
+  const g = normalizeGoal({
+    title: "練琴",
+    unitMode: "hours",
+    current: 0,
+    target: 2,
+    lastBumpKey: "",
+    lastBumpAmount: 0,
+  });
+  const apply = (mins, key) => {
+    const hoursNow = Math.round((mins / 60) * 100) / 100;
+    const prev = g.lastBumpKey === key ? (Number(g.lastBumpAmount) || 0) : 0;
+    g.current = Math.round((Number(g.current) - prev + hoursNow) * 100) / 100;
+    g.lastBumpKey = key;
+    g.lastBumpAmount = hoursNow;
+  };
+  apply(30, "2026-08-03");
+  assert.equal(g.current, 0.5);
+  apply(90, "2026-08-03");
+  assert.equal(g.current, 1.5);
+  apply(30, "2026-08-04");
+  assert.equal(g.current, 2);
+  assert.equal(maybeFinishGoal(g, 123), true);
 });
 
 console.log("\n" + passed + " passed, " + failed + " failed");
