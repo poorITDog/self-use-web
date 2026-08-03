@@ -16,6 +16,11 @@ import {
   countdownDaysLeft,
   eventOccursOn,
   eventRepeatLabel,
+  normalizeGoal,
+  maybeFinishGoal,
+  isGoalFinished,
+  goalUnitLabel,
+  goalTypeLabel,
 } from "../solara-core.mjs";
 
 function test(name, fn) {
@@ -217,7 +222,26 @@ run("normalizeState fills event repeat and goal habitId", () => {
   });
   assert.equal(s.events[0].repeat, "none");
   assert.equal(s.goals[0].habitId, "");
+  assert.equal(s.goals[0].goalType, "general");
+  assert.equal(s.goals[0].unitMode, "count");
   assert.equal(s.settings.notifyEvents, true);
+});
+
+run("normalizeGoal maps hours and cert fields", () => {
+  const g = normalizeGoal({ title: "AWS", unit: "小時", goalType: "cert", outcome: "SAA" });
+  assert.equal(g.unitMode, "hours");
+  assert.equal(goalUnitLabel(g), "小時");
+  assert.equal(goalTypeLabel(g.goalType), "證書");
+  assert.equal(g.outcome, "SAA");
+});
+
+run("maybeFinishGoal marks achievement when target reached", () => {
+  const g = normalizeGoal({ title: "Pro", current: 9, target: 10, goalType: "outcome" });
+  assert.equal(maybeFinishGoal(g, 1_700_000_000_000), false);
+  g.current = 10;
+  assert.equal(maybeFinishGoal(g, 1_700_000_000_000), true);
+  assert.equal(isGoalFinished(g), true);
+  assert.equal(g.finishedAt, 1_700_000_000_000);
 });
 
 console.log("\n" + passed + " passed, " + failed + " failed");

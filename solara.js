@@ -192,12 +192,7 @@
         until: (ev && ev.until) || ""
       });
     });
-    out.goals = out.goals.map(function (g) {
-      return Object.assign({ habitId: "", unit: "", current: 0, target: 1, lastBumpKey: "" }, g || {}, {
-        habitId: (g && g.habitId) || "",
-        lastBumpKey: (g && g.lastBumpKey) || ""
-      });
-    });
+    out.goals = out.goals.map(function (g) { return normalizeGoal(g); });
     if (Array.isArray(data.transactions)) out.transactions = data.transactions;
     out.syncUpdatedAt = Number(out.syncUpdatedAt) || 0;
     out.syncBaseAt = Number(out.syncBaseAt) || 0;
@@ -997,26 +992,107 @@
     return "完成";
   }
 
+  function normalizeGoal(g) {
+    var raw = g || {};
+    var unitMode = raw.unitMode || "";
+    var unitRaw = String(raw.unit || "").trim();
+    if (!unitMode) {
+      if (unitRaw === "小時" || unitRaw === "hours" || unitRaw === "hr" || unitRaw === "小時數") {
+        unitMode = "hours";
+      } else if (!unitRaw || unitRaw === "次" || unitRaw === "count") {
+        unitMode = "count";
+      } else {
+        unitMode = "custom";
+      }
+    }
+    var unit = unitRaw;
+    if (unitMode === "hours") unit = unit || "小時";
+    if (unitMode === "count") unit = unit || "次";
+    return Object.assign({
+      habitId: "",
+      unit: "",
+      unitMode: "count",
+      current: 0,
+      target: 1,
+      kind: "short",
+      goalType: "general",
+      outcome: "",
+      finishedAt: null,
+      lastBumpKey: ""
+    }, raw, {
+      habitId: raw.habitId || "",
+      unitMode: unitMode,
+      unit: unit,
+      goalType: raw.goalType || "general",
+      outcome: raw.outcome || "",
+      finishedAt: raw.finishedAt ? Number(raw.finishedAt) || null : null,
+      lastBumpKey: raw.lastBumpKey || "",
+      current: Number(raw.current) || 0,
+      target: Math.max(1, Number(raw.target) || 1)
+    });
+  }
+
+  function isGoalFinished(g) { return !!(g && g.finishedAt); }
+  function isGoalOpen(g) { return !isGoalFinished(g); }
+
+  function goalUnitLabel(g) {
+    if (!g) return "";
+    if (g.unitMode === "hours") return "小時";
+    if (g.unitMode === "count") return "次";
+    return g.unit || "";
+  }
+
+  function goalTypeLabel(t) {
+    if (t === "cert") return "證書";
+    if (t === "outcome") return "成果";
+    return "一般";
+  }
+
+  function maybeFinishGoal(g) {
+    if (!g || g.finishedAt) return false;
+    if (Number(g.current) < Number(g.target || 1)) return false;
+    g.current = Math.max(Number(g.current) || 0, Number(g.target) || 1);
+    g.finishedAt = Date.now();
+    touch(g);
+    return true;
+  }
+
+  function reopenGoal(g) {
+    if (!g) return;
+    g.finishedAt = null;
+    touch(g);
+  }
+
   // Bump linked goals once per day when habit becomes done.
-  function bumpLinkedGoals(habitId, key) {
+  function bumpLinkedGoals(habit, key) {
     var names = [];
+    var finishedNames = [];
     state.goals.forEach(function (g) {
-      if (g.habitId !== habitId) return;
+      if (g.habitId !== habit.id) return;
+      if (g.finishedAt) return;
       if (g.lastBumpKey === key) return;
-      g.current = Number(g.current) + 1;
+      var add = 1;
+      if (g.unitMode === "hours" && habit.type === "duration") {
+        var c = getCheckin(habit.id, key);
+        var mins = Number((c && (c.minutes || c.value)) || 0);
+        if (mins > 0) add = Math.round((mins / 60) * 100) / 100;
+      }
+      g.current = Math.round((Number(g.current) + add) * 100) / 100;
       g.lastBumpKey = key;
       touch(g);
       names.push(g.title);
+      if (maybeFinishGoal(g)) finishedNames.push(g.title);
     });
-    return names;
+    return { bumped: names, finished: finishedNames };
   }
 
   function afterHabitCompleted(habit, key) {
-    var bumped = bumpLinkedGoals(habit.id, key);
+    var result = bumpLinkedGoals(habit, key);
     var s = streakFor(habit);
     var parts = [];
     if (s === 7 || s === 30 || s === 100) parts.push(habit.name + " 連續 " + s + " 天");
-    if (bumped.length) parts.push("目標進度 +" + bumped.length);
+    if (result.bumped.length) parts.push("目標進度 +" + result.bumped.length);
+    if (result.finished.length) parts.push("成就解鎖：" + result.finished.join("、"));
     if (parts.length) toast(parts.join(" · "));
   }
 
@@ -1516,13 +1592,17 @@
   }
 
   function linkedGoalBadgeHtml(habit) {
-    var gs = state.goals.filter(function (g) { return g.habitId === habit.id; });
+    var gs = state.goals.filter(function (g) {
+      return g.habitId === habit.id && isGoalOpen(g);
+    });
     if (!gs.length) return "";
     var html = '<div class="habit-goal-badges">';
     gs.slice(0, 2).forEach(function (g) {
       var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
+      var unit = goalUnitLabel(g);
       html += '<div class="habit-goal-badge"><span>' + esc(g.title) + "</span>" +
-        '<span class="muted tiny">' + g.current + "/" + g.target + " · " + pct + "%</span>" +
+        '<span class="muted tiny">' + g.current + "/" + g.target +
+        (unit ? " " + unit : "") + " · " + pct + "%</span>" +
         '<div class="progress-bar-slim"><i style="width:' + pct + '%"></i></div></div>';
     });
     html += "</div>";
@@ -1803,9 +1883,14 @@
       html += '<div class="section-title" style="padding-top:8px">連結目標</div><div class="habit-linked-goals">';
       linkedGoals.forEach(function (g) {
         var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
+        var unit = goalUnitLabel(g);
         html += '<div class="habit-linked-goal"><strong>' + esc(g.title) + "</strong>" +
-          '<span class="muted tiny">' + g.current + " / " + g.target + " " + esc(g.unit || "") +
-          " · " + pct + "%</span></div>";
+          ' <span class="goal-type-badge type-' + escAttr(g.goalType || "general") + '">' +
+          goalTypeLabel(g.goalType) + (isGoalFinished(g) ? " · 成就" : "") + "</span>" +
+          '<span class="muted tiny">' + g.current + " / " + g.target +
+          (unit ? " " + esc(unit) : "") + " · " + pct + "%</span>" +
+          (g.outcome ? '<span class="tiny">' + esc(g.outcome) + "</span>" : "") +
+          "</div>";
       });
       html += "</div>";
     }
@@ -1898,9 +1983,7 @@
   }
 
   function activeGoalsStripHtml() {
-    var open = state.goals.filter(function (g) {
-      return Number(g.current) < Number(g.target || 1);
-    }).slice(0, 3);
+    var open = state.goals.filter(isGoalOpen).slice(0, 3);
     if (!open.length) return "";
     var html = '<div class="goals-strip">';
     html += '<div class="goals-strip-head"><span class="section-title">進行中目標</span>' +
@@ -1908,10 +1991,13 @@
     open.forEach(function (g) {
       var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
       var habit = g.habitId ? state.habits.find(function (h) { return h.id === g.habitId; }) : null;
+      var unit = goalUnitLabel(g);
       html += '<button type="button" class="goals-strip-item" data-edit-goal="' + g.id + '">' +
         '<div class="goals-strip-top"><strong>' + esc(g.title) + "</strong>" +
-        '<span class="muted tiny">' + g.current + "/" + g.target + " · " + pct + "%</span></div>" +
-        (habit ? '<div class="tiny goal-habit-link">' + esc(habit.name) + "</div>" : "") +
+        '<span class="muted tiny">' + g.current + "/" + g.target + (unit ? " " + unit : "") +
+        " · " + pct + "%</span></div>" +
+        '<div class="tiny">' + goalTypeLabel(g.goalType) +
+        (habit ? ' · <span class="goal-habit-link">' + esc(habit.name) + "</span>" : "") + "</div>" +
         '<div class="goal-progress-wrap">' +
         '<div class="progress-bar-slim"><i style="width:' + pct + '%"></i></div>' +
         '<div class="goal-pct-ring" style="--p:' + pct + '%" aria-label="完成 ' + pct + '%"><span>' + pct +
@@ -2993,15 +3079,26 @@
 
   function renderGoalsPanel() {
     var html = '<div class="settings-group"><div class="settings-group-title">短期目標</div>';
-    var shorts = state.goals.filter(function (g) { return g.kind === "short"; });
-    if (!shorts.length) html += '<div class="settings-row"><span class="settings-row-label muted">尚無短期目標</span></div>';
+    var shorts = state.goals.filter(function (g) { return g.kind === "short" && isGoalOpen(g); });
+    if (!shorts.length) html += '<div class="settings-row"><span class="settings-row-label muted">尚無進行中短期目標</span></div>';
     else shorts.forEach(function (g) { html += goalRow(g); });
     html += '<div class="settings-row"><button class="btn sm soft block" data-action="add-goal-short">+ 新增短期目標</button></div>';
     html += '</div><div class="settings-group"><div class="settings-group-title">長期目標</div>';
-    var longs = state.goals.filter(function (g) { return g.kind === "long"; });
-    if (!longs.length) html += '<div class="settings-row"><span class="settings-row-label muted">尚無長期目標</span></div>';
+    var longs = state.goals.filter(function (g) { return g.kind === "long" && isGoalOpen(g); });
+    if (!longs.length) html += '<div class="settings-row"><span class="settings-row-label muted">尚無進行中長期目標</span></div>';
     else longs.forEach(function (g) { html += goalRow(g); });
-    html += '<div class="settings-row"><button class="btn sm soft block" data-action="add-goal-long">+ 新增長期目標</button></div>';
+    html += '<div class="settings-row"><button class="btn sm soft block" data-action="add-goal-long">+ 新增長期目標</button></div></div>';
+
+    var achievements = state.goals.filter(isGoalFinished).sort(function (a, b) {
+      return Number(b.finishedAt) - Number(a.finishedAt);
+    });
+    html += '<div class="settings-group achievements-group"><div class="settings-group-title">成就列表</div>';
+    if (!achievements.length) {
+      html += '<div class="settings-row"><span class="settings-row-label muted">' +
+        "完成目標後會出現在這裡，例如 AWS 證書或職業成果。</span></div>";
+    } else {
+      achievements.forEach(function (g) { html += achievementRow(g); });
+    }
     html += "</div>";
     return html;
   }
@@ -3009,15 +3106,20 @@
   function goalRow(g) {
     var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
     var habit = g.habitId ? state.habits.find(function (h) { return h.id === g.habitId; }) : null;
+    var unit = goalUnitLabel(g);
+    var plusLabel = g.unitMode === "hours" ? "+1 小時" : "+1";
     var habitLine = habit
       ? '<div class="tiny goal-habit-link">連結習慣：' + esc(habit.name) +
         (isHabitDone(habit, todayKey()) ? " · 今日已打卡" : " · 今日未打卡") + "</div>"
       : "";
-    return '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
+    return '<div class="settings-row goal-row" style="flex-direction:column;align-items:stretch">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%">' +
-      '<span class="settings-row-label"><strong>' + esc(g.title) + "</strong></span>" +
-      '<span class="settings-row-value">' + g.current + " / " + g.target + " " + esc(g.unit || "") +
-      " · " + pct + "%</span></div>" +
+      '<span class="settings-row-label"><strong>' + esc(g.title) + "</strong>" +
+      ' <span class="goal-type-badge type-' + escAttr(g.goalType || "general") + '">' +
+      goalTypeLabel(g.goalType) + "</span></span>" +
+      '<span class="settings-row-value">' + g.current + " / " + g.target +
+      (unit ? " " + esc(unit) : "") + " · " + pct + "%</span></div>" +
+      (g.outcome ? '<div class="tiny goal-outcome-preview">成果：' + esc(g.outcome) + "</div>" : "") +
       (g.dueAt ? '<div class="tiny">期限 ' + dateKey(g.dueAt) + "</div>" : "") +
       habitLine +
       '<div class="goal-progress-wrap">' +
@@ -3025,61 +3127,125 @@
       '<div class="goal-pct-ring" style="--p:' + pct + '%" aria-label="完成 ' + pct + '%"><span>' + pct + "%</span></div>" +
       "</div>" +
       '<div class="row-actions" style="margin-top:6px">' +
-      '<button class="btn sm soft" data-goal-plus="' + g.id + '">+1</button>' +
-      (habit ? '<button class="btn sm soft" data-goal-check="' + g.id + '">打卡並 +1</button>' : "") +
+      '<button class="btn sm soft" data-goal-plus="' + g.id + '">' + plusLabel + "</button>" +
+      (habit ? '<button class="btn sm soft" data-goal-check="' + g.id + '">打卡並推進</button>' : "") +
+      '<button class="btn sm soft" data-goal-finish="' + g.id + '">標記完成</button>' +
       '<button class="btn sm ghost" data-edit-goal="' + g.id + '">編輯</button>' +
       '<button class="btn sm warn" data-delete-goal="' + g.id + '">刪除</button></div></div>';
   }
 
+  function achievementRow(g) {
+    var unit = goalUnitLabel(g);
+    var when = g.finishedAt ? new Date(g.finishedAt).toLocaleDateString("zh-HK") : "";
+    return '<div class="settings-row achievement-row" style="flex-direction:column;align-items:stretch">' +
+      '<div class="achievement-head">' +
+      '<span class="achievement-mark" aria-hidden="true">★</span>' +
+      '<div class="achievement-body">' +
+      '<div class="achievement-title"><strong>' + esc(g.title) + "</strong>" +
+      ' <span class="goal-type-badge type-' + escAttr(g.goalType || "general") + '">' +
+      goalTypeLabel(g.goalType) + "</span></div>" +
+      '<div class="tiny">' + g.current + " / " + g.target + (unit ? " " + esc(unit) : "") +
+      (when ? " · 完成於 " + when : "") + "</div>" +
+      (g.outcome ? '<div class="achievement-outcome">' + esc(g.outcome) + "</div>" : "") +
+      "</div></div>" +
+      '<div class="row-actions" style="margin-top:6px">' +
+      '<button class="btn sm ghost" data-edit-goal="' + g.id + '">查看／編輯</button>' +
+      '<button class="btn sm soft" data-goal-reopen="' + g.id + '">移回進行中</button>' +
+      '<button class="btn sm warn" data-delete-goal="' + g.id + '">刪除</button></div></div>';
+  }
+
   function openGoalEditor(kind, item) {
-    var g = item || {
-      id: "", title: "", kind: kind || "short", target: 10, current: 0, unit: "", dueAt: "", habitId: ""
-    };
+    var g = normalizeGoal(item || {
+      id: "", title: "", kind: kind || "short", target: 10, current: 0,
+      unitMode: "count", unit: "次", dueAt: "", habitId: "", goalType: "general", outcome: ""
+    });
     var due = g.dueAt ? dateKey(g.dueAt) : "";
     var habitOpts = '<option value="">— 不連結 —</option>' +
       state.habits.filter(function (h) { return !h.archived; }).map(function (h) {
         return opt(h.id, h.name, g.habitId || "");
       }).join("");
+    var typeOpts =
+      opt("general", "一般目標", g.goalType) +
+      opt("cert", "證書（如 AWS）", g.goalType) +
+      opt("outcome", "成果（如職業／頭銜）", g.goalType);
+    var unitOpts =
+      opt("count", "次數", g.unitMode) +
+      opt("hours", "小時", g.unitMode) +
+      opt("custom", "自訂單位", g.unitMode);
     openModal(
       "<h3>" + (g.id ? "編輯目標" : (g.kind === "long" ? "新增長期目標" : "新增短期目標")) + "</h3>" +
-      '<div class="field"><label>標題</label><input id="gTitle" value="' + escAttr(g.title) + '" /></div>' +
-      '<div class="grid-2"><div class="field"><label>目前</label><input id="gCur" type="number" value="' + g.current + '" /></div>' +
-      '<div class="field"><label>目標</label><input id="gTarget" type="number" value="' + g.target + '" /></div></div>' +
-      '<div class="field"><label>單位</label><input id="gUnit" value="' + escAttr(g.unit || "") + '" placeholder="頁 / km / 次" /></div>' +
+      '<div class="field"><label>標題</label><input id="gTitle" value="' + escAttr(g.title) +
+      '" placeholder="例如：取得 AWS SAA 證書" /></div>' +
+      '<div class="field"><label>類型</label><select id="gType">' + typeOpts + "</select></div>" +
+      '<div class="grid-2"><div class="field"><label>目前進度</label><input id="gCur" type="number" step="0.1" value="' +
+      g.current + '" /></div>' +
+      '<div class="field"><label>目標數值</label><input id="gTarget" type="number" step="0.1" value="' +
+      g.target + '" /></div></div>' +
+      '<div class="field"><label>計算單位</label><select id="gUnitMode">' + unitOpts + "</select></div>" +
+      '<div class="field" id="gUnitCustomWrap"' + (g.unitMode === "custom" ? "" : ' style="display:none"') +
+      '><label>自訂單位名稱</label><input id="gUnit" value="' + escAttr(g.unitMode === "custom" ? g.unit : "") +
+      '" placeholder="頁 / km / 場" /></div>' +
+      '<div class="field"><label>成果／結果（可選）</label><textarea id="gOutcome" rows="2" placeholder="例如：拿到 AWS Solutions Architect Associate；或成為職業聯賽選手">' +
+      esc(g.outcome || "") + "</textarea></div>" +
       '<div class="field"><label>期限（可選）</label><input id="gDue" type="date" value="' + due + '" /></div>' +
-      '<div class="field"><label>連結習慣（可選）</label><select id="gHabit">' + habitOpts + "</select></div>" +
+      '<div class="field"><label>連結習慣（可選）</label><select id="gHabit">' + habitOpts + "</select>" +
+      '<p class="tiny muted" style="margin:6px 0 0">小時目標若連結「計時」習慣，打卡會按分鐘換算成小時。</p></div>' +
       '<div class="row-actions"><button class="btn" id="gSave">儲存</button>' +
       (g.id ? '<button class="btn warn" id="gDel">刪除</button>' : "") +
       '<button class="btn ghost" id="gCancel">取消</button></div>'
     );
+    var unitModeEl = document.getElementById("gUnitMode");
+    var customWrap = document.getElementById("gUnitCustomWrap");
+    unitModeEl.onchange = function () {
+      customWrap.style.display = unitModeEl.value === "custom" ? "" : "none";
+    };
     document.getElementById("gCancel").onclick = closeModal;
     document.getElementById("gSave").onclick = function () {
       var title = document.getElementById("gTitle").value.trim();
       if (!title) return toast("請輸入標題");
       var dueVal = document.getElementById("gDue").value;
-      var payload = {
+      var unitMode = document.getElementById("gUnitMode").value || "count";
+      var unit = unitMode === "hours" ? "小時" : unitMode === "count" ? "次" :
+        document.getElementById("gUnit").value.trim();
+      if (unitMode === "custom" && !unit) return toast("請輸入自訂單位");
+      var payload = normalizeGoal({
         title: title,
         kind: g.kind,
+        goalType: document.getElementById("gType").value || "general",
         current: Number(document.getElementById("gCur").value) || 0,
         target: Number(document.getElementById("gTarget").value) || 1,
-        unit: document.getElementById("gUnit").value.trim(),
+        unitMode: unitMode,
+        unit: unit,
+        outcome: document.getElementById("gOutcome").value.trim(),
         dueAt: dueVal ? parseKey(dueVal).getTime() : null,
-        habitId: document.getElementById("gHabit").value || ""
-      };
+        habitId: document.getElementById("gHabit").value || "",
+        finishedAt: g.finishedAt || null,
+        lastBumpKey: g.lastBumpKey || ""
+      });
+      var target = state.goals;
       if (g.id) {
-        Object.assign(g, payload);
-        touch(g);
+        var existing = state.goals.find(function (x) { return x.id === g.id; });
+        if (existing) {
+          Object.assign(existing, payload);
+          if (Number(existing.current) < Number(existing.target)) existing.finishedAt = null;
+          else maybeFinishGoal(existing);
+          touch(existing);
+        }
       } else {
-        state.goals.push(touch(Object.assign({ id: uid() }, payload)));
+        var created = touch(Object.assign({ id: uid() }, payload));
+        maybeFinishGoal(created);
+        state.goals.push(created);
       }
       saveState();
       closeModal();
-      toast("目標已儲存");
+      var doneNow = Number(payload.current) >= Number(payload.target);
+      toast(doneNow ? "已存入成就列表" : "目標已儲存");
       render();
     };
     if (g.id) {
       document.getElementById("gDel").onclick = function () {
         if (!window.confirm("確定刪除此目標？")) return;
+        markTombstone(g.id);
         state.goals = state.goals.filter(function (x) { return x.id !== g.id; });
         saveState();
         closeModal();
@@ -3092,7 +3258,7 @@
   // Mark linked yes/no habit done for today; linked goals bump via afterHabitCompleted.
   function goalCheckAndPlus(goalId) {
     var goal = state.goals.find(function (x) { return x.id === goalId; });
-    if (!goal) return;
+    if (!goal || goal.finishedAt) return;
     var key = todayKey();
     if (goal.habitId) {
       var habit = state.habits.find(function (h) { return h.id === goal.habitId; });
@@ -3112,11 +3278,12 @@
         return;
       }
     }
-    goal.current = Number(goal.current) + 1;
+    goal.current = Math.round((Number(goal.current) + 1) * 100) / 100;
     touch(goal);
+    var finished = maybeFinishGoal(goal);
     saveState();
     render();
-    toast("已更新目標進度");
+    toast(finished ? "成就解鎖：" + goal.title : "已更新目標進度");
   }
 
   function renderNotifyPanel() {
@@ -3483,6 +3650,7 @@
     if (deleteGoal) {
       var dgid = deleteGoal.getAttribute("data-delete-goal");
       if (window.confirm("確定刪除此目標？")) {
+        markTombstone(dgid);
         state.goals = state.goals.filter(function (x) { return x.id !== dgid; });
         saveState();
         toast("已刪除");
@@ -3554,11 +3722,42 @@
     if (goalPlus) {
       var gid = goalPlus.getAttribute("data-goal-plus");
       var goal = state.goals.find(function (x) { return x.id === gid; });
-      if (goal) {
-        goal.current = Number(goal.current) + 1;
+      if (goal && !goal.finishedAt) {
+        goal.current = Math.round((Number(goal.current) + 1) * 100) / 100;
         touch(goal);
+        var fin = maybeFinishGoal(goal);
         saveState();
         render();
+        toast(fin ? "成就解鎖：" + goal.title : "已更新目標進度");
+      }
+      return;
+    }
+
+    var goalFinish = t.closest("[data-goal-finish]");
+    if (goalFinish) {
+      var fg = state.goals.find(function (x) {
+        return x.id === goalFinish.getAttribute("data-goal-finish");
+      });
+      if (fg && !fg.finishedAt) {
+        fg.current = Math.max(Number(fg.current) || 0, Number(fg.target) || 1);
+        maybeFinishGoal(fg);
+        saveState();
+        render();
+        toast("成就解鎖：" + fg.title);
+      }
+      return;
+    }
+
+    var goalReopen = t.closest("[data-goal-reopen]");
+    if (goalReopen) {
+      var rg = state.goals.find(function (x) {
+        return x.id === goalReopen.getAttribute("data-goal-reopen");
+      });
+      if (rg) {
+        reopenGoal(rg);
+        saveState();
+        render();
+        toast("已移回進行中");
       }
       return;
     }

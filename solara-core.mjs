@@ -88,11 +88,7 @@ export function normalizeState(data) {
       until: (ev && ev.until) || "",
     })
   );
-  out.goals = out.goals.map((g) =>
-    Object.assign({ habitId: "", unit: "", current: 0, target: 1 }, g || {}, {
-      habitId: (g && g.habitId) || "",
-    })
-  );
+  out.goals = out.goals.map((g) => normalizeGoal(g));
   out.syncUpdatedAt = Number(out.syncUpdatedAt) || 0;
   out.syncBaseAt = Number(out.syncBaseAt) || 0;
   out.tombstones = data.tombstones && typeof data.tombstones === "object" ? data.tombstones : {};
@@ -126,6 +122,82 @@ export function eventRepeatLabel(repeat) {
     yearly: "每年",
   };
   return map[repeat || "none"] || "";
+}
+
+/** Normalize one goal: hours/count units, cert/outcome types, achievements. */
+export function normalizeGoal(g) {
+  const raw = g || {};
+  let unitMode = raw.unitMode || "";
+  const unitRaw = String(raw.unit || "").trim();
+  if (!unitMode) {
+    if (unitRaw === "小時" || unitRaw === "hours" || unitRaw === "hr" || unitRaw === "小時數") {
+      unitMode = "hours";
+    } else if (!unitRaw || unitRaw === "次" || unitRaw === "count") {
+      unitMode = "count";
+    } else {
+      unitMode = "custom";
+    }
+  }
+  let unit = unitRaw;
+  if (unitMode === "hours") unit = unit || "小時";
+  if (unitMode === "count") unit = unit || "次";
+  const finishedAt = raw.finishedAt ? Number(raw.finishedAt) || null : null;
+  return Object.assign(
+    {
+      habitId: "",
+      unit: "",
+      unitMode: "count",
+      current: 0,
+      target: 1,
+      kind: "short",
+      goalType: "general",
+      outcome: "",
+      finishedAt: null,
+      lastBumpKey: "",
+    },
+    raw,
+    {
+      habitId: raw.habitId || "",
+      unitMode,
+      unit,
+      goalType: raw.goalType || "general",
+      outcome: raw.outcome || "",
+      finishedAt,
+      lastBumpKey: raw.lastBumpKey || "",
+      current: Number(raw.current) || 0,
+      target: Math.max(1, Number(raw.target) || 1),
+    }
+  );
+}
+
+export function isGoalFinished(g) {
+  return !!(g && g.finishedAt);
+}
+
+export function isGoalOpen(g) {
+  return !isGoalFinished(g);
+}
+
+export function goalUnitLabel(g) {
+  if (!g) return "";
+  if (g.unitMode === "hours") return "小時";
+  if (g.unitMode === "count") return "次";
+  return g.unit || "";
+}
+
+export function goalTypeLabel(t) {
+  if (t === "cert") return "證書";
+  if (t === "outcome") return "成果";
+  return "一般";
+}
+
+/** Mark finished when progress reaches target; returns true if newly finished. */
+export function maybeFinishGoal(g, nowMs) {
+  if (!g || g.finishedAt) return false;
+  if (Number(g.current) < Number(g.target || 1)) return false;
+  g.current = Math.max(Number(g.current) || 0, Number(g.target) || 1);
+  g.finishedAt = nowMs != null ? nowMs : Date.now();
+  return true;
 }
 
 export function syncContentWeight(s) {
