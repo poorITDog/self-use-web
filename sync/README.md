@@ -27,18 +27,38 @@ Solara 預設使用 **Google Identity Services (GIS)** + **Drive API `appDataFol
 
 1. **API 和服務** → **憑證** → **建立憑證** → **OAuth 用戶端 ID**
 2. 應用程式類型：**網頁應用程式**
-3. **已授權的 JavaScript 來源**（必須加入）：
-   - `http://localhost:8765`
-   - `https://pooritdog.github.io`
+3. **已授權的 JavaScript 來源**（必須加入，注意格式）：
+   - `http://localhost:8765`（本機測試）
+   - `https://pooritdog.github.io`（GitHub Pages）
 4. 建立後複製 **用戶端 ID**（格式：`123456789-xxxx.apps.googleusercontent.com`）
+
+#### GitHub Pages 注意（常見 403 原因）
+
+| 正確 | 錯誤 |
+|------|------|
+| 來源只寫 `https://pooritdog.github.io` | ❌ 唔好加路徑：`https://pooritdog.github.io/self-use-web` |
+| 唔好加結尾 `/` | ❌ `https://pooritdog.github.io/` |
+| App 實際網址可以係 `…/self-use-web/` | Origin 仍然只係域名本身 |
+
+GIS OAuth 核對嘅係 **origin**（協議 + 域名），唔係完整 path。  
+所以你用 `https://pooritdog.github.io/self-use-web/` 開 App，來源一樣只填 `https://pooritdog.github.io`。
+
+#### OAuth 同意畫面「測試」模式（另一個常見 403）
+
+若同意畫面狀態係 **測試中（Testing）**：
+
+1. **OAuth 同意畫面** → **測試使用者** → **新增使用者**
+2. 加入你會用來登入嘅 Gmail（一定要加，否則會 `403: access_denied`）
+3. 私人自用保持測試模式即可；唔使公開發布
 
 ### 5. 在 Solara 連接
 
-1. 開啟 Solara → **設定** → **同步**
-2. 貼上 **OAuth Client ID**
-3. 按 **連接 Google Drive**
-4. 登入 Google 帳戶並授權
-5. 確認 **自動同步** 已開啟（預設開啟）
+1. 用正確網址開啟：`https://pooritdog.github.io/self-use-web/`
+2. **設定** → **同步**
+3. 貼上 **OAuth Client ID**（只要 Client ID，唔使 Client Secret）
+4. 按 **連接 Google Drive**
+5. 用已加入「測試使用者」嘅 Google 帳戶授權
+6. 確認 **自動同步** 已開啟（預設開啟）
 
 ## 同步行為
 
@@ -71,10 +91,21 @@ Solara 預設使用 **Google Identity Services (GIS)** + **Drive API `appDataFol
 
 | 問題 | 可能原因 |
 |------|----------|
-| `連接失敗` | Client ID 錯誤；或未加入正確的 JavaScript 來源 |
+| **`403` / `access_denied`** | ① 同意畫面係測試模式，但你嘅 Gmail **未加做測試使用者**；② JavaScript 來源唔係剛好 `https://pooritdog.github.io`（唔好加 `/self-use-web`） |
+| `origin_mismatch` / 來源錯誤 | Cloud Console 未加目前網頁嘅 origin；改完要等幾分鐘再生效 |
+| `連接失敗` | Client ID 貼錯（多咗空格／貼咗 Secret）；或 Drive API 未啟用 |
 | `未連接` | 尚未按連接；或 Token 已過期（重新按連接） |
-| `失敗` | 網絡問題；Drive API 未啟用；授權範圍不足 |
+| `失敗` | 網絡問題；Drive API 未啟用；授權範圍不足（要有 `drive.appdata`） |
 | 多裝置資料不一致 | 等自動同步完成；或到設定按「立即同步」 |
+
+### 403 快速檢查清單
+
+1. [ ] Drive API 已啟用  
+2. [ ] OAuth Client 類型 = **網頁應用程式**  
+3. [ ] JavaScript 來源 = `https://pooritdog.github.io`（無 path、無尾隨 `/`）  
+4. [ ] 測試使用者已加入你嘅 Gmail  
+5. [ ] Solara 貼嘅係 **Client ID**，唔係 Client Secret  
+6. [ ] 用 `https://pooritdog.github.io/self-use-web/` 開啟（唔好用 `file://`）
 
 ## 安全提示
 
