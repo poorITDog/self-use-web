@@ -298,7 +298,23 @@ await assert(goalsBody.includes("開始於"), "goal shows start date");
 await assert(goalsBody.includes("成果"), "goal shows outcome type badge");
 await assert(!!(await page.$("[data-goal-check]")), "goal has check-and-plus when habit linked");
 await assert(!!(await page.$(".goal-habit-chip")), "linked habit shows colored chip");
+await assert(!!(await page.$(".goal-habit-dot")), "linked habit chip shows color dot");
 await assert(!!(await page.$(".goal-row.has-habit")), "linked goal row uses habit accent class");
+
+// habit detail linked goals: manage button + colored block
+await page.click('[data-nav="habits"]');
+await page.waitForSelector("[data-habit-open]");
+await page.evaluate(() => document.querySelector("[data-habit-open]").click());
+await page.waitForSelector(".habit-linked-goal");
+await assert(!!(await page.$('[data-nav-jump="settings-goals"].btn')), "habit detail has 管理目標 button");
+await assert(!!(await page.$(".habit-linked-goal .goal-habit-dot")), "habit detail linked goal has color dot");
+await page.evaluate(() => document.querySelector('[data-nav-jump="settings-goals"].btn').click());
+await page.waitForSelector('[data-settings="goals"].on, #settingsBody');
+const onGoals = await page.evaluate(() => {
+  const tab = document.querySelector('[data-settings="goals"]');
+  return !!(tab && tab.classList.contains("on"));
+});
+await assert(onGoals, "管理目標 jumps to settings goals");
 
 // hours + cert goal, finish into achievements
 await page.waitForSelector('[data-action="add-goal-long"]');

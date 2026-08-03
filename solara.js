@@ -1633,7 +1633,8 @@
       var unit = goalUnitLabel(g);
       var start = startedLabel(g);
       html += '<div class="habit-goal-badge" style="--hcolor:' + escAttr(habit.color) + '">' +
-        '<span class="habit-goal-badge-title">目標 · ' + esc(g.title) + "</span>" +
+        '<span class="habit-goal-badge-title"><span class="goal-habit-dot" aria-hidden="true"></span>目標 · ' +
+        esc(g.title) + "</span>" +
         '<span class="muted tiny">' + g.current + "/" + g.target +
         (unit ? " " + unit : "") + " · " + pct + "%" +
         (start ? " · " + start : "") + "</span>" +
@@ -1917,9 +1918,9 @@
       habitYearHeatHtml(habit);
     var linkedGoals = state.goals.filter(function (g) { return g.habitId === habit.id; });
     if (linkedGoals.length) {
-      html += '<div class="section-title" style="padding-top:8px">連結目標</div>' +
-        '<p class="goal-meta-line" style="margin:0 0 6px">設定於「設定 → 目標」' +
-        ' · <button type="button" class="linkish" data-nav-jump="settings-goals">前往管理</button></p>' +
+      html += '<div class="linked-goals-head"><span class="section-title">連結目標</span>' +
+        '<button type="button" class="btn sm soft" data-nav-jump="settings-goals">管理目標</button></div>' +
+        '<p class="goal-meta-line" style="margin:0 0 6px">設定於「設定 → 目標」</p>' +
         '<div class="habit-linked-goals">';
       linkedGoals.forEach(function (g) {
         var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
@@ -1927,13 +1928,14 @@
         var start = startedLabel(g);
         html += '<button type="button" class="habit-linked-goal" style="--hcolor:' +
           escAttr(habit.color) + '" data-edit-goal="' + g.id + '">' +
-          '<strong>' + esc(g.title) + "</strong>" +
+          '<strong><span class="goal-habit-dot" aria-hidden="true"></span> ' + esc(g.title) + "</strong>" +
           ' <span class="goal-type-badge type-' + escAttr(g.goalType || "general") + '">' +
           goalTypeLabel(g.goalType) + (isGoalFinished(g) ? " · 成就" : "") + "</span>" +
           '<span class="muted tiny">' + g.current + " / " + g.target +
           (unit ? " " + esc(unit) : "") + " · " + pct + "%</span>" +
           (start ? '<span class="goal-meta-line">' + esc(start) + "</span>" : "") +
           (g.outcome ? '<span class="tiny">' + esc(g.outcome) + "</span>" : "") +
+          '<div class="progress-bar-slim"><i style="width:' + pct + '%"></i></div>' +
           "</button>";
       });
       html += "</div>";
@@ -2046,7 +2048,8 @@
         " · " + pct + "%</span></div>" +
         '<div class="tiny">' + goalTypeLabel(g.goalType) +
         (habit ? ' · <span class="goal-habit-chip" style="--hcolor:' + escAttr(habit.color) + '">' +
-          esc(habit.name) + "</span>" : "") + "</div>" +
+          '<span class="goal-habit-dot" aria-hidden="true"></span>' + esc(habit.name) + "</span>" : "") +
+        "</div>" +
         (start ? '<div class="goal-meta-line">' + esc(start) + " · 設定於「設定 → 目標」</div>" :
           '<div class="goal-meta-line">設定於「設定 → 目標」</div>') +
         '<div class="goal-progress-wrap">' +
@@ -3171,7 +3174,8 @@
     var habitLine = habit
       ? '<div class="goal-habit-line">' +
         '<button type="button" class="goal-habit-chip" style="--hcolor:' + escAttr(habit.color) +
-        '" data-habit-open="' + habit.id + '">連結習慣：' + esc(habit.name) + "</button>" +
+        '" data-habit-open="' + habit.id + '"><span class="goal-habit-dot" aria-hidden="true"></span>' +
+        "連結習慣：" + esc(habit.name) + "</button>" +
         '<span class="muted tiny">' +
         (isHabitDone(habit, todayKey()) ? "今日已打卡" : "今日未打卡") + "</span></div>"
       : "";
