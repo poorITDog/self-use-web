@@ -8,6 +8,8 @@ import {
   defaultState,
   normalizeState,
   mergeSyncState,
+  shouldPushAfterMerge,
+  syncContentWeight,
   habitDueOn,
   isHabitDone,
   countdownNextAt,
@@ -71,34 +73,36 @@ run("normalizeState fills defaults", () => {
   assert.deepEqual(s.checkins, []);
   assert.deepEqual(s.events, []);
   assert.equal(s.settings.focusSoundEnabled, true);
+  assert.equal(s.syncBaseAt, 0);
 });
 
-run("mergeSyncState picks remote when newer", () => {
+run("mergeSyncState fast-forwards empty local to remote", () => {
   const local = defaultState();
-  local.syncUpdatedAt = 100;
-  local.habits = [{ id: "local" }];
+  local.syncUpdatedAt = Date.now();
   const remote = defaultState();
-  remote.syncUpdatedAt = 500;
-  remote.habits = [{ id: "remote" }];
-  const { state, winner } = mergeSyncState(local, remote, 500);
+  remote.habits = [{ id: "remote", updatedAt: 1 }];
+  const { state, winner, action } = mergeSyncState(local, remote, 500);
   assert.equal(winner, "remote");
+  assert.equal(action, "fast-forward");
   assert.equal(state.habits[0].id, "remote");
-  assert.equal(state.syncUpdatedAt, 500);
+  assert.equal(shouldPushAfterMerge({ state, winner, action }, true), false);
 });
 
-run("mergeSyncState keeps local when newer", () => {
+run("mergeSyncState union-merges both sides like git merge", () => {
   const local = defaultState();
   local.syncUpdatedAt = 900;
-  local.habits = [{ id: "local" }];
+  local.habits = [{ id: "local", name: "本地", updatedAt: 900 }];
   const remote = defaultState();
-  remote.habits = [{ id: "remote" }];
-  const { state, winner } = mergeSyncState(local, remote, 100);
-  assert.equal(winner, "local");
-  assert.equal(state.habits[0].id, "local");
+  remote.habits = [{ id: "remote", name: "雲端", updatedAt: 100 }];
+  const { state, winner, action } = mergeSyncState(local, remote, 100);
+  assert.equal(winner, "merged");
+  assert.equal(action, "merge");
+  const ids = state.habits.map((h) => h.id).sort();
+  assert.deepEqual(ids, ["local", "remote"]);
+  assert.equal(shouldPushAfterMerge({ state, winner, action }, true), true);
 });
 
 run("mergeSyncState prefers remote when local empty after reinstall", () => {
-  // Fresh install bumps wall clock, but has no habits — must restore cloud.
   const local = defaultState();
   local.syncUpdatedAt = Date.now();
   local.settings.googleConnected = true;
@@ -107,21 +111,32 @@ run("mergeSyncState prefers remote when local empty after reinstall", () => {
   remote.syncUpdatedAt = 1_700_000_000_000;
   remote.habits = [{ id: "old-habit", name: "晨跑" }];
   remote.checkins = [{ id: "c1", habitId: "old-habit", date: "2026-08-01", value: 1 }];
-  const { state, winner } = mergeSyncState(local, remote, 1_700_000_000_000);
+  const { state, winner, action } = mergeSyncState(local, remote, 1_700_000_000_000);
   assert.equal(winner, "remote");
+  assert.equal(action, "fast-forward");
   assert.equal(state.habits[0].id, "old-habit");
   assert.equal(state.checkins.length, 1);
 });
 
-run("mergeSyncState keeps newer non-empty local over older remote", () => {
+run("mergeSyncState keeps local-only content for push when remote empty", () => {
   const local = defaultState();
   local.syncUpdatedAt = 900;
   local.habits = [{ id: "new-local" }];
   const remote = defaultState();
-  remote.habits = [{ id: "old-remote" }];
-  const { state, winner } = mergeSyncState(local, remote, 100);
+  const { state, winner, action } = mergeSyncState(local, remote, 0);
   assert.equal(winner, "local");
+  assert.equal(action, "push");
   assert.equal(state.habits[0].id, "new-local");
+  assert.equal(shouldPushAfterMerge({ state, winner, action }, false), true);
+});
+
+run("shouldPushAfterMerge never pushes empty state", () => {
+  const empty = defaultState();
+  assert.equal(syncContentWeight(empty), 0);
+  assert.equal(
+    shouldPushAfterMerge({ state: empty, winner: "local", action: "push" }, true),
+    false
+  );
 });
 
 run("habitDueOn respects frequency", () => {

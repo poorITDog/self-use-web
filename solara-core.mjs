@@ -28,6 +28,8 @@ export function defaultState() {
   return {
     version: 1,
     syncUpdatedAt: 0,
+    // Last remote revision we successfully fetched/merged (git-like upstream tip).
+    syncBaseAt: 0,
     settings: {
       theme: "sunshine",
       photoDataUrl: "",
@@ -90,6 +92,7 @@ export function normalizeState(data) {
     })
   );
   out.syncUpdatedAt = Number(out.syncUpdatedAt) || 0;
+  out.syncBaseAt = Number(out.syncBaseAt) || 0;
   return out;
 }
 
@@ -122,16 +125,40 @@ export function eventRepeatLabel(repeat) {
   return map[repeat || "none"] || "";
 }
 
-function syncContentWeight(s) {
-  return (s.habits.length || 0) + (s.checkins.length || 0) +
-    (s.events.length || 0) + (s.countdowns.length || 0) +
-    (s.goals.length || 0) + (s.blocks.length || 0) +
-    (s.focusSessions.length || 0);
+export function syncContentWeight(s) {
+  const n = s && s.habits ? s : normalizeState(s);
+  return (n.habits.length || 0) + (n.checkins.length || 0) +
+    (n.events.length || 0) + (n.countdowns.length || 0) +
+    (n.goals.length || 0) + (n.blocks.length || 0) +
+    (n.focusSessions.length || 0);
+}
+
+// Union merge one collection by key; higher updatedAt wins on conflict (git-like).
+export function mergeEntityLists(localList, remoteList, keyFn) {
+  const map = new Map();
+  function put(item) {
+    if (!item) return;
+    const key = keyFn(item);
+    if (key == null || key === "") return;
+    const prev = map.get(key);
+    if (!prev) {
+      map.set(key, item);
+      return;
+    }
+    const pt = Number(prev.updatedAt) || 0;
+    const it = Number(item.updatedAt) || 0;
+    map.set(key, it >= pt ? item : prev);
+  }
+  (remoteList || []).forEach(put);
+  (localList || []).forEach(put);
+  return Array.from(map.values());
 }
 
 /**
- * Last-write-wins by syncUpdatedAt / remote updatedAt.
- * Empty local never beats non-empty remote (reinstall / reconnect safety).
+ * Git-like sync merge:
+ * - empty local + remote content → fast-forward to remote
+ * - local content + empty remote → keep local (caller will push)
+ * - both have content → union-merge collections by id
  */
 export function mergeSyncState(local, remote, remoteUpdatedAt) {
   const localNorm = normalizeState(local);
@@ -140,15 +167,58 @@ export function mergeSyncState(local, remote, remoteUpdatedAt) {
   const remoteTs = Number(remoteUpdatedAt) || Number(remoteNorm.syncUpdatedAt) || 0;
   const localWeight = syncContentWeight(localNorm);
   const remoteWeight = syncContentWeight(remoteNorm);
-  if (remoteWeight > 0 && localWeight === 0 && remoteTs > 0) {
+
+  if (remoteWeight > 0 && localWeight === 0) {
     remoteNorm.syncUpdatedAt = Math.max(remoteTs, localTs);
-    return { state: remoteNorm, winner: "remote" };
+    remoteNorm.syncBaseAt = remoteTs;
+    return { state: remoteNorm, winner: "remote", action: "fast-forward" };
   }
-  if (remoteTs > localTs) {
-    remoteNorm.syncUpdatedAt = remoteTs;
-    return { state: remoteNorm, winner: "remote" };
+  if (localWeight > 0 && remoteWeight === 0) {
+    localNorm.syncBaseAt = remoteTs || localNorm.syncBaseAt || 0;
+    return { state: localNorm, winner: "local", action: "push" };
   }
-  return { state: localNorm, winner: "local" };
+  if (localWeight === 0 && remoteWeight === 0) {
+    return { state: localNorm, winner: "local", action: "noop" };
+  }
+
+  const merged = normalizeState({
+    version: Math.max(localNorm.version || 1, remoteNorm.version || 1),
+    settings: remoteTs > localTs
+      ? { ...localNorm.settings, ...remoteNorm.settings }
+      : { ...remoteNorm.settings, ...localNorm.settings },
+  });
+  merged.habits = mergeEntityLists(localNorm.habits, remoteNorm.habits, (x) => x.id);
+  merged.checkins = mergeEntityLists(
+    localNorm.checkins,
+    remoteNorm.checkins,
+    (x) => x.id || `${x.habitId}|${x.date}`
+  );
+  merged.blocks = mergeEntityLists(localNorm.blocks, remoteNorm.blocks, (x) => x.id);
+  merged.countdowns = mergeEntityLists(localNorm.countdowns, remoteNorm.countdowns, (x) => x.id);
+  merged.focusSessions = mergeEntityLists(
+    localNorm.focusSessions,
+    remoteNorm.focusSessions,
+    (x) => x.id
+  );
+  merged.goals = mergeEntityLists(localNorm.goals, remoteNorm.goals, (x) => x.id);
+  merged.events = mergeEntityLists(localNorm.events, remoteNorm.events, (x) => x.id);
+  merged.transactions = mergeEntityLists(
+    localNorm.transactions || [],
+    remoteNorm.transactions || [],
+    (x) => x.id
+  );
+  merged.syncUpdatedAt = Math.max(localTs, remoteTs);
+  merged.syncBaseAt = remoteTs;
+  return { state: merged, winner: "merged", action: "merge" };
+}
+
+// After fetch+merge, decide whether to push (never push empty; skip pure fast-forward).
+export function shouldPushAfterMerge(result, hasRemoteFile) {
+  const weight = syncContentWeight(result.state);
+  if (weight <= 0) return false;
+  if (!hasRemoteFile) return true;
+  if (result.action === "fast-forward" || result.action === "noop") return false;
+  return result.action === "push" || result.action === "merge" || result.winner === "local";
 }
 
 export function habitDueOn(habit, key) {

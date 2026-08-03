@@ -60,19 +60,29 @@ GIS OAuth 核對嘅係 **origin**（協議 + 域名），唔係完整 path。
 5. 用已加入「測試使用者」嘅 Google 帳戶授權
 6. 確認 **自動同步** 已開啟（預設開啟）
 
-## 同步行為
+## 同步行為（Git 式：fetch → merge → push）
+
+Drive 同步跟 Git／常見雲端同步一樣，**唔會盲推本機蓋過雲端**：
+
+| 步驟 | 動作 |
+|------|------|
+| 1. Fetch | 讀取 Drive `solara-v1.json` + `modifiedTime` |
+| 2. Merge | 空本機 → fast-forward 雲端；兩邊都有資料 → 按 `id` 合併列表（衝突用 `updatedAt`） |
+| 3. Push | 有需要先上傳；**永遠唔會用空本機覆寫有內容嘅雲端** |
 
 | 時機 | 動作 |
 |------|------|
-| App 載入（已連接） | 從 Drive 拉取 → 與本機 LWW 合併（`syncUpdatedAt`） |
-| 每次 `saveState`（真正改資料） | 更新 `syncUpdatedAt`，防抖 ~1.5 秒後上傳完整 JSON |
-| 分頁重新可見 | 若已連接且自動同步開啟，再次拉取合併 |
+| App 載入（已連接） | 完整 sync（fetch → merge → 必要時 push） |
+| 每次 `saveState`（真正改資料） | 更新 `syncUpdatedAt`，防抖 ~1.5 秒後再跑完整 sync |
+| 分頁重新可見 | 若自動同步開啟，再跑完整 sync |
+| 「立即同步」 | 手動完整 sync |
 
-### 衝突策略（Last-Write-Wins）
+### 衝突策略
 
-比較本機 `syncUpdatedAt` 與雲端檔案 `modifiedTime`。較新的一方覆蓋較舊。
-
-**例外（重新安裝／重新加入主畫面）：** 若本機係空嘅（冇習慣、打卡、行程等），但雲端有資料，會優先還原雲端——避免「剛重裝」嘅新時間戳打贏舊備份。
+- **重新安裝／空本機：** fast-forward 雲端（等同 `git checkout` 遠端），唔 push
+- **兩邊都有資料：** union merge（兩邊習慣／打卡都會保留），再 push 合併結果
+- **本機有、雲端無：** push 本機（首次上傳）
+- `syncBaseAt` 記錄上次成功對齊嘅雲端 revision（類似 upstream tip）
 
 ### 更新 App／重新「加入主畫面」後點還原
 
