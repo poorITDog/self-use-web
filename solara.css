@@ -1234,17 +1234,8 @@ main {
 
 .fab svg { width: 24px; height: 24px; }
 
-.habit-edit-btn {
-  flex-shrink: 0;
-  align-self: center;
-}
-
 .archived-habits {
-  margin: 12px 16px 24px;
-  padding: 12px 14px;
-  border-radius: var(--radius);
-  background: var(--surface);
-  border: 1px solid var(--line);
+  padding: 0;
 }
 
 .archived-habit-row {
@@ -1615,6 +1606,12 @@ main {
 
 .settings-seg {
   margin: 12px 16px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.settings-seg button {
+  font-size: 0.78rem;
+  padding: 0 4px;
 }
 
 .settings-group {
