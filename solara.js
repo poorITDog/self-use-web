@@ -1056,6 +1056,7 @@
       weekStripHtml(h) +
       linkedGoalBadgeHtml(h) +
       "</button>" +
+      '<button type="button" class="btn sm ghost habit-edit-btn" data-edit-habit="' + h.id + '">編輯</button>' +
       '<button type="button" class="habit-row-chevron" data-habit-open="' + h.id + '" aria-label="詳情">' +
       chevronSvg + "</button></article>";
   }
@@ -1195,6 +1196,7 @@
       '<button type="button" class="habit-box-head" data-habit-box-open="' + habit.id + '">' +
       '<span class="habit-box-emoji">' + esc(habit.emoji || "✓") + "</span>" +
       '<span class="habit-box-name">' + esc(habit.name) + "</span></button>" +
+      '<button type="button" class="btn sm ghost habit-edit-btn" data-edit-habit="' + habit.id + '">編輯</button>' +
       checkBtnHtml(habit, key, "check check-lg") + "</div>" +
       '<div class="habit-box-month-label">' + habitBoxMonthLabel() + "</div>" +
       cal +
@@ -1236,6 +1238,7 @@
       '<div class="habit-row-meta">' + todayStatusText(h, key) + "</div>" +
       linkedGoalBadgeHtml(h) +
       "</button>" +
+      '<button type="button" class="btn sm ghost habit-edit-btn" data-edit-habit="' + h.id + '">編輯</button>' +
       '<button type="button" class="habit-row-chevron" data-habit-open="' + h.id + '" aria-label="詳情">' +
       chevronSvg + "</button></article>";
   }
@@ -1343,6 +1346,7 @@
       active.forEach(function (h) { html += habitBoxHtml(h, mode); });
       html += "</div>";
     }
+    html += archivedHabitsHtml();
     html += "</div>";
     return html;
   }
@@ -1503,9 +1507,61 @@
     html += '<div class="row-actions">' +
       '<button class="btn" data-edit-habit="' + habit.id + '">編輯</button>' +
       '<button class="btn ghost" data-archive-habit="' + habit.id + '">封存</button>' +
+      '<button class="btn warn" data-delete-habit="' + habit.id + '">刪除</button>' +
       '<button class="btn ghost" id="hdClose">關閉</button></div></div>';
     openModal(html);
     document.getElementById("hdClose").onclick = closeModal;
+  }
+
+  // Permanently remove habit and related check-ins / links.
+  function deleteHabitById(habitId) {
+    if (!habitId) return;
+    if (!window.confirm("確定永久刪除此習慣？相關打卡紀錄亦會刪除。")) return;
+    state.habits = state.habits.filter(function (h) { return h.id !== habitId; });
+    state.checkins = state.checkins.filter(function (c) { return c.habitId !== habitId; });
+    state.goals.forEach(function (g) {
+      if (g.habitId === habitId) {
+        g.habitId = "";
+        touch(g);
+      }
+    });
+    state.blocks.forEach(function (b) {
+      if (b.habitId === habitId) {
+        b.habitId = "";
+        touch(b);
+      }
+    });
+    if (ui.focus.habitId === habitId) ui.focus.habitId = "";
+    saveState();
+    closeModal();
+    toast("已刪除習慣");
+    render();
+  }
+
+  function restoreHabitById(habitId) {
+    var h = state.habits.find(function (x) { return x.id === habitId; });
+    if (!h) return;
+    h.archived = false;
+    touch(h);
+    saveState();
+    toast("已還原習慣");
+    render();
+  }
+
+  function archivedHabitsHtml() {
+    var archived = state.habits.filter(function (h) { return h.archived; });
+    if (!archived.length) return "";
+    var html = '<div class="archived-habits"><div class="section-title">已封存</div>';
+    archived.forEach(function (h) {
+      html += '<div class="archived-habit-row">' +
+        '<span>' + habitEmoji(h) + esc(h.name) + "</span>" +
+        '<div class="row-actions">' +
+        '<button type="button" class="btn sm soft" data-restore-habit="' + h.id + '">還原</button>' +
+        '<button type="button" class="btn sm warn" data-delete-habit="' + h.id + '">刪除</button>' +
+        "</div></div>";
+    });
+    html += "</div>";
+    return html;
   }
 
   function refreshHabitDetail() {
@@ -1689,6 +1745,7 @@
       '<div class="row-actions">' +
       '<button class="btn" id="hSave">儲存</button>' +
       (h.id ? '<button class="btn ghost" id="hArchive">封存</button>' : "") +
+      (h.id ? '<button class="btn warn" id="hDelete">刪除</button>' : "") +
       '<button class="btn ghost" id="hCancel">取消</button></div>'
     );
 
@@ -1753,6 +1810,9 @@
         closeModal();
         toast("已封存");
         render();
+      };
+      document.getElementById("hDelete").onclick = function () {
+        deleteHabitById(h.id);
       };
     }
   }
@@ -2109,6 +2169,7 @@
     };
     if (b.id) {
       document.getElementById("bDel").onclick = function () {
+        if (!window.confirm("確定刪除此時段？")) return;
         state.blocks = state.blocks.filter(function (x) { return x.id !== b.id; });
         saveState();
         closeModal();
@@ -2201,6 +2262,7 @@
     };
     if (ev.id) {
       document.getElementById("eDel").onclick = function () {
+        if (!window.confirm("確定刪除此行程？")) return;
         state.events = state.events.filter(function (x) { return x.id !== ev.id; });
         saveState();
         closeModal();
@@ -2410,6 +2472,7 @@
     };
     if (c.id) {
       document.getElementById("cDel").onclick = function () {
+        if (!window.confirm("確定刪除此倒數？")) return;
         state.countdowns = state.countdowns.filter(function (x) { return x.id !== c.id; });
         saveState();
         closeModal();
@@ -2455,9 +2518,10 @@
       html += '<div class="focus-history"><div class="section-title">最近專注</div>';
       recent.forEach(function (s) {
         var habit = s.habitId ? state.habits.find(function (h) { return h.id === s.habitId; }) : null;
-        html += '<div class="focus-history-row"><strong>' + fmtMin(s.minutes) + "</strong>" +
-          '<span class="muted tiny">' + dateKey(s.startedAt) +
-          (habit ? " · " + esc(habit.name) : "") + "</span></div>";
+        html += '<div class="focus-history-row"><div><strong>' + fmtMin(s.minutes) + "</strong>" +
+          '<span class="muted tiny"> · ' + dateKey(s.startedAt) +
+          (habit ? " · " + esc(habit.name) : "") + "</span></div>" +
+          '<button type="button" class="btn sm ghost" data-delete-focus="' + s.id + '">刪除</button></div>';
       });
       html += "</div>";
     } else {
@@ -2657,6 +2721,7 @@
     };
     if (g.id) {
       document.getElementById("gDel").onclick = function () {
+        if (!window.confirm("確定刪除此目標？")) return;
         state.goals = state.goals.filter(function (x) { return x.id !== g.id; });
         saveState();
         closeModal();
@@ -2938,7 +3003,8 @@
     setView(btn.getAttribute("data-nav"));
   });
 
-  document.getElementById("app").addEventListener("click", function (e) {
+  // Modal is outside #app — same handler must cover both, or detail「編輯／刪除」會失效。
+  function handleUiClick(e) {
     var t = e.target;
 
     var navSettings = t.closest("[data-settings]");
@@ -3025,6 +3091,30 @@
         saveState();
         closeModal();
         toast("已封存");
+        render();
+      }
+      return;
+    }
+
+    var deleteHabit = t.closest("[data-delete-habit]");
+    if (deleteHabit) {
+      deleteHabitById(deleteHabit.getAttribute("data-delete-habit"));
+      return;
+    }
+
+    var restoreHabit = t.closest("[data-restore-habit]");
+    if (restoreHabit) {
+      restoreHabitById(restoreHabit.getAttribute("data-restore-habit"));
+      return;
+    }
+
+    var deleteFocus = t.closest("[data-delete-focus]");
+    if (deleteFocus) {
+      var fid = deleteFocus.getAttribute("data-delete-focus");
+      if (window.confirm("刪除這筆專注紀錄？")) {
+        state.focusSessions = state.focusSessions.filter(function (s) { return s.id !== fid; });
+        saveState();
+        toast("已刪除");
         render();
       }
       return;
@@ -3171,7 +3261,10 @@
       else if (mode === "drive-pull") drivePull();
       return;
     }
-  });
+  }
+
+  document.getElementById("app").addEventListener("click", handleUiClick);
+  document.getElementById("modal").addEventListener("click", handleUiClick);
 
   document.getElementById("app").addEventListener("change", function (e) {
     if (e.target.matches("[data-cal-opt]")) {

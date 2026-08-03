@@ -125,14 +125,34 @@ await page.waitForSelector(".habit-checkin-row, .habit-row");
 await page.click('[data-habits-panel="board"]');
 await page.waitForSelector(".habit-box");
 
-// open habit detail from box
+// open habit detail from box — edit must work inside modal (outside #app)
 await page.click('[data-habit-box-open]');
 await page.waitForSelector(".habit-full-cal");
 const detailCal = await page.$(".habit-full-cal");
 await assert(!!detailCal, "habit detail calendar renders");
 const yearHeat = await page.$(".habit-year-heat");
 await assert(!!yearHeat, "habit detail year heatmap renders");
-await page.evaluate(() => document.getElementById("hdClose").click());
+const detailEdit = await page.$('#modal [data-edit-habit]');
+await assert(!!detailEdit, "habit detail has edit button");
+const detailDelete = await page.$('#modal [data-delete-habit]');
+await assert(!!detailDelete, "habit detail has delete button");
+await page.evaluate(() => document.querySelector('#modal [data-edit-habit]').click());
+await page.waitForSelector("#hName");
+const editName = await page.$eval("#hName", (el) => el.value);
+await assert(editName.includes("晨跑"), "edit modal opens with habit name from detail");
+await page.evaluate(() => { document.getElementById("hName").value = "晨跑改名"; });
+await page.evaluate(() => document.getElementById("hSave").click());
+await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
+const renamed = await page.$eval("#view-habits", (el) => el.textContent.includes("晨跑改名"));
+await assert(renamed, "habit rename saved from detail edit");
+
+// list edit button also works
+await page.waitForSelector('[data-edit-habit]');
+await page.evaluate(() => document.querySelector('[data-edit-habit]').click());
+await page.waitForSelector("#hDelete");
+const hasDeleteInEditor = await page.$("#hDelete");
+await assert(!!hasDeleteInEditor, "habit editor has delete button");
+await page.evaluate(() => document.getElementById("hCancel").click());
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
 
 // overview mode week strip
