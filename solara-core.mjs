@@ -58,6 +58,8 @@ export function defaultState() {
     goals: [],
     events: [],
     transactions: [],
+    // id → deletedAt — keeps hard deletes from resurrecting on union merge
+    tombstones: {},
   };
 }
 
@@ -93,6 +95,7 @@ export function normalizeState(data) {
   );
   out.syncUpdatedAt = Number(out.syncUpdatedAt) || 0;
   out.syncBaseAt = Number(out.syncBaseAt) || 0;
+  out.tombstones = data.tombstones && typeof data.tombstones === "object" ? data.tombstones : {};
   return out;
 }
 
@@ -130,7 +133,27 @@ export function syncContentWeight(s) {
   return (n.habits.length || 0) + (n.checkins.length || 0) +
     (n.events.length || 0) + (n.countdowns.length || 0) +
     (n.goals.length || 0) + (n.blocks.length || 0) +
-    (n.focusSessions.length || 0);
+    (n.focusSessions.length || 0) + ((n.transactions && n.transactions.length) || 0);
+}
+
+export function mergeTombstones(a, b) {
+  const out = Object.assign({}, a || {});
+  Object.keys(b || {}).forEach((k) => {
+    out[k] = Math.max(Number(out[k]) || 0, Number(b[k]) || 0);
+  });
+  return out;
+}
+
+export function applyTombstones(list, tombstones) {
+  const stones = tombstones || {};
+  return (list || []).filter((item) => {
+    if (!item) return false;
+    const key = item.id;
+    const alt = item.habitId && item.date ? `${item.habitId}|${item.date}` : "";
+    const delAt = Math.max(Number(stones[key]) || 0, Number(stones[alt]) || 0);
+    if (!delAt) return true;
+    return (Number(item.updatedAt) || 0) > delAt;
+  });
 }
 
 // Union merge one collection by key; higher updatedAt wins on conflict (git-like).
@@ -158,7 +181,7 @@ export function mergeEntityLists(localList, remoteList, keyFn) {
  * Git-like sync merge:
  * - empty local + remote content → fast-forward to remote
  * - local content + empty remote → keep local (caller will push)
- * - both have content → union-merge collections by id
+ * - both have content → union-merge collections by id (+ tombstones)
  */
 export function mergeSyncState(local, remote, remoteUpdatedAt) {
   const localNorm = normalizeState(local);
@@ -167,8 +190,10 @@ export function mergeSyncState(local, remote, remoteUpdatedAt) {
   const remoteTs = Number(remoteUpdatedAt) || Number(remoteNorm.syncUpdatedAt) || 0;
   const localWeight = syncContentWeight(localNorm);
   const remoteWeight = syncContentWeight(remoteNorm);
+  const localHasTombs = Object.keys(localNorm.tombstones || {}).length > 0;
 
-  if (remoteWeight > 0 && localWeight === 0) {
+  // Reinstall / empty local: take cloud. Tombstones alone still need merge path.
+  if (remoteWeight > 0 && localWeight === 0 && !localHasTombs) {
     remoteNorm.syncUpdatedAt = Math.max(remoteTs, localTs);
     remoteNorm.syncBaseAt = remoteTs;
     return { state: remoteNorm, winner: "remote", action: "fast-forward" };
@@ -177,7 +202,7 @@ export function mergeSyncState(local, remote, remoteUpdatedAt) {
     localNorm.syncBaseAt = remoteTs || localNorm.syncBaseAt || 0;
     return { state: localNorm, winner: "local", action: "push" };
   }
-  if (localWeight === 0 && remoteWeight === 0) {
+  if (localWeight === 0 && remoteWeight === 0 && !localHasTombs) {
     return { state: localNorm, winner: "local", action: "noop" };
   }
 
@@ -187,27 +212,44 @@ export function mergeSyncState(local, remote, remoteUpdatedAt) {
       ? { ...localNorm.settings, ...remoteNorm.settings }
       : { ...remoteNorm.settings, ...localNorm.settings },
   });
-  merged.habits = mergeEntityLists(localNorm.habits, remoteNorm.habits, (x) => x.id);
-  merged.checkins = mergeEntityLists(
-    localNorm.checkins,
-    remoteNorm.checkins,
-    (x) => x.id || `${x.habitId}|${x.date}`
+  merged.tombstones = mergeTombstones(localNorm.tombstones, remoteNorm.tombstones);
+  merged.habits = applyTombstones(
+    mergeEntityLists(localNorm.habits, remoteNorm.habits, (x) => x.id),
+    merged.tombstones
   );
-  merged.blocks = mergeEntityLists(localNorm.blocks, remoteNorm.blocks, (x) => x.id);
-  merged.countdowns = mergeEntityLists(localNorm.countdowns, remoteNorm.countdowns, (x) => x.id);
-  merged.focusSessions = mergeEntityLists(
-    localNorm.focusSessions,
-    remoteNorm.focusSessions,
-    (x) => x.id
+  merged.checkins = applyTombstones(
+    mergeEntityLists(
+      localNorm.checkins,
+      remoteNorm.checkins,
+      (x) => `${x.habitId}|${x.date}`
+    ),
+    merged.tombstones
   );
-  merged.goals = mergeEntityLists(localNorm.goals, remoteNorm.goals, (x) => x.id);
-  merged.events = mergeEntityLists(localNorm.events, remoteNorm.events, (x) => x.id);
-  merged.transactions = mergeEntityLists(
-    localNorm.transactions || [],
-    remoteNorm.transactions || [],
-    (x) => x.id
+  merged.blocks = applyTombstones(
+    mergeEntityLists(localNorm.blocks, remoteNorm.blocks, (x) => x.id),
+    merged.tombstones
   );
-  merged.syncUpdatedAt = Math.max(localTs, remoteTs);
+  merged.countdowns = applyTombstones(
+    mergeEntityLists(localNorm.countdowns, remoteNorm.countdowns, (x) => x.id),
+    merged.tombstones
+  );
+  merged.focusSessions = applyTombstones(
+    mergeEntityLists(localNorm.focusSessions, remoteNorm.focusSessions, (x) => x.id),
+    merged.tombstones
+  );
+  merged.goals = applyTombstones(
+    mergeEntityLists(localNorm.goals, remoteNorm.goals, (x) => x.id),
+    merged.tombstones
+  );
+  merged.events = applyTombstones(
+    mergeEntityLists(localNorm.events, remoteNorm.events, (x) => x.id),
+    merged.tombstones
+  );
+  merged.transactions = applyTombstones(
+    mergeEntityLists(localNorm.transactions || [], remoteNorm.transactions || [], (x) => x.id),
+    merged.tombstones
+  );
+  merged.syncUpdatedAt = Math.max(localTs, remoteTs, Date.now());
   merged.syncBaseAt = remoteTs;
   return { state: merged, winner: "merged", action: "merge" };
 }

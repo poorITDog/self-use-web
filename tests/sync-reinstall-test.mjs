@@ -59,7 +59,18 @@ assert.equal(shouldPushAfterMerge(both, true), true, "merge result should push u
 const emptyPush = mergeSyncState(defaultState(), cloud, cloudFileModified);
 assert.equal(shouldPushAfterMerge(emptyPush, true), false);
 
+// Hard delete must not come back from older cloud snapshot.
+const afterDelete = normalizeState(deviceA);
+afterDelete.habits = afterDelete.habits.filter((h) => h.id !== "h1");
+afterDelete.tombstones = Object.assign({}, afterDelete.tombstones, { h1: Date.now() });
+afterDelete.syncUpdatedAt = Date.now();
+const deleted = mergeSyncState(afterDelete, cloud, cloudFileModified);
+assert.equal(deleted.winner, "merged");
+assert.equal(deleted.state.habits.some((h) => h.id === "h1"), false, "tombstone blocks resurrect");
+assert.equal(shouldPushAfterMerge(deleted, true), true);
+
 console.log("✓ sync-reinstall: empty fresh fast-forwards cloud");
 console.log("✓ sync-gitlike: two-device habits union-merge + push");
 console.log("✓ sync-gitlike: never push empty over cloud");
-console.log("\n3 passed, 0 failed");
+console.log("✓ sync-gitlike: tombstone delete survives merge");
+console.log("\n4 passed, 0 failed");

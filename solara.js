@@ -35,6 +35,7 @@
   var syncStatus = "disconnected";
   var uploadDebounce = null;
   var syncInFlight = null;
+  var syncQueued = false;
   var autoSyncTimer = null;
   var googleTokenClient = null;
   var tokenPromiseResolve = null;
@@ -145,7 +146,8 @@
       countdowns: [],
       focusSessions: [],
       goals: [],
-      events: []
+      events: [],
+      tombstones: {}
     };
   }
 
@@ -199,8 +201,16 @@
     if (Array.isArray(data.transactions)) out.transactions = data.transactions;
     out.syncUpdatedAt = Number(out.syncUpdatedAt) || 0;
     out.syncBaseAt = Number(out.syncBaseAt) || 0;
+    out.tombstones = data.tombstones && typeof data.tombstones === "object" ? data.tombstones : {};
     return out;
   }
+
+  function markTombstone(key) {
+    if (!key) return;
+    if (!state.tombstones || typeof state.tombstones !== "object") state.tombstones = {};
+    state.tombstones[key] = Date.now();
+  }
+
 
   // Calendar appointment occurrence (not a habit).
   function eventOccursOn(ev, key) {
@@ -395,27 +405,32 @@
   }
 
   // Git-like Drive sync: fetch → merge → push (never push empty over cloud).
-  // Always fetch+merge first; push only when needed. Coalesces concurrent calls.
+  // Always fetch+merge first; push only when needed. Queues one follow-up if busy.
   function driveSync(opts) {
     opts = opts || {};
     var wantPush = opts.push !== false;
     if (!state.settings.googleConnected) return Promise.resolve();
     // Scheduled/background sync respects autoSync; manual force always runs.
     if (!opts.force && state.settings.autoSync === false) return Promise.resolve();
-    if (syncInFlight) return syncInFlight;
+    if (syncInFlight) {
+      syncQueued = true;
+      return syncInFlight;
+    }
     setSyncStatus("syncing");
-    var done = function (value) {
+    var runQueued = function (value) {
       syncInFlight = null;
+      if (syncQueued) {
+        syncQueued = false;
+        return driveSync({ push: true, force: !!opts.force }).then(function () {
+          return value;
+        });
+      }
       return value;
     };
-    var fail = function () {
-      syncInFlight = null;
-      setSyncStatus("failed");
-    };
-    syncInFlight = getAccessToken("").then(function (token) {
+    var p = getAccessToken("").then(function (token) {
       if (!token) {
         setSyncStatus("disconnected");
-        return done();
+        return runQueued();
       }
       return driveFindFile(token).then(function (file) {
         var loadRemote = !file
@@ -432,7 +447,8 @@
           });
         return loadRemote.then(function (pack) {
           var prev = state;
-          var fromEmpty = syncContentWeight(normalizeState(state)) === 0;
+          var fromEmpty = syncContentWeight(normalizeState(state)) === 0 &&
+            Object.keys(state.tombstones || {}).length === 0;
           var result;
           if (pack.remote) {
             result = mergeSyncState(state, pack.remote, pack.remoteTs);
@@ -454,12 +470,13 @@
           var doPush = wantPush && shouldPushAfterMerge(result, !!pack.file);
           // Extra guard: never upload empty snapshot onto a non-empty cloud file.
           if (doPush && syncContentWeight(state) === 0 && pack.remote &&
-            syncContentWeight(normalizeState(pack.remote)) > 0) {
+            syncContentWeight(normalizeState(pack.remote)) > 0 &&
+            Object.keys(state.tombstones || {}).length === 0) {
             doPush = false;
           }
           if (!doPush) {
             setSyncStatus("synced");
-            return done(result);
+            return runQueued(result);
           }
           var payload = state;
           var write = pack.file
@@ -469,13 +486,21 @@
             state.syncBaseAt = Date.now();
             saveStateLocal();
             setSyncStatus("synced");
-            return done(result);
+            return runQueued(result);
           });
         });
       });
     });
-    syncInFlight.catch(fail);
-    return syncInFlight;
+    syncInFlight = p;
+    p.catch(function () {
+      if (syncInFlight === p) syncInFlight = null;
+      setSyncStatus("failed");
+      if (syncQueued) {
+        syncQueued = false;
+        driveSync({ push: true, force: !!opts.force });
+      }
+    });
+    return p;
   }
 
   function drivePull() {
@@ -543,7 +568,27 @@
     return (n.habits.length || 0) + (n.checkins.length || 0) +
       (n.events.length || 0) + (n.countdowns.length || 0) +
       (n.goals.length || 0) + (n.blocks.length || 0) +
-      (n.focusSessions.length || 0);
+      (n.focusSessions.length || 0) + ((n.transactions && n.transactions.length) || 0);
+  }
+
+  function mergeTombstones(a, b) {
+    var out = Object.assign({}, a || {});
+    Object.keys(b || {}).forEach(function (k) {
+      out[k] = Math.max(Number(out[k]) || 0, Number(b[k]) || 0);
+    });
+    return out;
+  }
+
+  function applyTombstones(list, tombstones) {
+    var stones = tombstones || {};
+    return (list || []).filter(function (item) {
+      if (!item) return false;
+      var key = item.id;
+      var alt = item.habitId && item.date ? item.habitId + "|" + item.date : "";
+      var delAt = Math.max(Number(stones[key]) || 0, Number(stones[alt]) || 0);
+      if (!delAt) return true;
+      return (Number(item.updatedAt) || 0) > delAt;
+    });
   }
 
   function mergeEntityLists(localList, remoteList, keyFn) {
@@ -576,8 +621,9 @@
     var remoteTs = Number(remoteUpdatedAt) || Number(remoteNorm.syncUpdatedAt) || 0;
     var localWeight = syncContentWeight(localNorm);
     var remoteWeight = syncContentWeight(remoteNorm);
+    var localHasTombs = Object.keys(localNorm.tombstones || {}).length > 0;
 
-    if (remoteWeight > 0 && localWeight === 0) {
+    if (remoteWeight > 0 && localWeight === 0 && !localHasTombs) {
       remoteNorm.syncUpdatedAt = Math.max(remoteTs, localTs);
       remoteNorm.syncBaseAt = remoteTs;
       return { state: remoteNorm, winner: "remote", action: "fast-forward" };
@@ -586,7 +632,7 @@
       localNorm.syncBaseAt = remoteTs || localNorm.syncBaseAt || 0;
       return { state: localNorm, winner: "local", action: "push" };
     }
-    if (localWeight === 0 && remoteWeight === 0) {
+    if (localWeight === 0 && remoteWeight === 0 && !localHasTombs) {
       return { state: localNorm, winner: "local", action: "noop" };
     }
 
@@ -596,23 +642,48 @@
         ? Object.assign({}, localNorm.settings, remoteNorm.settings)
         : Object.assign({}, remoteNorm.settings, localNorm.settings)
     });
-    merged.habits = mergeEntityLists(localNorm.habits, remoteNorm.habits, function (x) { return x.id; });
-    merged.checkins = mergeEntityLists(localNorm.checkins, remoteNorm.checkins, function (x) {
-      return x.id || (x.habitId + "|" + x.date);
-    });
-    merged.blocks = mergeEntityLists(localNorm.blocks, remoteNorm.blocks, function (x) { return x.id; });
-    merged.countdowns = mergeEntityLists(localNorm.countdowns, remoteNorm.countdowns, function (x) { return x.id; });
-    merged.focusSessions = mergeEntityLists(localNorm.focusSessions, remoteNorm.focusSessions, function (x) { return x.id; });
-    merged.goals = mergeEntityLists(localNorm.goals, remoteNorm.goals, function (x) { return x.id; });
-    merged.events = mergeEntityLists(localNorm.events, remoteNorm.events, function (x) { return x.id; });
+    merged.tombstones = mergeTombstones(localNorm.tombstones, remoteNorm.tombstones);
+    merged.habits = applyTombstones(
+      mergeEntityLists(localNorm.habits, remoteNorm.habits, function (x) { return x.id; }),
+      merged.tombstones
+    );
+    merged.checkins = applyTombstones(
+      mergeEntityLists(localNorm.checkins, remoteNorm.checkins, function (x) {
+        return x.habitId + "|" + x.date;
+      }),
+      merged.tombstones
+    );
+    merged.blocks = applyTombstones(
+      mergeEntityLists(localNorm.blocks, remoteNorm.blocks, function (x) { return x.id; }),
+      merged.tombstones
+    );
+    merged.countdowns = applyTombstones(
+      mergeEntityLists(localNorm.countdowns, remoteNorm.countdowns, function (x) { return x.id; }),
+      merged.tombstones
+    );
+    merged.focusSessions = applyTombstones(
+      mergeEntityLists(localNorm.focusSessions, remoteNorm.focusSessions, function (x) { return x.id; }),
+      merged.tombstones
+    );
+    merged.goals = applyTombstones(
+      mergeEntityLists(localNorm.goals, remoteNorm.goals, function (x) { return x.id; }),
+      merged.tombstones
+    );
+    merged.events = applyTombstones(
+      mergeEntityLists(localNorm.events, remoteNorm.events, function (x) { return x.id; }),
+      merged.tombstones
+    );
     if (localNorm.transactions || remoteNorm.transactions) {
-      merged.transactions = mergeEntityLists(
-        localNorm.transactions || [],
-        remoteNorm.transactions || [],
-        function (x) { return x.id; }
+      merged.transactions = applyTombstones(
+        mergeEntityLists(
+          localNorm.transactions || [],
+          remoteNorm.transactions || [],
+          function (x) { return x.id; }
+        ),
+        merged.tombstones
       );
     }
-    merged.syncUpdatedAt = Math.max(localTs, remoteTs);
+    merged.syncUpdatedAt = Math.max(localTs, remoteTs, Date.now());
     merged.syncBaseAt = remoteTs;
     return { state: merged, winner: "merged", action: "merge" };
   }
@@ -1750,6 +1821,13 @@
   function deleteHabitById(habitId) {
     if (!habitId) return;
     if (!window.confirm("確定永久刪除此習慣？相關打卡紀錄亦會刪除。")) return;
+    markTombstone(habitId);
+    state.checkins.forEach(function (c) {
+      if (c.habitId === habitId) {
+        if (c.id) markTombstone(c.id);
+        if (c.date) markTombstone(habitId + "|" + c.date);
+      }
+    });
     state.habits = state.habits.filter(function (h) { return h.id !== habitId; });
     state.checkins = state.checkins.filter(function (c) { return c.habitId !== habitId; });
     state.goals.forEach(function (g) {
@@ -3671,9 +3749,13 @@
     function start() {
       if (state.settings.googleClientId) initGoogleAuth();
       if (state.settings.googleConnected) {
-        setSyncStatus("syncing");
-        autoDriveSync();
-        startAutoSyncLoop();
+        if (state.settings.autoSync === false) {
+          setSyncStatus("synced");
+        } else {
+          setSyncStatus("syncing");
+          autoDriveSync();
+          startAutoSyncLoop();
+        }
       } else {
         setSyncStatus("disconnected");
       }
