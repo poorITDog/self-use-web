@@ -518,15 +518,15 @@ main {
   font: inherit;
   color: inherit;
   cursor: pointer;
-  background: color-mix(in srgb, var(--hcolor, var(--accent)) 12%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--hcolor, var(--accent)) 32%, var(--line));
-  border-left: 3px solid var(--hcolor, var(--accent-2));
+  background: color-mix(in srgb, var(--hcolor, var(--accent)) 22%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--hcolor, var(--accent)) 45%, var(--line));
+  border-left: 4px solid var(--hcolor, var(--accent-2));
   transition: background 0.15s var(--ease), transform 0.15s var(--ease);
 }
 
 .habit-linked-goal:hover,
 .habit-linked-goal:focus-visible {
-  background: color-mix(in srgb, var(--hcolor, var(--accent)) 18%, var(--surface));
+  background: color-mix(in srgb, var(--hcolor, var(--accent)) 30%, var(--surface));
 }
 
 .habit-linked-goal:active {
@@ -544,9 +544,10 @@ main {
   gap: 4px;
   padding: 3px 9px;
   border-radius: var(--radius-xs);
-  background: color-mix(in srgb, var(--hcolor, var(--accent)) 16%, var(--surface));
+  background: color-mix(in srgb, var(--hcolor, var(--accent)) 26%, var(--surface));
   color: var(--text);
-  border: 1px solid color-mix(in srgb, var(--hcolor, var(--accent)) 36%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--hcolor, var(--accent)) 48%, var(--line));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hcolor, var(--accent)) 18%, transparent);
   font-weight: 700;
   font-size: 0.78rem;
   line-height: 1.3;
@@ -570,8 +571,9 @@ button.goal-habit-chip {
 
 .goal-meta-line {
   color: var(--text-soft);
-  font-size: 0.72rem;
-  line-height: 1.35;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  font-weight: 500;
 }
 
 button.linkish {
@@ -674,8 +676,8 @@ button.linkish {
 }
 
 .goal-row.has-habit {
-  border-left: 3px solid var(--hcolor, var(--accent-2));
-  background: color-mix(in srgb, var(--hcolor, var(--accent)) 7%, var(--surface));
+  border-left: 4px solid var(--hcolor, var(--accent-2));
+  background: color-mix(in srgb, var(--hcolor, var(--accent)) 14%, var(--surface));
 }
 
 .goal-row.has-habit .progress > i {
@@ -731,10 +733,10 @@ button.linkish {
   gap: 4px;
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--hcolor, var(--accent)) 26%, var(--line));
-  border-left: 3px solid var(--hcolor, var(--accent-2));
+  border: 1px solid color-mix(in srgb, var(--hcolor, var(--accent)) 38%, var(--line));
+  border-left: 4px solid var(--hcolor, var(--accent-2));
   border-radius: var(--radius-xs);
-  background: color-mix(in srgb, var(--hcolor, var(--accent)) 10%, var(--surface));
+  background: color-mix(in srgb, var(--hcolor, var(--accent)) 18%, var(--surface));
   color: inherit;
   font: inherit;
   text-align: left;
@@ -744,7 +746,7 @@ button.linkish {
 
 .goals-strip-item:hover,
 .goals-strip-item:focus-visible {
-  background: color-mix(in srgb, var(--hcolor, var(--accent)) 16%, var(--surface));
+  background: color-mix(in srgb, var(--hcolor, var(--accent)) 26%, var(--surface));
 }
 
 .goals-strip-item .progress-bar-slim > i {
@@ -1568,9 +1570,9 @@ button.linkish {
   gap: 3px;
   padding: 7px 9px;
   border-radius: var(--radius-xs);
-  background: color-mix(in srgb, var(--hcolor, var(--accent)) 14%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--hcolor, var(--accent)) 30%, var(--line));
-  border-left: 3px solid var(--hcolor, var(--accent-2));
+  background: color-mix(in srgb, var(--hcolor, var(--accent)) 22%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--hcolor, var(--accent)) 42%, var(--line));
+  border-left: 4px solid var(--hcolor, var(--accent-2));
   font-size: 0.78rem;
   font-weight: 600;
 }
