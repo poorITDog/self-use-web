@@ -235,6 +235,13 @@ run("normalizeGoal maps hours and cert fields", () => {
   assert.equal(g.outcome, "SAA");
 });
 
+run("normalizeGoal keeps createdAt or falls back to updatedAt", () => {
+  const withCreated = normalizeGoal({ title: "A", createdAt: 100, updatedAt: 200 });
+  assert.equal(withCreated.createdAt, 100);
+  const legacy = normalizeGoal({ title: "B", updatedAt: 300 });
+  assert.equal(legacy.createdAt, 300);
+});
+
 run("maybeFinishGoal marks achievement when target reached", () => {
   const g = normalizeGoal({ title: "Pro", current: 9, target: 10, goalType: "outcome" });
   assert.equal(maybeFinishGoal(g, 1_700_000_000_000), false);

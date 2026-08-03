@@ -142,6 +142,7 @@ export function normalizeGoal(g) {
   if (unitMode === "hours") unit = unit || "小時";
   if (unitMode === "count") unit = unit || "次";
   const finishedAt = raw.finishedAt ? Number(raw.finishedAt) || null : null;
+  const createdAt = Number(raw.createdAt) || Number(raw.updatedAt) || null;
   return Object.assign(
     {
       habitId: "",
@@ -153,6 +154,7 @@ export function normalizeGoal(g) {
       goalType: "general",
       outcome: "",
       finishedAt: null,
+      createdAt: null,
       lastBumpKey: "",
       lastBumpAmount: 0,
     },
@@ -164,6 +166,7 @@ export function normalizeGoal(g) {
       goalType: raw.goalType || "general",
       outcome: raw.outcome || "",
       finishedAt,
+      createdAt,
       lastBumpKey: raw.lastBumpKey || "",
       lastBumpAmount: Number(raw.lastBumpAmount) || 0,
       current: Number(raw.current) || 0,

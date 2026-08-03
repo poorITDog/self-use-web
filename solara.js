@@ -84,6 +84,25 @@
 
   function todayKey() { return dateKey(new Date()); }
 
+  // Chinese date for start / setup labels, e.g. 2026年8月3日
+  function formatZhDate(ts) {
+    var t = Number(ts) || 0;
+    if (!t) return "";
+    var d = new Date(t);
+    return d.getFullYear() + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日";
+  }
+
+  // Prefer createdAt; fall back to updatedAt for older records
+  function startedAtMs(item) {
+    if (!item) return 0;
+    return Number(item.createdAt) || Number(item.updatedAt) || 0;
+  }
+
+  function startedLabel(item) {
+    var s = formatZhDate(startedAtMs(item));
+    return s ? "開始於 " + s : "";
+  }
+
   function esc(s) {
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;")
@@ -1008,6 +1027,7 @@
     var unit = unitRaw;
     if (unitMode === "hours") unit = unit || "小時";
     if (unitMode === "count") unit = unit || "次";
+    var createdAt = Number(raw.createdAt) || Number(raw.updatedAt) || null;
     return Object.assign({
       habitId: "",
       unit: "",
@@ -1018,6 +1038,7 @@
       goalType: "general",
       outcome: "",
       finishedAt: null,
+      createdAt: null,
       lastBumpKey: "",
       lastBumpAmount: 0
     }, raw, {
@@ -1027,6 +1048,7 @@
       goalType: raw.goalType || "general",
       outcome: raw.outcome || "",
       finishedAt: raw.finishedAt ? Number(raw.finishedAt) || null : null,
+      createdAt: createdAt,
       lastBumpKey: raw.lastBumpKey || "",
       lastBumpAmount: Number(raw.lastBumpAmount) || 0,
       current: Number(raw.current) || 0,
@@ -1609,9 +1631,12 @@
     gs.slice(0, 2).forEach(function (g) {
       var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
       var unit = goalUnitLabel(g);
-      html += '<div class="habit-goal-badge"><span>' + esc(g.title) + "</span>" +
+      var start = startedLabel(g);
+      html += '<div class="habit-goal-badge" style="--hcolor:' + escAttr(habit.color) + '">' +
+        '<span class="habit-goal-badge-title">目標 · ' + esc(g.title) + "</span>" +
         '<span class="muted tiny">' + g.current + "/" + g.target +
-        (unit ? " " + unit : "") + " · " + pct + "%</span>" +
+        (unit ? " " + unit : "") + " · " + pct + "%" +
+        (start ? " · " + start : "") + "</span>" +
         '<div class="progress-bar-slim"><i style="width:' + pct + '%"></i></div></div>';
     });
     html += "</div>";
@@ -1874,6 +1899,9 @@
       "<h3>" + esc(habit.name) + "</h3>" +
       '<p class="muted">' + typeLabel(habit.type) + " · " + esc(habit.group || "未分組") +
       (habitTimeLabel(habit) ? " · " + esc(habitTimeLabel(habit)) : "") + "</p>" +
+      (startedLabel(habit)
+        ? '<p class="goal-meta-line">' + esc(startedLabel(habit)) + " · 設定於「習慣」分頁</p>"
+        : '<p class="goal-meta-line">設定於「習慣」分頁</p>') +
       '<p class="sheet-pull-hint">向下拉亦可返回主頁</p></div>' +
       '<div class="habit-detail-stats">' +
       '<div class="detail-stat"><div class="label">連續天數</div><div class="value">' + streakFor(habit) + "</div></div>" +
@@ -1889,17 +1917,24 @@
       habitYearHeatHtml(habit);
     var linkedGoals = state.goals.filter(function (g) { return g.habitId === habit.id; });
     if (linkedGoals.length) {
-      html += '<div class="section-title" style="padding-top:8px">連結目標</div><div class="habit-linked-goals">';
+      html += '<div class="section-title" style="padding-top:8px">連結目標</div>' +
+        '<p class="goal-meta-line" style="margin:0 0 6px">設定於「設定 → 目標」' +
+        ' · <button type="button" class="linkish" data-nav-jump="settings-goals">前往管理</button></p>' +
+        '<div class="habit-linked-goals">';
       linkedGoals.forEach(function (g) {
         var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
         var unit = goalUnitLabel(g);
-        html += '<div class="habit-linked-goal"><strong>' + esc(g.title) + "</strong>" +
+        var start = startedLabel(g);
+        html += '<button type="button" class="habit-linked-goal" style="--hcolor:' +
+          escAttr(habit.color) + '" data-edit-goal="' + g.id + '">' +
+          '<strong>' + esc(g.title) + "</strong>" +
           ' <span class="goal-type-badge type-' + escAttr(g.goalType || "general") + '">' +
           goalTypeLabel(g.goalType) + (isGoalFinished(g) ? " · 成就" : "") + "</span>" +
           '<span class="muted tiny">' + g.current + " / " + g.target +
           (unit ? " " + esc(unit) : "") + " · " + pct + "%</span>" +
+          (start ? '<span class="goal-meta-line">' + esc(start) + "</span>" : "") +
           (g.outcome ? '<span class="tiny">' + esc(g.outcome) + "</span>" : "") +
-          "</div>";
+          "</button>";
       });
       html += "</div>";
     }
@@ -1996,17 +2031,24 @@
     if (!open.length) return "";
     var html = '<div class="goals-strip">';
     html += '<div class="goals-strip-head"><span class="section-title">進行中目標</span>' +
-      '<button type="button" class="btn sm ghost" data-nav-jump="settings-goals">全部</button></div>';
+      '<button type="button" class="btn sm ghost" data-nav-jump="settings-goals">設定 → 目標</button></div>';
     open.forEach(function (g) {
       var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
       var habit = g.habitId ? state.habits.find(function (h) { return h.id === g.habitId; }) : null;
       var unit = goalUnitLabel(g);
-      html += '<button type="button" class="goals-strip-item" data-edit-goal="' + g.id + '">' +
+      var start = startedLabel(g);
+      var hcolor = habit ? habit.color : "";
+      html += '<button type="button" class="goals-strip-item' + (habit ? " has-habit" : "") + '"' +
+        (hcolor ? ' style="--hcolor:' + escAttr(hcolor) + '"' : "") +
+        ' data-edit-goal="' + g.id + '">' +
         '<div class="goals-strip-top"><strong>' + esc(g.title) + "</strong>" +
         '<span class="muted tiny">' + g.current + "/" + g.target + (unit ? " " + unit : "") +
         " · " + pct + "%</span></div>" +
         '<div class="tiny">' + goalTypeLabel(g.goalType) +
-        (habit ? ' · <span class="goal-habit-link">' + esc(habit.name) + "</span>" : "") + "</div>" +
+        (habit ? ' · <span class="goal-habit-chip" style="--hcolor:' + escAttr(habit.color) + '">' +
+          esc(habit.name) + "</span>" : "") + "</div>" +
+        (start ? '<div class="goal-meta-line">' + esc(start) + " · 設定於「設定 → 目標」</div>" :
+          '<div class="goal-meta-line">設定於「設定 → 目標」</div>') +
         '<div class="goal-progress-wrap">' +
         '<div class="progress-bar-slim"><i style="width:' + pct + '%"></i></div>' +
         '<div class="goal-pct-ring" style="--p:' + pct + '%" aria-label="完成 ' + pct + '%"><span>' + pct +
@@ -3125,11 +3167,17 @@
     var habit = g.habitId ? state.habits.find(function (h) { return h.id === g.habitId; }) : null;
     var unit = goalUnitLabel(g);
     var plusLabel = g.unitMode === "hours" ? "+1 小時" : "+1";
+    var start = startedLabel(g);
     var habitLine = habit
-      ? '<div class="tiny goal-habit-link">連結習慣：' + esc(habit.name) +
-        (isHabitDone(habit, todayKey()) ? " · 今日已打卡" : " · 今日未打卡") + "</div>"
+      ? '<div class="goal-habit-line">' +
+        '<button type="button" class="goal-habit-chip" style="--hcolor:' + escAttr(habit.color) +
+        '" data-habit-open="' + habit.id + '">連結習慣：' + esc(habit.name) + "</button>" +
+        '<span class="muted tiny">' +
+        (isHabitDone(habit, todayKey()) ? "今日已打卡" : "今日未打卡") + "</span></div>"
       : "";
-    return '<div class="settings-row goal-row" style="flex-direction:column;align-items:stretch">' +
+    return '<div class="settings-row goal-row' + (habit ? " has-habit" : "") + '"' +
+      (habit ? ' style="--hcolor:' + escAttr(habit.color) + ';flex-direction:column;align-items:stretch"' :
+        ' style="flex-direction:column;align-items:stretch"') + ">" +
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%">' +
       '<span class="settings-row-label"><strong>' + esc(g.title) + "</strong>" +
       ' <span class="goal-type-badge type-' + escAttr(g.goalType || "general") + '">' +
@@ -3138,6 +3186,8 @@
       (unit ? " " + esc(unit) : "") + " · " + pct + "%</span></div>" +
       (g.outcome ? '<div class="tiny goal-outcome-preview">成果：' + esc(g.outcome) + "</div>" : "") +
       (g.dueAt ? '<div class="tiny">期限 ' + dateKey(g.dueAt) + "</div>" : "") +
+      '<div class="goal-meta-line">' +
+      (start ? esc(start) + " · " : "") + "設定於「設定 → 目標」</div>" +
       habitLine +
       '<div class="goal-progress-wrap">' +
       '<div class="progress"><i style="width:' + pct + '%"></i></div>' +
@@ -3239,6 +3289,7 @@
       var unit = unitMode === "hours" ? "小時" : unitMode === "count" ? "次" :
         document.getElementById("gUnit").value.trim();
       if (unitMode === "custom" && !unit) return toast("請輸入自訂單位");
+      var now = Date.now();
       var payload = normalizeGoal({
         title: title,
         kind: g.kind,
@@ -3251,19 +3302,22 @@
         dueAt: dueVal ? parseKey(dueVal).getTime() : null,
         habitId: document.getElementById("gHabit").value || "",
         finishedAt: g.finishedAt || null,
+        createdAt: g.createdAt || (g.id ? null : now),
         lastBumpKey: g.lastBumpKey || "",
         lastBumpAmount: g.lastBumpAmount || 0
       });
       if (g.id) {
         var existing = state.goals.find(function (x) { return x.id === g.id; });
         if (existing) {
+          var keepCreated = existing.createdAt || g.createdAt || now;
           Object.assign(existing, payload);
+          existing.createdAt = keepCreated;
           if (Number(existing.current) < Number(existing.target)) existing.finishedAt = null;
           else maybeFinishGoal(existing);
           touch(existing);
         }
       } else {
-        var created = touch(Object.assign({ id: uid() }, payload));
+        var created = touch(Object.assign({ id: uid(), createdAt: now }, payload));
         maybeFinishGoal(created);
         state.goals.push(created);
       }
@@ -3703,6 +3757,7 @@
     if (jump) {
       var dest = jump.getAttribute("data-nav-jump");
       if (dest === "settings-goals") {
+        closeModal();
         ui.view = "settings";
         ui.settingsTab = "goals";
         render();
