@@ -593,10 +593,27 @@ main {
 .achievement-row {
   border-left: 3px solid var(--accent-2);
   background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  transition: background 0.18s var(--ease), transform 0.18s var(--ease);
+}
+
+.achievement-row:hover {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
+.goal-row {
+  transition: background 0.15s var(--ease);
 }
 
 .goal-row .settings-row-label strong {
   font-size: 0.98rem;
+}
+
+.achievement-mark {
+  transition: transform 0.18s var(--ease);
+}
+
+.achievement-row:hover .achievement-mark {
+  transform: scale(1.06);
 }
 
 .goals-strip {

@@ -3112,7 +3112,9 @@
       html += '<div class="settings-row"><span class="settings-row-label muted">' +
         "完成目標後會出現在這裡，例如 AWS 證書或職業成果。</span></div>";
     } else {
+      html += '<div class="achievements-list" role="list">';
       achievements.forEach(function (g) { html += achievementRow(g); });
+      html += "</div>";
     }
     html += "</div>";
     return html;
@@ -3151,8 +3153,14 @@
 
   function achievementRow(g) {
     var unit = goalUnitLabel(g);
-    var when = g.finishedAt ? new Date(g.finishedAt).toLocaleDateString("zh-HK") : "";
-    return '<div class="settings-row achievement-row" style="flex-direction:column;align-items:stretch">' +
+    var when = "";
+    if (g.finishedAt) {
+      var d = new Date(g.finishedAt);
+      when = d.getFullYear() + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日";
+    }
+    var label = esc(g.title) + "（" + goalTypeLabel(g.goalType) + "成就）";
+    return '<div class="settings-row achievement-row" style="flex-direction:column;align-items:stretch" role="listitem" aria-label="' +
+      escAttr(label) + '">' +
       '<div class="achievement-head">' +
       '<span class="achievement-mark" aria-hidden="true">★</span>' +
       '<div class="achievement-body">' +
@@ -3164,9 +3172,12 @@
       (g.outcome ? '<div class="achievement-outcome">' + esc(g.outcome) + "</div>" : "") +
       "</div></div>" +
       '<div class="row-actions" style="margin-top:6px">' +
-      '<button class="btn sm ghost" data-edit-goal="' + g.id + '">查看／編輯</button>' +
-      '<button class="btn sm soft" data-goal-reopen="' + g.id + '">移回進行中</button>' +
-      '<button class="btn sm warn" data-delete-goal="' + g.id + '">刪除</button></div></div>';
+      '<button class="btn sm ghost" data-edit-goal="' + g.id + '" aria-label="查看或編輯成就 ' + escAttr(g.title) +
+      '">查看／編輯</button>' +
+      '<button class="btn sm soft" data-goal-reopen="' + g.id + '" aria-label="將 ' + escAttr(g.title) +
+      ' 移回進行中">移回進行中</button>' +
+      '<button class="btn sm warn" data-delete-goal="' + g.id + '" aria-label="刪除成就 ' + escAttr(g.title) +
+      '">刪除</button></div></div>';
   }
 
   function openGoalEditor(kind, item) {
