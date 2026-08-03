@@ -132,6 +132,7 @@
         notifyEnabled: false,
         notifyHabits: true,
         notifyEvents: true,
+        notifyCountdowns: true,
         focusSoundEnabled: true
       },
       habits: [],
@@ -155,6 +156,7 @@
     if (out.settings.notifyEnabled === undefined) out.settings.notifyEnabled = false;
     if (out.settings.notifyHabits === undefined) out.settings.notifyHabits = true;
     if (out.settings.notifyEvents === undefined) out.settings.notifyEvents = true;
+    if (out.settings.notifyCountdowns === undefined) out.settings.notifyCountdowns = true;
     if (out.settings.focusSoundEnabled === undefined) out.settings.focusSoundEnabled = true;
     out.countdowns = (Array.isArray(out.countdowns) ? out.countdowns : []).map(function (c) {
       var kind = c.kind || "countdown";
@@ -549,6 +551,30 @@
             } catch (e) { /* ignore */ }
           }
         }, ms);
+        notifyTimers.push(tid);
+      });
+    }
+    if (state.settings.notifyCountdowns !== false) {
+      var morning = new Date();
+      morning.setHours(9, 0, 0, 0);
+      var msCd = morning.getTime() - now;
+      if (msCd < 0) msCd += 86400000;
+      state.countdowns.forEach(function (c) {
+        var days = countdownDaysLeft(c);
+        if (days > 3) return;
+        var tid = setTimeout(function () {
+          if (Notification.permission !== "granted") return;
+          try {
+            var body = days <= 0
+              ? (c.title + " 就是今天")
+              : (c.title + " 還有 " + days + " 天");
+            new Notification("Solara 倒數提醒", {
+              body: body,
+              tag: "countdown-" + c.id + "-" + todayKey(),
+              silent: false
+            });
+          } catch (e) { /* ignore */ }
+        }, msCd);
         notifyTimers.push(tid);
       });
     }
@@ -1225,32 +1251,45 @@
         color: ev.color || colors()[0],
         kind: "行程",
         meta: eventRepeatLabel(ev.repeat),
-        action: 'data-edit-event="' + ev.id + '"'
+        eventId: ev.id
       });
     });
     state.habits.filter(function (h) {
       return !h.archived && habitDueOn(h, key) && h.timeOfDay;
     }).forEach(function (h) {
+      var done = isHabitDone(h, key);
       items.push({
         sort: timeToMinutes(h.timeOfDay),
         time: h.timeOfDay,
         title: h.name,
         color: h.color,
-        kind: isHabitDone(h, key) ? "習慣 · 已完成" : "習慣",
+        kind: done ? "習慣 · 已完成" : "習慣 · 點此打卡",
         meta: "",
-        action: 'data-habit-open="' + h.id + '"'
+        habitId: h.id,
+        done: done
       });
     });
     items.sort(function (a, b) { return a.sort - b.sort; });
     if (!items.length) return "";
     var html = '<div class="today-timeline"><div class="section-title">今日時間軸</div>';
     items.forEach(function (it) {
-      html += '<button type="button" class="today-timeline-item" ' + it.action + ">" +
-        '<span class="today-timeline-time">' + esc(it.time) + "</span>" +
-        '<span class="today-timeline-dot" style="background:' + it.color + '"></span>' +
-        '<span class="today-timeline-body"><strong>' + esc(it.title) + "</strong>" +
-        '<span class="muted tiny">' + esc(it.kind) + (it.meta ? " · " + it.meta : "") +
-        "</span></span></button>";
+      if (it.habitId) {
+        html += '<div class="today-timeline-item' + (it.done ? " done" : "") + '">' +
+          '<span class="today-timeline-time">' + esc(it.time) + "</span>" +
+          '<span class="today-timeline-dot" style="background:' + it.color + '"></span>' +
+          '<button type="button" class="today-timeline-body" data-toggle="' + it.habitId + '">' +
+          "<strong>" + esc(it.title) + "</strong>" +
+          '<span class="muted tiny">' + esc(it.kind) + "</span></button>" +
+          '<button type="button" class="btn sm ' + (it.done ? "soft" : "") + '" data-toggle="' + it.habitId +
+          '">' + (it.done ? "已完成" : "打卡") + "</button></div>";
+      } else {
+        html += '<button type="button" class="today-timeline-item" data-edit-event="' + it.eventId + '">' +
+          '<span class="today-timeline-time">' + esc(it.time) + "</span>" +
+          '<span class="today-timeline-dot" style="background:' + it.color + '"></span>' +
+          '<span class="today-timeline-body"><strong>' + esc(it.title) + "</strong>" +
+          '<span class="muted tiny">' + esc(it.kind) + (it.meta ? " · " + it.meta : "") +
+          "</span></span></button>";
+      }
     });
     html += "</div>";
     return html;
@@ -2409,6 +2448,21 @@
     var todayFocus = state.focusSessions.filter(function (s) { return dateKey(s.startedAt) === todayKey(); });
     var sum = todayFocus.reduce(function (a, s) { return a + Number(s.minutes || 0); }, 0);
     html += '<div class="focus-stats">今天專注 ' + todayFocus.length + " 次 · " + fmtMin(sum) + "</div>";
+    var recent = state.focusSessions.slice().sort(function (a, b) {
+      return Number(b.startedAt) - Number(a.startedAt);
+    }).slice(0, 8);
+    if (recent.length) {
+      html += '<div class="focus-history"><div class="section-title">最近專注</div>';
+      recent.forEach(function (s) {
+        var habit = s.habitId ? state.habits.find(function (h) { return h.id === s.habitId; }) : null;
+        html += '<div class="focus-history-row"><strong>' + fmtMin(s.minutes) + "</strong>" +
+          '<span class="muted tiny">' + dateKey(s.startedAt) +
+          (habit ? " · " + esc(habit.name) : "") + "</span></div>";
+      });
+      html += "</div>";
+    } else {
+      html += '<div class="focus-history"><p class="muted tiny" style="margin:8px 0 0">完成一輪番茄鐘後，記錄會顯示在這裡。</p></div>';
+    }
     return html;
   }
 
@@ -2665,6 +2719,10 @@
       (state.settings.notifyEvents !== false ? " checked" : "") +
       (state.settings.notifyEnabled && supported ? "" : " disabled") +
       " /> 行程提醒（當日開始時間）</label></div>";
+    html += '<div class="settings-row"><label class="settings-row-label"><input type="checkbox" id="notifyCountdowns"' +
+      (state.settings.notifyCountdowns !== false ? " checked" : "") +
+      (state.settings.notifyEnabled && supported ? "" : " disabled") +
+      " /> 倒數提醒（3 日內，早上 9 時）</label></div>";
     html += '<div class="settings-row"><label class="settings-row-label"><input type="checkbox" id="settingsFocusSound"' +
       (state.settings.focusSoundEnabled !== false ? " checked" : "") +
       " /> 專注提示音</label></div>";
@@ -3155,6 +3213,13 @@
       saveStateLocal();
       scheduleHabitNotifications();
       toast(state.settings.notifyEvents ? "已開啟行程提醒" : "已關閉行程提醒");
+      return;
+    }
+    if (e.target.id === "notifyCountdowns") {
+      state.settings.notifyCountdowns = e.target.checked;
+      saveStateLocal();
+      scheduleHabitNotifications();
+      toast(state.settings.notifyCountdowns ? "已開啟倒數提醒" : "已關閉倒數提醒");
       return;
     }
     if (e.target.id === "focusSoundEnabled" || e.target.id === "settingsFocusSound") {

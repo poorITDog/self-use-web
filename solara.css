@@ -1380,7 +1380,7 @@ main {
 
 .today-timeline-item {
   display: grid;
-  grid-template-columns: 44px 10px 1fr;
+  grid-template-columns: 44px 10px 1fr auto;
   gap: 8px;
   align-items: center;
   width: 100%;
@@ -1392,6 +1392,39 @@ main {
   font: inherit;
   text-align: left;
   cursor: pointer;
+}
+
+.today-timeline-item.done {
+  opacity: 0.72;
+}
+
+.today-timeline-item .today-timeline-body {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.focus-history {
+  margin-top: 16px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.focus-history-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.focus-history-row:last-child {
+  border-bottom: 0;
 }
 
 .today-timeline-item:active {
