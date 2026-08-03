@@ -1595,9 +1595,12 @@
       var habit = g.habitId ? state.habits.find(function (h) { return h.id === g.habitId; }) : null;
       html += '<button type="button" class="goals-strip-item" data-edit-goal="' + g.id + '">' +
         '<div class="goals-strip-top"><strong>' + esc(g.title) + "</strong>" +
-        '<span class="muted tiny">' + g.current + "/" + g.target + "</span></div>" +
+        '<span class="muted tiny">' + g.current + "/" + g.target + " · " + pct + "%</span></div>" +
         (habit ? '<div class="tiny goal-habit-link">' + esc(habit.name) + "</div>" : "") +
-        '<div class="progress-bar-slim"><i style="width:' + pct + '%"></i></div></button>';
+        '<div class="goal-progress-wrap">' +
+        '<div class="progress-bar-slim"><i style="width:' + pct + '%"></i></div>' +
+        '<div class="goal-pct-ring" style="--p:' + pct + '%" aria-label="完成 ' + pct + '%"><span>' + pct +
+        "%</span></div></div></button>";
     });
     html += "</div>";
     return html;
@@ -1646,12 +1649,13 @@
       (panel === "board" ? "on" : "") + '">儀表板</button></div>';
     if (!active.length) {
       html += emptyHabitsHtml();
-      if (panel === "board") html += archivedHabitsHtml();
     } else if (panel === "board") {
       html += habitBoardHtml(active);
     } else {
       html += todayCheckinHtml(todayHabits);
     }
+    // Always show archive section on habits (both today & board).
+    if (panel === "today" || !active.length) html += archivedHabitsHtml();
     document.getElementById("view-habits").innerHTML = html;
   }
 
