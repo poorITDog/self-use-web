@@ -1018,7 +1018,8 @@
       goalType: "general",
       outcome: "",
       finishedAt: null,
-      lastBumpKey: ""
+      lastBumpKey: "",
+      lastBumpAmount: 0
     }, raw, {
       habitId: raw.habitId || "",
       unitMode: unitMode,
@@ -1027,6 +1028,7 @@
       outcome: raw.outcome || "",
       finishedAt: raw.finishedAt ? Number(raw.finishedAt) || null : null,
       lastBumpKey: raw.lastBumpKey || "",
+      lastBumpAmount: Number(raw.lastBumpAmount) || 0,
       current: Number(raw.current) || 0,
       target: Math.max(1, Number(raw.target) || 1)
     });
@@ -1063,22 +1065,29 @@
     touch(g);
   }
 
-  // Bump linked goals once per day when habit becomes done.
+  // Sync linked goals from habit progress (hours goals accumulate same-day deltas).
   function bumpLinkedGoals(habit, key) {
     var names = [];
     var finishedNames = [];
     state.goals.forEach(function (g) {
       if (g.habitId !== habit.id) return;
       if (g.finishedAt) return;
-      if (g.lastBumpKey === key) return;
-      var add = 1;
       if (g.unitMode === "hours" && habit.type === "duration") {
         var c = getCheckin(habit.id, key);
-        var mins = Number((c && (c.minutes || c.value)) || 0);
-        if (mins > 0) add = Math.round((mins / 60) * 100) / 100;
+        var mins = Number(c && (c.minutes != null ? c.minutes : c.value)) || 0;
+        var hoursNow = Math.round((mins / 60) * 100) / 100;
+        var prev = g.lastBumpKey === key ? (Number(g.lastBumpAmount) || 0) : 0;
+        if (hoursNow === prev) return;
+        g.current = Math.round((Number(g.current) - prev + hoursNow) * 100) / 100;
+        if (g.current < 0) g.current = 0;
+        g.lastBumpKey = key;
+        g.lastBumpAmount = hoursNow;
+      } else {
+        if (g.lastBumpKey === key) return;
+        g.current = Math.round((Number(g.current) + 1) * 100) / 100;
+        g.lastBumpKey = key;
+        g.lastBumpAmount = 1;
       }
-      g.current = Math.round((Number(g.current) + add) * 100) / 100;
-      g.lastBumpKey = key;
       touch(g);
       names.push(g.title);
       if (maybeFinishGoal(g)) finishedNames.push(g.title);
@@ -2264,8 +2273,13 @@
       }
       saveState();
       closeModal();
-      if (!wasDone && isHabitDone(habit, key)) afterHabitCompleted(habit, key);
-      else toast("已記錄");
+      if (habit.type === "duration" || habit.type === "count") {
+        afterHabitCompleted(habit, key);
+      } else if (!wasDone && isHabitDone(habit, key)) {
+        afterHabitCompleted(habit, key);
+      } else {
+        toast("已記錄");
+      }
       if (ui.habitDetailId) refreshHabitDetail();
       render();
     };
@@ -3003,6 +3017,7 @@
               c.value = c.minutes;
               touch(c);
             }
+            afterHabitCompleted(habit, key);
           }
         }
         saveState();
@@ -3222,7 +3237,6 @@
         finishedAt: g.finishedAt || null,
         lastBumpKey: g.lastBumpKey || ""
       });
-      var target = state.goals;
       if (g.id) {
         var existing = state.goals.find(function (x) { return x.id === g.id; });
         if (existing) {
@@ -3255,7 +3269,7 @@
     }
   }
 
-  // Mark linked yes/no habit done for today; linked goals bump via afterHabitCompleted.
+  // Mark linked habit done / sync hours; linked goals bump via afterHabitCompleted.
   function goalCheckAndPlus(goalId) {
     var goal = state.goals.find(function (x) { return x.id === goalId; });
     if (!goal || goal.finishedAt) return;
@@ -3275,6 +3289,15 @@
         afterHabitCompleted(habit, key);
         saveState();
         render();
+        return;
+      }
+      if (habit && goal.unitMode === "hours" && habit.type === "duration") {
+        var result = bumpLinkedGoals(habit, key);
+        saveState();
+        render();
+        if (result.finished.length) toast("成就解鎖：" + result.finished.join("、"));
+        else if (result.bumped.length) toast("已同步小時進度");
+        else toast("今日尚未有計時紀錄，請先打卡或專注");
         return;
       }
     }

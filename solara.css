@@ -590,6 +590,15 @@ main {
   color: var(--text);
 }
 
+.achievement-row {
+  border-left: 3px solid var(--accent-2);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+
+.goal-row .settings-row-label strong {
+  font-size: 0.98rem;
+}
+
 .goals-strip {
   margin: 0 0 12px;
   padding: 12px 14px;

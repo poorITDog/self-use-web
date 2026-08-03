@@ -154,6 +154,7 @@ export function normalizeGoal(g) {
       outcome: "",
       finishedAt: null,
       lastBumpKey: "",
+      lastBumpAmount: 0,
     },
     raw,
     {
@@ -164,6 +165,7 @@ export function normalizeGoal(g) {
       outcome: raw.outcome || "",
       finishedAt,
       lastBumpKey: raw.lastBumpKey || "",
+      lastBumpAmount: Number(raw.lastBumpAmount) || 0,
       current: Number(raw.current) || 0,
       target: Math.max(1, Number(raw.target) || 1),
     }
