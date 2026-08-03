@@ -3144,11 +3144,16 @@
       '<div class="goal-pct-ring" style="--p:' + pct + '%" aria-label="完成 ' + pct + '%"><span>' + pct + "%</span></div>" +
       "</div>" +
       '<div class="row-actions" style="margin-top:6px">' +
-      '<button class="btn sm soft" data-goal-plus="' + g.id + '">' + plusLabel + "</button>" +
-      (habit ? '<button class="btn sm soft" data-goal-check="' + g.id + '">打卡並推進</button>' : "") +
-      '<button class="btn sm soft" data-goal-finish="' + g.id + '">標記完成</button>' +
-      '<button class="btn sm ghost" data-edit-goal="' + g.id + '">編輯</button>' +
-      '<button class="btn sm warn" data-delete-goal="' + g.id + '">刪除</button></div></div>';
+      '<button class="btn sm soft" data-goal-plus="' + g.id + '" aria-label="' + escAttr(plusLabel + " " + g.title) +
+      '">' + plusLabel + "</button>" +
+      (habit ? '<button class="btn sm soft" data-goal-check="' + g.id + '" aria-label="打卡並推進 ' +
+        escAttr(g.title) + '">打卡並推進</button>' : "") +
+      '<button class="btn sm soft" data-goal-finish="' + g.id + '" aria-label="標記完成 ' + escAttr(g.title) +
+      '">標記完成</button>' +
+      '<button class="btn sm ghost" data-edit-goal="' + g.id + '" aria-label="編輯目標 ' + escAttr(g.title) +
+      '">編輯</button>' +
+      '<button class="btn sm warn" data-delete-goal="' + g.id + '" aria-label="刪除目標 ' + escAttr(g.title) +
+      '">刪除</button></div></div>';
   }
 
   function achievementRow(g) {
