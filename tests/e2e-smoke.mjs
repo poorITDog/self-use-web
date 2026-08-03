@@ -53,19 +53,21 @@ async function assert(cond, name) {
 const brand = await page.$eval(".solara-mark", (el) => el.getAttribute("aria-label"));
 await assert(brand === "Solara", "brand mark visible on habits");
 
-// default tab is habits; dashboard (儀表板) is default habits panel
+// default tab is habits; today panel is default
 const activeNav = await page.$eval("#nav button.active", (el) => el.getAttribute("data-nav"));
 await assert(activeNav === "habits", "default nav is habits");
 
-// board panel is default — habit boxes appear after creating a habit
-await page.waitForSelector('[data-habits-panel="board"].on');
-const boardDefault = await page.$eval('[data-habits-panel="board"]', (el) => el.classList.contains("on"));
-await assert(boardDefault, "habits board panel is default");
+await page.waitForSelector('[data-habits-panel="today"].on');
+const todayDefault = await page.$eval('[data-habits-panel="today"]', (el) => el.classList.contains("on"));
+await assert(todayDefault, "habits today panel is default");
 
 // today summary renders
 await page.waitForSelector(".today-strip");
 const todayStrip = await page.$(".today-strip");
 await assert(!!todayStrip, "today summary strip renders");
+await page.waitForSelector(".week-summary");
+const weekSummary = await page.$(".week-summary");
+await assert(!!weekSummary, "week summary renders on habits");
 
 // habits segment: 今天 | 儀表板
 await page.waitForSelector('[data-habits-panel="board"]');
@@ -80,17 +82,24 @@ async function clickAction(action) {
   }, action);
 }
 
-// create yes/no habit
+// create yes/no habit (defaults to suggested time)
 await clickAction("add-habit");
 await page.waitForSelector("#hName");
 await page.type("#hName", "晨跑");
 await page.select("#hType", "yesno");
+const defaultTime = await page.$eval("#hTime", (el) => el.value);
+await assert(!!defaultTime, "new habit gets default suggested time");
 await page.evaluate(() => document.getElementById("hSave").click());
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
 
-// complete via large check button on habit box (board is default)
-await page.waitForSelector(".habit-box .check-lg");
-await page.evaluate(() => document.querySelector(".habit-box .check-lg").click());
+// today timeline appears after timed habit exists
+await page.waitForSelector(".today-timeline");
+const timeline = await page.$(".today-timeline");
+await assert(!!timeline, "today timeline renders with timed habit");
+
+// complete via check on today row
+await page.waitForSelector(".habit-checkin-row .check-lg, .check-lg");
+await page.evaluate(() => document.querySelector(".check-lg").click());
 await page.waitForFunction(() => {
   const ring = document.querySelector(".progress-ring-inner strong");
   return ring && ring.textContent.includes("100");
@@ -98,7 +107,8 @@ await page.waitForFunction(() => {
 const rate = await page.$eval(".progress-ring-inner strong", (el) => el.textContent);
 await assert(rate.includes("100"), "completion rate updates to 100% after yes/no checkin");
 
-// habit dashboard boxes visible (already on board)
+// habit dashboard boxes on board
+await page.click('[data-habits-panel="board"]');
 await page.waitForSelector(".habit-box");
 const habitBox = await page.$(".habit-box");
 await assert(!!habitBox, "habit dashboard box renders");
@@ -120,6 +130,8 @@ await page.click('[data-habit-box-open]');
 await page.waitForSelector(".habit-full-cal");
 const detailCal = await page.$(".habit-full-cal");
 await assert(!!detailCal, "habit detail calendar renders");
+const yearHeat = await page.$(".habit-year-heat");
+await assert(!!yearHeat, "habit detail year heatmap renders");
 await page.evaluate(() => document.getElementById("hdClose").click());
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
 

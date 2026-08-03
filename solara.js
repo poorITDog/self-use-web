@@ -20,7 +20,7 @@
     timetableDow: new Date().getDay(),
     habitDetailId: "",
     habitDetailMonth: startOfMonth(new Date()),
-    habitsPanel: "board",
+    habitsPanel: "today",
     countdownUnit: "days",
     focus: {
       running: false,
@@ -1257,13 +1257,11 @@
   }
 
   function todayCheckinHtml(todayHabits) {
-    var html = todayUnifiedTimelineHtml();
     if (!todayHabits.length) {
-      html += '<div class="empty compact"><p>今天沒有需要完成的習慣</p>' +
+      return '<div class="empty compact"><p>今天沒有需要完成的習慣</p>' +
         '<button class="btn sm" data-action="add-habit">+ 新增習慣</button></div>';
-      return html;
     }
-    html += '<div class="today-checkin">';
+    var html = '<div class="today-checkin">';
     var grouped = {};
     todayHabits.forEach(function (h) {
       var g = TIME_GROUPS.indexOf(h.group) >= 0 ? h.group : "其他";
@@ -1405,6 +1403,31 @@
     return { label: "完成日數", value: totalDoneDays(h) + " 日" };
   }
 
+  // Compact 12-week contribution heatmap (Habitify-style glance).
+  function habitYearHeatHtml(habit) {
+    var end = new Date();
+    var start = new Date();
+    start.setDate(end.getDate() - 12 * 7 + 1);
+    while (start.getDay() !== 0) start.setDate(start.getDate() - 1);
+    var html = '<div class="habit-year-heat"><div class="section-title" style="padding:8px 0 4px">近 12 週</div>' +
+      '<div class="habit-year-grid" aria-label="近十二週完成熱圖">';
+    var cur = new Date(start);
+    for (var i = 0; i < 84; i++) {
+      var key = dateKey(cur);
+      var due = habitDueOn(habit, key);
+      var done = due && isHabitDone(habit, key);
+      var cls = "heat-cell";
+      if (!due) cls += " off";
+      else if (key > todayKey()) cls += " future";
+      else if (done) cls += " done";
+      else cls += " missed";
+      html += '<span class="' + cls + '" style="--hcolor:' + habit.color + '" title="' + key + '"></span>';
+      cur.setDate(cur.getDate() + 1);
+    }
+    html += "</div></div>";
+    return html;
+  }
+
   function openHabitDetail(habit, month) {
     ui.habitDetailId = habit.id;
     ui.habitDetailMonth = month || ui.habitDetailMonth || startOfMonth(new Date());
@@ -1425,7 +1448,8 @@
       '<button type="button" class="btn sm ghost" data-hdetail-cal="prev">‹</button>' +
       '<span class="muted cal-month-label">' + ym.getFullYear() + " 年 " + (ym.getMonth() + 1) + " 月</span>" +
       '<button type="button" class="btn sm ghost" data-hdetail-cal="next">›</button></div>' +
-      habitCalGridHtml(habit, ym, "habit-full");
+      habitCalGridHtml(habit, ym, "habit-full") +
+      habitYearHeatHtml(habit);
     var linkedGoals = state.goals.filter(function (g) { return g.habitId === habit.id; });
     if (linkedGoals.length) {
       html += '<div class="section-title" style="padding-top:8px">連結目標</div><div class="habit-linked-goals">';
@@ -1455,8 +1479,9 @@
   function emptyHabitsHtml() {
     return '<div class="empty">' +
       '<div class="empty-illus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>' +
-      "<p>目前沒有習慣。新增一個，開始記錄生活。</p>" +
-      '<button class="btn" data-action="add-habit">+ 新增習慣</button></div>';
+      "<p>目前沒有習慣。先加一個「是／否」習慣，例如晨跑；再用右下角 ＋ 加行程或目標。</p>" +
+      '<button class="btn" data-action="add-habit">+ 新增習慣</button>' +
+      '<button class="btn soft" data-action="quick-add" style="margin-top:8px">快速新增其他</button></div>';
   }
 
   function activeGoalsStripHtml() {
@@ -1480,13 +1505,44 @@
     return html;
   }
 
+  function weekSummaryHtml() {
+    var start = new Date();
+    start.setDate(start.getDate() - start.getDay());
+    var due = 0;
+    var done = 0;
+    var d = new Date(start);
+    for (var i = 0; i < 7; i++) {
+      var key = dateKey(d);
+      state.habits.filter(function (h) { return !h.archived && habitDueOn(h, key); }).forEach(function (h) {
+        due++;
+        if (isHabitDone(h, key)) done++;
+      });
+      d.setDate(d.getDate() + 1);
+    }
+    var rate = due ? Math.round((done / due) * 100) : 0;
+    var evtCount = 0;
+    d = new Date(start);
+    for (i = 0; i < 7; i++) {
+      evtCount += eventsForDate(dateKey(d)).length;
+      d.setDate(d.getDate() + 1);
+    }
+    return '<div class="week-summary">' +
+      '<div class="week-summary-cell"><div class="label">本週達成</div><div class="value">' + rate + "%</div></div>" +
+      '<div class="week-summary-cell"><div class="label">本週打卡</div><div class="value">' + done + "/" + due + "</div></div>" +
+      '<div class="week-summary-cell"><div class="label">最佳連續</div><div class="value">' + bestStreak() + "</div></div>" +
+      '<div class="week-summary-cell"><div class="label">本週行程</div><div class="value">' + evtCount + "</div></div>" +
+      "</div>";
+  }
+
   function renderHabits() {
     var key = todayKey();
     var todayHabits = state.habits.filter(function (h) { return !h.archived && habitDueOn(h, key); });
     var active = state.habits.filter(function (h) { return !h.archived; });
-    var panel = ui.habitsPanel || "board";
+    var panel = ui.habitsPanel || "today";
     var html = todayStripHtml(todayHabits);
+    html += weekSummaryHtml();
     html += activeGoalsStripHtml();
+    html += todayUnifiedTimelineHtml();
     html += '<div class="seg habits-seg"><button type="button" data-habits-panel="today" class="' +
       (panel === "today" ? "on" : "") + '">今天</button><button type="button" data-habits-panel="board" class="' +
       (panel === "board" ? "on" : "") + '">儀表板</button></div>';
@@ -1554,11 +1610,17 @@
     return best;
   }
 
+  function defaultTimeForGroup(group) {
+    var map = { "早上": "07:30", "下午": "14:00", "晚上": "21:00", "健康": "08:00", "工作": "10:00", "生活": "19:00" };
+    return map[group] || "09:00";
+  }
+
   function openHabitEditor(habit) {
     ui.habitDetailId = "";
     var h = habit || {
       id: "", name: "", color: colors()[0], type: "yesno",
-      frequency: [0, 1, 2, 3, 4, 5, 6], group: "早上", target: 1, timeOfDay: "",
+      frequency: [0, 1, 2, 3, 4, 5, 6], group: "早上", target: 1,
+      timeOfDay: defaultTimeForGroup("早上"),
       emoji: "", note: ""
     };
     var freq = h.frequency || [];
@@ -1573,7 +1635,8 @@
       '<div class="field"><label>目標（數量或分鐘）</label><input id="hTarget" type="number" min="1" value="' + (h.target || 1) + '" /></div>' +
       '<div class="field"><label>分組</label><select id="hGroup">' +
       GROUPS.map(function (g) { return opt(g, g, h.group); }).join("") + "</select></div>" +
-      '<div class="field"><label>建議時段（可選）</label><input id="hTime" type="time" value="' + escAttr(h.timeOfDay || "") + '" /></div>' +
+      '<div class="field"><label>建議時段</label><input id="hTime" type="time" value="' +
+      escAttr(h.timeOfDay || defaultTimeForGroup(h.group || "早上")) + '" /></div>' +
       '<div class="field"><label>備註（可選）</label><input id="hNote" value="' + escAttr(h.note || "") + '" placeholder="補充說明" /></div>' +
       '<div class="field"><label>顏色</label><div class="swatches" id="hColors">' +
       palette.map(function (c) {
@@ -1605,6 +1668,10 @@
       if (!b) return;
       b.classList.toggle("on");
     };
+    document.getElementById("hGroup").onchange = function () {
+      var timeEl = document.getElementById("hTime");
+      if (!h.id || !timeEl.value) timeEl.value = defaultTimeForGroup(this.value);
+    };
     document.getElementById("hCancel").onclick = closeModal;
     document.getElementById("hSave").onclick = function () {
       var name = document.getElementById("hName").value.trim();
@@ -1614,12 +1681,14 @@
         frequency.push(Number(b.getAttribute("data-dow")));
       });
       if (!frequency.length) return toast("至少選一日");
+      var groupVal = document.getElementById("hGroup").value;
+      var timeVal = document.getElementById("hTime").value || defaultTimeForGroup(groupVal);
       var payload = {
         name: name,
         type: document.getElementById("hType").value,
         target: Number(document.getElementById("hTarget").value) || 1,
-        group: document.getElementById("hGroup").value,
-        timeOfDay: document.getElementById("hTime").value,
+        group: groupVal,
+        timeOfDay: timeVal,
         note: document.getElementById("hNote").value.trim(),
         emoji: document.getElementById("hEmoji").value.trim(),
         color: document.getElementById("hColor").value || colors()[0],
