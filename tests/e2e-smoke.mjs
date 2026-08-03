@@ -160,6 +160,28 @@ await page.waitForFunction(() => !document.getElementById("modalBackdrop").class
 const rangeText = await page.$eval("#view-habits", (el) => el.textContent);
 await assert(rangeText.includes("06:30") && rangeText.includes("08:30"), "habit time range 06:30–08:30 saved and shown");
 
+// pull habit detail sheet down to return to main habits page
+await page.click('[data-habit-box-open]');
+await page.waitForSelector(".habit-detail .sheet-handle");
+await page.waitForSelector("#hdBack");
+const pullHint = await page.$(".sheet-pull-hint");
+await assert(!!pullHint, "habit detail shows pull-to-back hint");
+const backBtn = await page.$eval("#hdBack", (el) => el.textContent.includes("返回"));
+await assert(backBtn, "habit detail shows back button");
+await page.evaluate(() => {
+  const modal = document.getElementById("modal");
+  const rect = modal.getBoundingClientRect();
+  const x = rect.left + rect.width / 2;
+  const y = rect.top + 20;
+  const opts = { bubbles: true, pointerId: 1, pointerType: "touch", isPrimary: true };
+  modal.dispatchEvent(new PointerEvent("pointerdown", Object.assign({ clientX: x, clientY: y }, opts)));
+  modal.dispatchEvent(new PointerEvent("pointermove", Object.assign({ clientX: x, clientY: y + 140 }, opts)));
+  modal.dispatchEvent(new PointerEvent("pointerup", Object.assign({ clientX: x, clientY: y + 140 }, opts)));
+});
+await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
+const afterPull = await page.$("#modalBackdrop.open");
+await assert(!afterPull, "pull down dismisses habit detail back to main");
+
 // main list stays clean — no inline edit buttons
 const listEditBtns = await page.$$(".habit-edit-btn, .habit-checkin-row [data-edit-habit], .habit-box [data-edit-habit]");
 await assert(listEditBtns.length === 0, "no inline edit buttons on habit main list");
