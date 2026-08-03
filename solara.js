@@ -3078,7 +3078,8 @@
     html += '<div class="settings-row"><span class="settings-row-label">狀態</span>' +
       '<span class="chip sync-chip sync-' + syncStatus + '">' + syncStatusLabel() + "</span></div>";
     html += '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
-      '<p class="muted tiny" style="margin:0">資料自動儲存到 Google Drive appDataFolder（' + DRIVE_FILE + "）</p></div>";
+      '<p class="muted tiny" style="margin:0">Git 式同步：先拉取合併，再上傳（' + DRIVE_FILE +
+      "）。空本機唔會覆寫雲端。</p></div>";
     html += '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
       '<label class="settings-row-label">OAuth Client ID</label>' +
       '<input id="googleClientId" value="' + escAttr(state.settings.googleClientId || "") +
