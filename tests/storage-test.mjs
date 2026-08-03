@@ -157,6 +157,17 @@ run("mergeSyncState tombstone keeps hard delete from resurrecting", () => {
   assert.ok(state.tombstones.gone);
 });
 
+run("shouldPushAfterMerge allows tombstone-only delete-last push", () => {
+  const local = defaultState();
+  local.tombstones = { h1: Date.now() };
+  local.syncUpdatedAt = Date.now();
+  const remote = defaultState();
+  remote.habits = [{ id: "h1", name: "最後一個", updatedAt: 1 }];
+  const result = mergeSyncState(local, remote, 100);
+  assert.equal(result.state.habits.length, 0);
+  assert.equal(shouldPushAfterMerge(result, true), true);
+});
+
 run("habitDueOn respects frequency", () => {
   const habit = { frequency: [1, 3, 5] };
   assert.equal(habitDueOn(habit, "2026-08-03"), true);

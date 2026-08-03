@@ -257,8 +257,10 @@ export function mergeSyncState(local, remote, remoteUpdatedAt) {
 // After fetch+merge, decide whether to push (never push empty; skip pure fast-forward).
 export function shouldPushAfterMerge(result, hasRemoteFile) {
   const weight = syncContentWeight(result.state);
-  if (weight <= 0) return false;
-  if (!hasRemoteFile) return true;
+  const tombs = Object.keys((result.state && result.state.tombstones) || {}).length;
+  // Allow tombstone-only pushes so "delete last item" reaches Drive.
+  if (weight <= 0 && tombs === 0) return false;
+  if (!hasRemoteFile) return weight > 0 || tombs > 0;
   if (result.action === "fast-forward" || result.action === "noop") return false;
   return result.action === "push" || result.action === "merge" || result.winner === "local";
 }

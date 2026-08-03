@@ -689,8 +689,10 @@
   }
 
   function shouldPushAfterMerge(result, hasRemoteFile) {
-    if (syncContentWeight(result.state) <= 0) return false;
-    if (!hasRemoteFile) return true;
+    var weight = syncContentWeight(result.state);
+    var tombs = Object.keys((result.state && result.state.tombstones) || {}).length;
+    if (weight <= 0 && tombs === 0) return false;
+    if (!hasRemoteFile) return weight > 0 || tombs > 0;
     if (result.action === "fast-forward" || result.action === "noop") return false;
     return result.action === "push" || result.action === "merge" || result.winner === "local";
   }
