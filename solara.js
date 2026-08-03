@@ -34,11 +34,15 @@
 
   var syncStatus = "disconnected";
   var uploadDebounce = null;
+  var syncInFlight = null;
+  var syncQueued = false;
+  var autoSyncTimer = null;
   var googleTokenClient = null;
   var tokenPromiseResolve = null;
   var notifyTimers = [];
   var notifyIntervalId = null;
   var audioCtx = null;
+  var AUTO_SYNC_MS = 3 * 60 * 1000;
 
   var THEME_COLORS = {
     sunshine: "#FFF8F0",
@@ -114,6 +118,7 @@
     return {
       version: 1,
       syncUpdatedAt: 0,
+      syncBaseAt: 0,
       settings: {
         theme: "sunshine",
         photoDataUrl: "",
@@ -141,7 +146,8 @@
       countdowns: [],
       focusSessions: [],
       goals: [],
-      events: []
+      events: [],
+      tombstones: {}
     };
   }
 
@@ -194,8 +200,17 @@
     });
     if (Array.isArray(data.transactions)) out.transactions = data.transactions;
     out.syncUpdatedAt = Number(out.syncUpdatedAt) || 0;
+    out.syncBaseAt = Number(out.syncBaseAt) || 0;
+    out.tombstones = data.tombstones && typeof data.tombstones === "object" ? data.tombstones : {};
     return out;
   }
+
+  function markTombstone(key) {
+    if (!key) return;
+    if (!state.tombstones || typeof state.tombstones !== "object") state.tombstones = {};
+    state.tombstones[key] = Date.now();
+  }
+
 
   // Calendar appointment occurrence (not a habit).
   function eventOccursOn(ev, key) {
@@ -236,8 +251,9 @@
     scheduleDriveUpload();
   }
 
+  // Persist only — do not bump syncUpdatedAt. Bumping here made a fresh
+  // reinstall beat older Drive data on the next pull (LWW).
   function saveStateLocal() {
-    state.syncUpdatedAt = Date.now();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }
 
@@ -365,61 +381,145 @@
     );
   }
 
-  function drivePull() {
+  function keepDriveSession(prev, next) {
+    if (prev.settings.googleClientId) next.settings.googleClientId = prev.settings.googleClientId;
+    next.settings.googleConnected = prev.settings.googleConnected;
+    next.settings.autoSync = prev.settings.autoSync !== false;
+    return next;
+  }
+
+  // Automatic git-like sync when connected + autoSync on.
+  function autoDriveSync() {
+    if (!state.settings.googleConnected || state.settings.autoSync === false) {
+      return Promise.resolve();
+    }
+    return driveSync({ push: true });
+  }
+
+  function startAutoSyncLoop() {
+    clearInterval(autoSyncTimer);
+    if (!state.settings.googleConnected || state.settings.autoSync === false) return;
+    autoSyncTimer = setInterval(function () {
+      if (document.visibilityState === "visible") autoDriveSync();
+    }, AUTO_SYNC_MS);
+  }
+
+  // Git-like Drive sync: fetch → merge → push (never push empty over cloud).
+  // Always fetch+merge first; push only when needed. Queues one follow-up if busy.
+  function driveSync(opts) {
+    opts = opts || {};
+    var wantPush = opts.push !== false;
     if (!state.settings.googleConnected) return Promise.resolve();
+    // Scheduled/background sync respects autoSync; manual force always runs.
+    if (!opts.force && state.settings.autoSync === false) return Promise.resolve();
+    if (syncInFlight) {
+      syncQueued = true;
+      return syncInFlight;
+    }
     setSyncStatus("syncing");
-    return getAccessToken("").then(function (token) {
+    var runQueued = function (value) {
+      syncInFlight = null;
+      if (syncQueued) {
+        syncQueued = false;
+        return driveSync({ push: true, force: !!opts.force }).then(function () {
+          return value;
+        });
+      }
+      return value;
+    };
+    var p = getAccessToken("").then(function (token) {
       if (!token) {
         setSyncStatus("disconnected");
-        return;
+        return runQueued();
       }
       return driveFindFile(token).then(function (file) {
-        if (!file) {
-          setSyncStatus("synced");
-          return;
-        }
-        return fetch(
-          "https://www.googleapis.com/drive/v3/files/" + file.id + "?alt=media",
-          { headers: { Authorization: "Bearer " + token } }
-        ).then(function (r) { return r.json(); }).then(function (remote) {
-          var remoteTs = new Date(file.modifiedTime).getTime();
-          var merged = mergeSyncState(state, remote, remoteTs);
-          state = merged.state;
+        var loadRemote = !file
+          ? Promise.resolve({ file: null, remote: null, remoteTs: 0 })
+          : fetch(
+            "https://www.googleapis.com/drive/v3/files/" + file.id + "?alt=media",
+            { headers: { Authorization: "Bearer " + token } }
+          ).then(function (r) { return r.json(); }).then(function (remote) {
+            return {
+              file: file,
+              remote: remote,
+              remoteTs: new Date(file.modifiedTime).getTime()
+            };
+          });
+        return loadRemote.then(function (pack) {
+          var prev = state;
+          var fromEmpty = syncContentWeight(normalizeState(state)) === 0 &&
+            Object.keys(state.tombstones || {}).length === 0;
+          var result;
+          if (pack.remote) {
+            result = mergeSyncState(state, pack.remote, pack.remoteTs);
+          } else {
+            result = {
+              state: normalizeState(state),
+              winner: "local",
+              action: syncContentWeight(state) > 0 ? "push" : "noop"
+            };
+          }
+          state = keepDriveSession(prev, result.state);
+          if (pack.remoteTs) state.syncBaseAt = pack.remoteTs;
           saveStateLocal();
           applyTheme();
           render();
-          setSyncStatus("synced");
+          if (fromEmpty && (result.winner === "remote" || result.winner === "merged")) {
+            toast("已從雲端還原資料");
+          }
+          var doPush = wantPush && shouldPushAfterMerge(result, !!pack.file);
+          // Extra guard: never upload empty snapshot onto a non-empty cloud file.
+          if (doPush && syncContentWeight(state) === 0 && pack.remote &&
+            syncContentWeight(normalizeState(pack.remote)) > 0 &&
+            Object.keys(state.tombstones || {}).length === 0) {
+            doPush = false;
+          }
+          if (!doPush) {
+            setSyncStatus("synced");
+            return runQueued(result);
+          }
+          var payload = state;
+          var write = pack.file
+            ? driveUpdateFile(token, pack.file.id, payload)
+            : driveCreateFile(token, payload);
+          return write.then(function () {
+            state.syncBaseAt = Date.now();
+            saveStateLocal();
+            setSyncStatus("synced");
+            return runQueued(result);
+          });
         });
       });
-    }).catch(function () {
-      setSyncStatus("failed");
     });
+    syncInFlight = p;
+    p.catch(function () {
+      if (syncInFlight === p) syncInFlight = null;
+      setSyncStatus("failed");
+      if (syncQueued) {
+        syncQueued = false;
+        driveSync({ push: true, force: !!opts.force });
+      }
+    });
+    return p;
+  }
+
+  function drivePull() {
+    // Fetch+merge only (git fetch/merge), no upload.
+    return driveSync({ push: false, force: true });
   }
 
   function drivePush() {
-    if (!state.settings.googleConnected || state.settings.autoSync === false) return;
-    setSyncStatus("syncing");
-    getAccessToken("").then(function (token) {
-      if (!token) {
-        setSyncStatus("disconnected");
-        return;
-      }
-      var payload = state;
-      return driveFindFile(token).then(function (file) {
-        if (file) return driveUpdateFile(token, file.id, payload);
-        return driveCreateFile(token, payload);
-      }).then(function () {
-        setSyncStatus("synced");
-      });
-    }).catch(function () {
-      setSyncStatus("failed");
-    });
+    // Full sync like `git pull && git push`.
+    return driveSync({ push: true, force: true });
   }
 
   function scheduleDriveUpload() {
     if (!state.settings.googleConnected || state.settings.autoSync === false) return;
     clearTimeout(uploadDebounce);
-    uploadDebounce = setTimeout(drivePush, 1500);
+    // Automatic fetch+merge before push after every real edit.
+    uploadDebounce = setTimeout(function () {
+      autoDriveSync();
+    }, 1500);
   }
 
   function connectGoogleDrive() {
@@ -439,7 +539,8 @@
       state.settings.googleConnected = true;
       state.settings.autoSync = true;
       saveStateLocal();
-      drivePull().then(function () {
+      driveSync({ push: true, force: true }).then(function () {
+        startAutoSyncLoop();
         toast("已連接 Google Drive");
         render();
       });
@@ -449,6 +550,8 @@
   function disconnectGoogleDrive() {
     state.settings.googleConnected = false;
     clearStoredToken();
+    clearInterval(autoSyncTimer);
+    autoSyncTimer = null;
     saveStateLocal();
     setSyncStatus("disconnected");
     toast("已中斷連接");
@@ -460,16 +563,138 @@
     return obj;
   }
 
+  function syncContentWeight(s) {
+    var n = s && s.habits ? s : normalizeState(s);
+    return (n.habits.length || 0) + (n.checkins.length || 0) +
+      (n.events.length || 0) + (n.countdowns.length || 0) +
+      (n.goals.length || 0) + (n.blocks.length || 0) +
+      (n.focusSessions.length || 0) + ((n.transactions && n.transactions.length) || 0);
+  }
+
+  function mergeTombstones(a, b) {
+    var out = Object.assign({}, a || {});
+    Object.keys(b || {}).forEach(function (k) {
+      out[k] = Math.max(Number(out[k]) || 0, Number(b[k]) || 0);
+    });
+    return out;
+  }
+
+  function applyTombstones(list, tombstones) {
+    var stones = tombstones || {};
+    return (list || []).filter(function (item) {
+      if (!item) return false;
+      var key = item.id;
+      var alt = item.habitId && item.date ? item.habitId + "|" + item.date : "";
+      var delAt = Math.max(Number(stones[key]) || 0, Number(stones[alt]) || 0);
+      if (!delAt) return true;
+      return (Number(item.updatedAt) || 0) > delAt;
+    });
+  }
+
+  function mergeEntityLists(localList, remoteList, keyFn) {
+    var map = {};
+    var order = [];
+    function put(item) {
+      if (!item) return;
+      var key = keyFn(item);
+      if (key == null || key === "") return;
+      var prev = map[key];
+      if (!prev) {
+        map[key] = item;
+        order.push(key);
+        return;
+      }
+      var pt = Number(prev.updatedAt) || 0;
+      var it = Number(item.updatedAt) || 0;
+      map[key] = it >= pt ? item : prev;
+    }
+    (remoteList || []).forEach(put);
+    (localList || []).forEach(put);
+    return order.map(function (k) { return map[k]; });
+  }
+
+  // Git-like merge — keep in sync with solara-core.mjs.
   function mergeSyncState(local, remote, remoteUpdatedAt) {
     var localNorm = normalizeState(local);
     var remoteNorm = normalizeState(remote);
     var localTs = Number(localNorm.syncUpdatedAt) || 0;
     var remoteTs = Number(remoteUpdatedAt) || Number(remoteNorm.syncUpdatedAt) || 0;
-    if (remoteTs > localTs) {
-      remoteNorm.syncUpdatedAt = remoteTs;
-      return { state: remoteNorm, winner: "remote" };
+    var localWeight = syncContentWeight(localNorm);
+    var remoteWeight = syncContentWeight(remoteNorm);
+    var localHasTombs = Object.keys(localNorm.tombstones || {}).length > 0;
+
+    if (remoteWeight > 0 && localWeight === 0 && !localHasTombs) {
+      remoteNorm.syncUpdatedAt = Math.max(remoteTs, localTs);
+      remoteNorm.syncBaseAt = remoteTs;
+      return { state: remoteNorm, winner: "remote", action: "fast-forward" };
     }
-    return { state: localNorm, winner: "local" };
+    if (localWeight > 0 && remoteWeight === 0) {
+      localNorm.syncBaseAt = remoteTs || localNorm.syncBaseAt || 0;
+      return { state: localNorm, winner: "local", action: "push" };
+    }
+    if (localWeight === 0 && remoteWeight === 0 && !localHasTombs) {
+      return { state: localNorm, winner: "local", action: "noop" };
+    }
+
+    var merged = normalizeState({
+      version: Math.max(localNorm.version || 1, remoteNorm.version || 1),
+      settings: remoteTs > localTs
+        ? Object.assign({}, localNorm.settings, remoteNorm.settings)
+        : Object.assign({}, remoteNorm.settings, localNorm.settings)
+    });
+    merged.tombstones = mergeTombstones(localNorm.tombstones, remoteNorm.tombstones);
+    merged.habits = applyTombstones(
+      mergeEntityLists(localNorm.habits, remoteNorm.habits, function (x) { return x.id; }),
+      merged.tombstones
+    );
+    merged.checkins = applyTombstones(
+      mergeEntityLists(localNorm.checkins, remoteNorm.checkins, function (x) {
+        return x.habitId + "|" + x.date;
+      }),
+      merged.tombstones
+    );
+    merged.blocks = applyTombstones(
+      mergeEntityLists(localNorm.blocks, remoteNorm.blocks, function (x) { return x.id; }),
+      merged.tombstones
+    );
+    merged.countdowns = applyTombstones(
+      mergeEntityLists(localNorm.countdowns, remoteNorm.countdowns, function (x) { return x.id; }),
+      merged.tombstones
+    );
+    merged.focusSessions = applyTombstones(
+      mergeEntityLists(localNorm.focusSessions, remoteNorm.focusSessions, function (x) { return x.id; }),
+      merged.tombstones
+    );
+    merged.goals = applyTombstones(
+      mergeEntityLists(localNorm.goals, remoteNorm.goals, function (x) { return x.id; }),
+      merged.tombstones
+    );
+    merged.events = applyTombstones(
+      mergeEntityLists(localNorm.events, remoteNorm.events, function (x) { return x.id; }),
+      merged.tombstones
+    );
+    if (localNorm.transactions || remoteNorm.transactions) {
+      merged.transactions = applyTombstones(
+        mergeEntityLists(
+          localNorm.transactions || [],
+          remoteNorm.transactions || [],
+          function (x) { return x.id; }
+        ),
+        merged.tombstones
+      );
+    }
+    merged.syncUpdatedAt = Math.max(localTs, remoteTs, Date.now());
+    merged.syncBaseAt = remoteTs;
+    return { state: merged, winner: "merged", action: "merge" };
+  }
+
+  function shouldPushAfterMerge(result, hasRemoteFile) {
+    var weight = syncContentWeight(result.state);
+    var tombs = Object.keys((result.state && result.state.tombstones) || {}).length;
+    if (weight <= 0 && tombs === 0) return false;
+    if (!hasRemoteFile) return weight > 0 || tombs > 0;
+    if (result.action === "fast-forward" || result.action === "noop") return false;
+    return result.action === "push" || result.action === "merge" || result.winner === "local";
   }
 
   function applyTheme() {
@@ -1598,6 +1823,13 @@
   function deleteHabitById(habitId) {
     if (!habitId) return;
     if (!window.confirm("確定永久刪除此習慣？相關打卡紀錄亦會刪除。")) return;
+    markTombstone(habitId);
+    state.checkins.forEach(function (c) {
+      if (c.habitId === habitId) {
+        if (c.id) markTombstone(c.id);
+        if (c.date) markTombstone(habitId + "|" + c.date);
+      }
+    });
     state.habits = state.habits.filter(function (h) { return h.id !== habitId; });
     state.checkins = state.checkins.filter(function (c) { return c.habitId !== habitId; });
     state.goals.forEach(function (g) {
@@ -2958,7 +3190,8 @@
     html += '<div class="settings-row"><span class="settings-row-label">狀態</span>' +
       '<span class="chip sync-chip sync-' + syncStatus + '">' + syncStatusLabel() + "</span></div>";
     html += '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
-      '<p class="muted tiny" style="margin:0">資料自動儲存到 Google Drive appDataFolder（' + DRIVE_FILE + "）</p></div>";
+      '<p class="muted tiny" style="margin:0">Git 式同步：先拉取合併，再上傳（' + DRIVE_FILE +
+      "）。空本機唔會覆寫雲端。</p></div>";
     html += '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
       '<label class="settings-row-label">OAuth Client ID</label>' +
       '<input id="googleClientId" value="' + escAttr(state.settings.googleClientId || "") +
@@ -3396,7 +3629,7 @@
       else if (mode === "push") cloudPush();
       else if (mode === "connect") connectGoogleDrive();
       else if (mode === "disconnect") disconnectGoogleDrive();
-      else if (mode === "drive-pull") drivePull();
+      else if (mode === "drive-pull") drivePush(); // 立即同步 = fetch+merge+push
       return;
     }
   }
@@ -3464,7 +3697,15 @@
     if (e.target.id === "autoSyncToggle") {
       state.settings.autoSync = e.target.checked;
       saveStateLocal();
-      toast(state.settings.autoSync ? "已開啟自動同步" : "已關閉自動同步");
+      if (state.settings.autoSync) {
+        startAutoSyncLoop();
+        autoDriveSync();
+        toast("已開啟自動同步");
+      } else {
+        clearInterval(autoSyncTimer);
+        autoSyncTimer = null;
+        toast("已關閉自動同步");
+      }
       return;
     }
     if (e.target.id === "googleClientId") {
@@ -3496,18 +3737,27 @@
     }
   });
 
+  // Auto fetch+merge when returning to the app (no manual button needed).
   document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState === "visible" && state.settings.googleConnected && state.settings.autoSync !== false) {
-      drivePull();
-    }
+    if (document.visibilityState === "visible") autoDriveSync();
+  });
+
+  // Auto fetch+merge when network comes back.
+  window.addEventListener("online", function () {
+    autoDriveSync();
   });
 
   function bootSync() {
     function start() {
       if (state.settings.googleClientId) initGoogleAuth();
       if (state.settings.googleConnected) {
-        setSyncStatus("syncing");
-        drivePull();
+        if (state.settings.autoSync === false) {
+          setSyncStatus("synced");
+        } else {
+          setSyncStatus("syncing");
+          autoDriveSync();
+          startAutoSyncLoop();
+        }
       } else {
         setSyncStatus("disconnected");
       }

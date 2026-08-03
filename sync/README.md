@@ -60,17 +60,44 @@ GIS OAuth 核對嘅係 **origin**（協議 + 域名），唔係完整 path。
 5. 用已加入「測試使用者」嘅 Google 帳戶授權
 6. 確認 **自動同步** 已開啟（預設開啟）
 
-## 同步行為
+## 同步行為（Git 式：fetch → merge → push）
 
-| 時機 | 動作 |
+Drive 同步跟 Git／常見雲端同步一樣，**唔會盲推本機蓋過雲端**：
+
+| 步驟 | 動作 |
 |------|------|
-| App 載入（已連接） | 從 Drive 拉取 → 與本機 LWW 合併（`syncUpdatedAt`） |
-| 每次 `saveState` | 防抖 ~1.5 秒後上傳完整 JSON |
-| 分頁重新可見 | 若已連接且自動同步開啟，再次拉取合併 |
+| 1. Fetch | 讀取 Drive `solara-v1.json` + `modifiedTime` |
+| 2. Merge | 空本機 → fast-forward 雲端；兩邊都有資料 → 按 `id` 合併列表（衝突用 `updatedAt`） |
+| 3. Push | 有需要先上傳；**永遠唔會用空本機覆寫有內容嘅雲端** |
 
-### 衝突策略（Last-Write-Wins）
+| 時機 | 動作（自動，唔使撳掣） |
+|------|------|
+| App 載入（已連接＋自動同步開） | 自動 fetch → merge → 必要時 push |
+| 每次改資料 `saveState` | 防抖 ~1.5 秒後自動完整 sync |
+| 分頁／App 重新可見 | 自動完整 sync |
+| 網絡由斷線恢復（`online`） | 自動完整 sync |
+| 背景定時（約每 3 分鐘，頁面可見時） | 自動完整 sync |
+| 打開「自動同步」掣 | 立即跑一次＋啟動定時 |
+| 「立即同步」 | 手動完整 sync（自動關閉時都得） |
 
-比較本機 `syncUpdatedAt` 與雲端檔案 `modifiedTime`。較新的一方覆蓋較舊。
+### 衝突策略
+
+- **重新安裝／空本機：** fast-forward 雲端（等同 `git checkout` 遠端），唔 push
+- **兩邊都有資料：** union merge（兩邊習慣／打卡都會保留），再 push 合併結果
+- **本機有、雲端無：** push 本機（首次上傳）
+- `syncBaseAt` 記錄上次成功對齊嘅雲端 revision（類似 upstream tip）
+
+### 更新 App／重新「加入主畫面」後點還原
+
+本機資料放喺瀏覽器 `localStorage`。清除網站資料、換瀏覽器、或某些「刪除 App 再加入」流程會清空本機，**唔會自動記住已連接狀態**。
+
+請用：
+
+1. **同一個** OAuth Client ID（唔好新建另一個 Client——`appDataFolder` 係跟 Client 嘅）
+2. **同一個** Google 帳戶按 **連接 Google Drive**
+3. 連接成功後會自動拉取；若雲端有舊資料，會提示「已從雲端還原資料」
+
+亦可先用設定 → 同步 → **匯出備份**，重裝後 **匯入備份**（唔經 Google 都得）。
 
 ### 同步狀態
 
@@ -97,6 +124,7 @@ GIS OAuth 核對嘅係 **origin**（協議 + 域名），唔係完整 path。
 | `未連接` | 尚未按連接；或 Token 已過期（重新按連接） |
 | `失敗` | 網絡問題；Drive API 未啟用；授權範圍不足（要有 `drive.appdata`） |
 | 多裝置資料不一致 | 等自動同步完成；或到設定按「立即同步」 |
+| **重裝／再加入主畫面後係空嘅** | ① 要用**同一個** Client ID + **同一個** Google 帳戶重新連接；② 唔好新建 OAuth Client；③ 連接後等「已從雲端還原」；④ 若從未開過 Drive 同步，只能靠「匯入備份」 |
 
 ### 403 快速檢查清單
 
