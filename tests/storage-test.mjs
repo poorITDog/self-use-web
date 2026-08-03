@@ -97,6 +97,33 @@ run("mergeSyncState keeps local when newer", () => {
   assert.equal(state.habits[0].id, "local");
 });
 
+run("mergeSyncState prefers remote when local empty after reinstall", () => {
+  // Fresh install bumps wall clock, but has no habits — must restore cloud.
+  const local = defaultState();
+  local.syncUpdatedAt = Date.now();
+  local.settings.googleConnected = true;
+  local.settings.googleClientId = "new-client.apps.googleusercontent.com";
+  const remote = defaultState();
+  remote.syncUpdatedAt = 1_700_000_000_000;
+  remote.habits = [{ id: "old-habit", name: "晨跑" }];
+  remote.checkins = [{ id: "c1", habitId: "old-habit", date: "2026-08-01", value: 1 }];
+  const { state, winner } = mergeSyncState(local, remote, 1_700_000_000_000);
+  assert.equal(winner, "remote");
+  assert.equal(state.habits[0].id, "old-habit");
+  assert.equal(state.checkins.length, 1);
+});
+
+run("mergeSyncState keeps newer non-empty local over older remote", () => {
+  const local = defaultState();
+  local.syncUpdatedAt = 900;
+  local.habits = [{ id: "new-local" }];
+  const remote = defaultState();
+  remote.habits = [{ id: "old-remote" }];
+  const { state, winner } = mergeSyncState(local, remote, 100);
+  assert.equal(winner, "local");
+  assert.equal(state.habits[0].id, "new-local");
+});
+
 run("habitDueOn respects frequency", () => {
   const habit = { frequency: [1, 3, 5] };
   assert.equal(habitDueOn(habit, "2026-08-03"), true);

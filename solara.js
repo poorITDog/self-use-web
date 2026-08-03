@@ -236,8 +236,9 @@
     scheduleDriveUpload();
   }
 
+  // Persist only — do not bump syncUpdatedAt. Bumping here made a fresh
+  // reinstall beat older Drive data on the next pull (LWW).
   function saveStateLocal() {
-    state.syncUpdatedAt = Date.now();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }
 
@@ -383,12 +384,21 @@
           { headers: { Authorization: "Bearer " + token } }
         ).then(function (r) { return r.json(); }).then(function (remote) {
           var remoteTs = new Date(file.modifiedTime).getTime();
+          var clientId = state.settings.googleClientId;
+          var connected = state.settings.googleConnected;
+          var autoSync = state.settings.autoSync;
+          var fromEmpty = syncContentWeight(normalizeState(state)) === 0;
           var merged = mergeSyncState(state, remote, remoteTs);
           state = merged.state;
+          // Keep the session we just authorized; cloud snapshot may be older.
+          if (clientId) state.settings.googleClientId = clientId;
+          state.settings.googleConnected = connected;
+          state.settings.autoSync = autoSync !== false;
           saveStateLocal();
           applyTheme();
           render();
           setSyncStatus("synced");
+          if (fromEmpty && merged.winner === "remote") toast("已從雲端還原資料");
         });
       });
     }).catch(function () {
@@ -460,11 +470,26 @@
     return obj;
   }
 
+  // Count real user rows — used so an empty reinstall cannot win LWW.
+  function syncContentWeight(s) {
+    return (s.habits.length || 0) + (s.checkins.length || 0) +
+      (s.events.length || 0) + (s.countdowns.length || 0) +
+      (s.goals.length || 0) + (s.blocks.length || 0) +
+      (s.focusSessions.length || 0);
+  }
+
   function mergeSyncState(local, remote, remoteUpdatedAt) {
     var localNorm = normalizeState(local);
     var remoteNorm = normalizeState(remote);
     var localTs = Number(localNorm.syncUpdatedAt) || 0;
     var remoteTs = Number(remoteUpdatedAt) || Number(remoteNorm.syncUpdatedAt) || 0;
+    var localWeight = syncContentWeight(localNorm);
+    var remoteWeight = syncContentWeight(remoteNorm);
+    // Empty fresh install after "add to home screen" again: prefer cloud.
+    if (remoteWeight > 0 && localWeight === 0 && remoteTs > 0) {
+      remoteNorm.syncUpdatedAt = Math.max(remoteTs, localTs);
+      return { state: remoteNorm, winner: "remote" };
+    }
     if (remoteTs > localTs) {
       remoteNorm.syncUpdatedAt = remoteTs;
       return { state: remoteNorm, winner: "remote" };

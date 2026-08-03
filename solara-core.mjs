@@ -122,12 +122,28 @@ export function eventRepeatLabel(repeat) {
   return map[repeat || "none"] || "";
 }
 
-/** Last-write-wins: pick newer snapshot by syncUpdatedAt / remote updatedAt. */
+function syncContentWeight(s) {
+  return (s.habits.length || 0) + (s.checkins.length || 0) +
+    (s.events.length || 0) + (s.countdowns.length || 0) +
+    (s.goals.length || 0) + (s.blocks.length || 0) +
+    (s.focusSessions.length || 0);
+}
+
+/**
+ * Last-write-wins by syncUpdatedAt / remote updatedAt.
+ * Empty local never beats non-empty remote (reinstall / reconnect safety).
+ */
 export function mergeSyncState(local, remote, remoteUpdatedAt) {
   const localNorm = normalizeState(local);
   const remoteNorm = normalizeState(remote);
   const localTs = Number(localNorm.syncUpdatedAt) || 0;
   const remoteTs = Number(remoteUpdatedAt) || Number(remoteNorm.syncUpdatedAt) || 0;
+  const localWeight = syncContentWeight(localNorm);
+  const remoteWeight = syncContentWeight(remoteNorm);
+  if (remoteWeight > 0 && localWeight === 0 && remoteTs > 0) {
+    remoteNorm.syncUpdatedAt = Math.max(remoteTs, localTs);
+    return { state: remoteNorm, winner: "remote" };
+  }
   if (remoteTs > localTs) {
     remoteNorm.syncUpdatedAt = remoteTs;
     return { state: remoteNorm, winner: "remote" };
