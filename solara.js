@@ -3235,7 +3235,8 @@
         dueAt: dueVal ? parseKey(dueVal).getTime() : null,
         habitId: document.getElementById("gHabit").value || "",
         finishedAt: g.finishedAt || null,
-        lastBumpKey: g.lastBumpKey || ""
+        lastBumpKey: g.lastBumpKey || "",
+        lastBumpAmount: g.lastBumpAmount || 0
       });
       if (g.id) {
         var existing = state.goals.find(function (x) { return x.id === g.id; });
