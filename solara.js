@@ -176,8 +176,9 @@
       if (!Array.isArray(out[k])) out[k] = [];
     });
     out.habits = out.habits.map(function (h) {
-      if (h && h.group === "朝早") return Object.assign({}, h, { group: "早上" });
-      return h;
+      var next = h && h.group === "朝早" ? Object.assign({}, h, { group: "早上" }) : (h || {});
+      if (next.timeEnd === undefined) next.timeEnd = "";
+      return next;
     });
     out.events = out.events.map(function (ev) {
       return Object.assign({ repeat: "none", until: "", note: "", allDay: false }, ev || {}, {
@@ -943,10 +944,12 @@
     var key = dateStr || todayKey();
     var done = isHabitDone(h, key);
     var c = getCheckin(h.id, key);
+    var time = habitTimeLabel(h);
+    var timeBit = time ? " · " + time : "";
     if (!habitDueOn(h, key)) return "休息日";
-    if (h.type === "yesno") return done ? "已完成" : "未完成";
-    if (h.type === "count") return (c ? c.value : 0) + " / " + (h.target || 1) + " 次";
-    return fmtMin(c ? (c.minutes || c.value || 0) : 0) + " / " + fmtMin(h.target || 1);
+    if (h.type === "yesno") return (done ? "已完成" : "未完成") + timeBit;
+    if (h.type === "count") return (c ? c.value : 0) + " / " + (h.target || 1) + " 次" + timeBit;
+    return fmtMin(c ? (c.minutes || c.value || 0) : 0) + " / " + fmtMin(h.target || 1) + timeBit;
   }
 
   function checkBtnHtml(h, key, cls) {
@@ -1056,13 +1059,19 @@
       weekStripHtml(h) +
       linkedGoalBadgeHtml(h) +
       "</button>" +
-      '<button type="button" class="btn sm ghost habit-edit-btn" data-edit-habit="' + h.id + '">編輯</button>' +
       '<button type="button" class="habit-row-chevron" data-habit-open="' + h.id + '" aria-label="詳情">' +
       chevronSvg + "</button></article>";
   }
 
   function habitEmoji(h) {
     return (h && h.emoji) ? h.emoji + " " : "";
+  }
+
+  // Habit suggested window label, e.g. 06:30–08:30
+  function habitTimeLabel(h) {
+    if (!h || !h.timeOfDay) return "";
+    if (h.timeEnd && h.timeEnd !== h.timeOfDay) return h.timeOfDay + "–" + h.timeEnd;
+    return h.timeOfDay;
   }
 
   function periodDoneCount(habit, mode) {
@@ -1196,7 +1205,6 @@
       '<button type="button" class="habit-box-head" data-habit-box-open="' + habit.id + '">' +
       '<span class="habit-box-emoji">' + esc(habit.emoji || "✓") + "</span>" +
       '<span class="habit-box-name">' + esc(habit.name) + "</span></button>" +
-      '<button type="button" class="btn sm ghost habit-edit-btn" data-edit-habit="' + habit.id + '">編輯</button>' +
       checkBtnHtml(habit, key, "check check-lg") + "</div>" +
       '<div class="habit-box-month-label">' + habitBoxMonthLabel() + "</div>" +
       cal +
@@ -1238,7 +1246,6 @@
       '<div class="habit-row-meta">' + todayStatusText(h, key) + "</div>" +
       linkedGoalBadgeHtml(h) +
       "</button>" +
-      '<button type="button" class="btn sm ghost habit-edit-btn" data-edit-habit="' + h.id + '">編輯</button>' +
       '<button type="button" class="habit-row-chevron" data-habit-open="' + h.id + '" aria-label="詳情">' +
       chevronSvg + "</button></article>";
   }
@@ -1263,7 +1270,7 @@
       var done = isHabitDone(h, key);
       items.push({
         sort: timeToMinutes(h.timeOfDay),
-        time: h.timeOfDay,
+        time: habitTimeLabel(h),
         title: h.name,
         color: h.color,
         kind: done ? "習慣 · 已完成" : "習慣 · 點此打卡",
@@ -1346,7 +1353,6 @@
       active.forEach(function (h) { html += habitBoxHtml(h, mode); });
       html += "</div>";
     }
-    html += archivedHabitsHtml();
     html += "</div>";
     return html;
   }
@@ -1480,7 +1486,8 @@
       '<div class="habit-detail-hero" style="--hcolor:' + habit.color + '">' +
       '<span class="dot dot-lg" style="--hcolor:' + habit.color + '"></span>' +
       "<h3>" + esc(habit.name) + "</h3>" +
-      '<p class="muted">' + typeLabel(habit.type) + " · " + esc(habit.group || "未分組") + "</p></div>" +
+      '<p class="muted">' + typeLabel(habit.type) + " · " + esc(habit.group || "未分組") +
+      (habitTimeLabel(habit) ? " · " + esc(habitTimeLabel(habit)) : "") + "</p></div>" +
       '<div class="habit-detail-stats">' +
       '<div class="detail-stat"><div class="label">連續天數</div><div class="value">' + streakFor(habit) + "</div></div>" +
       '<div class="detail-stat"><div class="label">本月完成率</div><div class="value">' + monthRate(habit) + "%</div></div>" +
@@ -1550,13 +1557,15 @@
 
   function archivedHabitsHtml() {
     var archived = state.habits.filter(function (h) { return h.archived; });
-    var html = '<div class="archived-habits"><div class="section-title">已封存（' + archived.length + "）</div>";
+    var html = '<div class="archived-habits">';
     if (!archived.length) {
-      html += '<p class="muted tiny" style="margin:0">封存的習慣會顯示在這裡，可還原或永久刪除。</p>';
+      html += '<div class="settings-row"><span class="settings-row-label muted">尚無封存習慣。在習慣詳情或編輯頁可按「封存」。</span></div>';
     } else {
       archived.forEach(function (h) {
         html += '<div class="archived-habit-row">' +
-          '<span>' + habitEmoji(h) + esc(h.name) + "</span>" +
+          '<div><strong>' + habitEmoji(h) + esc(h.name) + "</strong>" +
+          (habitTimeLabel(h) ? '<div class="muted tiny">' + esc(habitTimeLabel(h)) + "</div>" : "") +
+          "</div>" +
           '<div class="row-actions">' +
           '<button type="button" class="btn sm soft" data-restore-habit="' + h.id + '">還原</button>' +
           '<button type="button" class="btn sm warn" data-delete-habit="' + h.id + '">永久刪除</button>' +
@@ -1654,8 +1663,6 @@
     } else {
       html += todayCheckinHtml(todayHabits);
     }
-    // Always show archive section on habits (both today & board).
-    if (panel === "today" || !active.length) html += archivedHabitsHtml();
     document.getElementById("view-habits").innerHTML = html;
   }
 
@@ -1724,13 +1731,14 @@
       id: "", name: "", color: colors()[0], type: "yesno",
       frequency: [0, 1, 2, 3, 4, 5, 6], group: "早上", target: 1,
       timeOfDay: defaultTimeForGroup("早上"),
+      timeEnd: "",
       emoji: "", note: ""
     };
     var freq = h.frequency || [];
     var palette = colors();
     openModal(
       "<h3>" + (h.id ? "編輯習慣" : "新增習慣") + "</h3>" +
-      '<div class="field"><label>名稱</label><input id="hName" value="' + escAttr(h.name) + '" placeholder="例如：晨跑" /></div>' +
+      '<div class="field"><label>名稱</label><input id="hName" value="' + escAttr(h.name) + '" placeholder="例如：健身" /></div>' +
       '<div class="grid-2"><div class="field"><label>圖示 Emoji</label><input id="hEmoji" value="' + escAttr(h.emoji || "") + '" maxlength="4" placeholder="🏃" /></div>' +
       '<div class="field"><label>類型</label><select id="hType">' +
       opt("yesno", "是 / 否", h.type) + opt("count", "數量", h.type) + opt("duration", "計時（分鐘）", h.type) +
@@ -1738,8 +1746,11 @@
       '<div class="field"><label>目標（數量或分鐘）</label><input id="hTarget" type="number" min="1" value="' + (h.target || 1) + '" /></div>' +
       '<div class="field"><label>分組</label><select id="hGroup">' +
       GROUPS.map(function (g) { return opt(g, g, h.group); }).join("") + "</select></div>" +
-      '<div class="field"><label>建議時段</label><input id="hTime" type="time" value="' +
+      '<div class="grid-2"><div class="field"><label>開始時間</label><input id="hTime" type="time" value="' +
       escAttr(h.timeOfDay || defaultTimeForGroup(h.group || "早上")) + '" /></div>' +
+      '<div class="field"><label>結束時間（可選）</label><input id="hTimeEnd" type="time" value="' +
+      escAttr(h.timeEnd || "") + '" /></div></div>' +
+      '<p class="muted tiny" style="margin:-4px 0 10px">例如健身可設 06:30–08:30；只填開始亦可。</p>' +
       '<div class="field"><label>備註（可選）</label><input id="hNote" value="' + escAttr(h.note || "") + '" placeholder="補充說明" /></div>' +
       '<div class="field"><label>顏色</label><div class="swatches" id="hColors">' +
       palette.map(function (c) {
@@ -1787,12 +1798,17 @@
       if (!frequency.length) return toast("至少選一日");
       var groupVal = document.getElementById("hGroup").value;
       var timeVal = document.getElementById("hTime").value || defaultTimeForGroup(groupVal);
+      var timeEndVal = document.getElementById("hTimeEnd").value || "";
+      if (timeEndVal && timeToMinutes(timeEndVal) < timeToMinutes(timeVal)) {
+        return toast("結束時間不可早於開始時間");
+      }
       var payload = {
         name: name,
         type: document.getElementById("hType").value,
         target: Number(document.getElementById("hTarget").value) || 1,
         group: groupVal,
         timeOfDay: timeVal,
+        timeEnd: timeEndVal,
         note: document.getElementById("hNote").value.trim(),
         emoji: document.getElementById("hEmoji").value.trim(),
         color: document.getElementById("hColor").value || colors()[0],
@@ -1896,7 +1912,7 @@
         id: "habit-" + h.id,
         title: h.name,
         start: h.timeOfDay,
-        end: "",
+        end: h.timeEnd || "",
         color: h.color,
         kind: "habit",
         done: isHabitDone(h, selected),
@@ -2296,6 +2312,7 @@
   function renderSettings() {
     var tabs = [
       ["goals", "目標"],
+      ["archive", "封存"],
       ["theme", "主題"],
       ["notify", "提醒"],
       ["sync", "同步"]
@@ -2316,10 +2333,16 @@
     var map = {
       sync: renderSyncPanel,
       goals: renderGoalsPanel,
+      archive: renderArchivePanel,
       theme: renderThemePanel,
       notify: renderNotifyPanel
     };
     el.innerHTML = (map[ui.settingsTab] || renderGoalsPanel)();
+  }
+
+  function renderArchivePanel() {
+    return '<div class="settings-group"><div class="settings-group-title">已封存習慣</div>' +
+      archivedHabitsHtml() + "</div>";
   }
 
   function renderTimetablePanel() {
@@ -2987,7 +3010,7 @@
 
   function goMoreTab(tab) {
     ui.view = "settings";
-    ui.settingsTab = tab === "goals" || tab === "theme" || tab === "sync" || tab === "notify" ? tab : "goals";
+    ui.settingsTab = tab === "goals" || tab === "archive" || tab === "theme" || tab === "sync" || tab === "notify" ? tab : "goals";
     if (tab === "countdown") {
       setView("countdown");
       return;
