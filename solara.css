@@ -29,6 +29,16 @@
   --nav-active-bg: var(--accent-soft);
   --nav-active-color: var(--accent-2);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Responsive page gutters — keep content off screen edges in app mode */
+  --page-gutter: clamp(18px, 5.2vw, 28px);
+  --page-gutter-sm: clamp(12px, 3.6vw, 18px);
+}
+
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  :root {
+    --page-gutter: clamp(20px, 5.8vw, 32px);
+    --page-gutter-sm: clamp(14px, 4vw, 20px);
+  }
 }
 
 [data-theme="sunshine"] {
@@ -191,7 +201,7 @@ button {
 }
 
 .app {
-  width: min(640px, 100%);
+  width: min(680px, 100%);
   margin: 0 auto;
   min-height: 100vh;
   display: flex;
@@ -210,7 +220,10 @@ button {
   justify-content: space-between;
   gap: 12px;
   min-height: var(--app-bar-h);
-  padding: calc(8px + env(safe-area-inset-top)) 16px 8px;
+  padding-top: calc(8px + env(safe-area-inset-top, 0px));
+  padding-bottom: 8px;
+  padding-left: max(var(--page-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--page-gutter), env(safe-area-inset-right, 0px));
   background: var(--bg-elevated);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -284,7 +297,10 @@ button {
 
 main {
   flex: 1;
-  padding: 0 0 16px;
+  padding-top: 0;
+  padding-bottom: 16px;
+  padding-left: max(var(--page-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--page-gutter), env(safe-area-inset-right, 0px));
 }
 
 .view { display: none; }
@@ -307,7 +323,7 @@ main {
   left: 50%;
   transform: translateX(-50%);
   bottom: calc(8px + env(safe-area-inset-bottom));
-  width: min(420px, calc(100% - 24px));
+  width: min(420px, calc(100% - (2 * var(--page-gutter))));
   height: var(--nav-h);
   padding: 4px;
   display: grid;
@@ -360,7 +376,7 @@ main {
   color: var(--text-mute);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 16px 16px 8px;
+  padding: 16px 0 8px;
 }
 
 /* ── Buttons ── */
@@ -412,7 +428,7 @@ main {
 
 /* ── Today summary ── */
 .today-strip {
-  margin: 12px 16px;
+  margin: 12px 0;
   padding: 14px 16px;
   border-radius: var(--radius);
   background: var(--surface);
@@ -505,7 +521,7 @@ main {
 }
 
 .goals-strip {
-  margin: 0 16px 12px;
+  margin: 0 0 12px;
   padding: 12px 14px;
   border-radius: var(--radius);
   background: var(--surface);
@@ -580,7 +596,13 @@ main {
 }
 
 /* ── Habit groups & rows ── */
-.habit-groups { display: grid; }
+.habit-groups {
+  display: grid;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
 
 .habit-group-section {
   border-bottom: 1px solid var(--line);
@@ -589,7 +611,7 @@ main {
 .habit-group-section:last-child { border-bottom: 0; }
 
 .habit-group-label {
-  padding: 14px 16px 6px;
+  padding: 14px 12px 6px;
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--text-mute);
@@ -601,7 +623,7 @@ main {
   grid-template-columns: auto 1fr auto;
   gap: 12px;
   align-items: center;
-  padding: 12px 16px;
+  padding: 12px;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
   transition: background 0.15s;
@@ -757,7 +779,7 @@ main {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 12px 0;
   gap: 8px;
 }
 
@@ -773,7 +795,7 @@ main {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 0;
-  margin: 0 16px 12px;
+  margin: 0 0 12px;
   padding: 3px;
   border-radius: var(--radius-xs);
   background: var(--surface-2);
@@ -798,12 +820,12 @@ main {
   box-shadow: var(--shadow-sm);
 }
 
-.cal-grid-wrap { padding: 0 12px 12px; }
+.cal-grid-wrap { padding: 0 0 12px; }
 
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: 6px;
 }
 
 .cal-dow {
@@ -879,7 +901,7 @@ main {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 0 12px 8px;
+  padding: 0 0 8px;
 }
 
 .cal-event-row {
@@ -909,8 +931,8 @@ main {
 .cal-week-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-  padding: 0 12px 12px;
+  gap: 6px;
+  padding: 0 0 12px;
 }
 
 .cal-week-col {
@@ -948,7 +970,7 @@ main {
 
 /* Day panel */
 .day-panel {
-  margin: 0 16px 16px;
+  margin: 0 0 16px;
   border-radius: var(--radius);
   background: var(--surface);
   border: 1px solid var(--line);
@@ -1082,7 +1104,7 @@ main {
 .week-picks {
   display: flex;
   gap: 6px;
-  padding: 12px 16px;
+  padding: 12px 0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -1135,7 +1157,7 @@ main {
 }
 
 .schedule-day {
-  margin: 0 16px;
+  margin: 0;
   border-radius: var(--radius);
   background: var(--surface);
   border: 1px solid var(--line);
@@ -1216,7 +1238,7 @@ main {
 
 .fab {
   position: fixed;
-  right: 20px;
+  right: max(var(--page-gutter), env(safe-area-inset-right, 0px));
   bottom: calc(var(--nav-h) + 16px + env(safe-area-inset-bottom));
   width: 52px;
   height: 52px;
@@ -1351,7 +1373,7 @@ main {
 }
 
 .week-summary {
-  margin: 0 16px 12px;
+  margin: 0 0 12px;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
@@ -1412,7 +1434,7 @@ main {
 }
 
 .today-timeline {
-  margin: 0 16px 12px;
+  margin: 0 0 12px;
   padding: 12px 14px;
   border-radius: var(--radius);
   background: var(--surface);
@@ -1509,7 +1531,7 @@ main {
 .countdown-cards {
   display: grid;
   gap: 10px;
-  padding: 12px 16px;
+  padding: 12px 0;
 }
 
 .countdown-card {
@@ -1545,7 +1567,7 @@ main {
 
 /* ── Focus / Pomodoro ── */
 .focus-view {
-  padding: 0 16px 16px;
+  padding: 0 0 16px;
 }
 
 .focus-panel {
@@ -1605,7 +1627,7 @@ main {
 .settings-wrap { padding-bottom: 16px; }
 
 .settings-seg {
-  margin: 12px 16px;
+  margin: 12px 0;
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
@@ -1615,7 +1637,7 @@ main {
 }
 
 .settings-group {
-  margin: 0 16px 20px;
+  margin: 0 0 20px;
   border-radius: var(--radius);
   background: var(--surface);
   border: 1px solid var(--line);
@@ -1655,7 +1677,7 @@ main {
 
 /* ── Goals, lists ── */
 .panel {
-  margin: 12px 16px;
+  margin: 12px 0;
   padding: 16px;
   border-radius: var(--radius);
   background: var(--surface);
@@ -2116,9 +2138,16 @@ details.advanced-sync summary {
   grid-template-columns: auto 1fr auto;
   gap: 12px;
   align-items: center;
-  padding: 12px 16px;
+  padding: 12px;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
+}
+
+.today-checkin {
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--surface);
 }
 
 .today-checkin .habit-group-section:last-child {
@@ -2135,7 +2164,7 @@ details.advanced-sync summary {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 8px 16px 12px;
+  padding: 8px 0 12px;
 }
 
 .habits-board-toolbar .section-title {
@@ -2160,14 +2189,14 @@ details.advanced-sync summary {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
-  padding: 0 12px 8px;
+  padding: 0 0 8px;
 }
 
 @media (min-width: 520px) {
   .habit-box-grid-wrap {
     grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
     gap: 12px;
-    padding: 0 16px 8px;
+    padding: 0 0 8px;
   }
 }
 
@@ -2379,7 +2408,7 @@ button.habit-box-day:active {
   display: flex;
   flex-wrap: wrap;
   gap: 12px 16px;
-  padding: 0 16px 10px;
+  padding: 0 0 10px;
 }
 
 .cal-opt {
@@ -2392,7 +2421,7 @@ button.habit-box-day:active {
 }
 
 .cal-countdown-list {
-  padding: 0 16px 8px;
+  padding: 0 0 8px;
   display: grid;
   gap: 8px;
 }
@@ -2410,7 +2439,7 @@ button.habit-box-day:active {
 
 /* ── Countdown unit toggle ── */
 .countdown-unit-seg {
-  margin: 12px 16px 8px;
+  margin: 12px 0 8px;
 }
 
 .countdown-card {
@@ -2456,6 +2485,10 @@ button.habit-box-day:active {
 }
 
 @media (min-width: 640px) {
+  :root {
+    --page-gutter: 28px;
+    --page-gutter-sm: 18px;
+  }
   .app { padding-top: 8px; }
   .modal {
     border-radius: 20px;
@@ -2464,5 +2497,13 @@ button.habit-box-day:active {
   .modal-backdrop.open {
     align-items: center;
     padding: 16px;
+  }
+}
+
+/* Narrow phones: keep a firm floor so content never kisses the bezel */
+@media (max-width: 360px) {
+  :root {
+    --page-gutter: 16px;
+    --page-gutter-sm: 12px;
   }
 }
