@@ -146,16 +146,38 @@ await page.waitForFunction(() => !document.getElementById("modalBackdrop").class
 const renamed = await page.$eval("#view-habits", (el) => el.textContent.includes("晨跑改名"));
 await assert(renamed, "habit rename saved from detail edit");
 
-// list edit button also works
-await page.waitForSelector('[data-edit-habit]');
-await page.evaluate(() => document.querySelector('[data-edit-habit]').click());
-await page.waitForSelector("#hDelete");
-const hasDeleteInEditor = await page.$("#hDelete");
-await assert(!!hasDeleteInEditor, "habit editor has delete button");
-await page.evaluate(() => document.getElementById("hCancel").click());
+// habit editor supports start/end time range (e.g. gym 06:30–08:30)
+await page.click('[data-habit-box-open]');
+await page.waitForSelector('#modal [data-edit-habit]');
+await page.evaluate(() => document.querySelector('#modal [data-edit-habit]').click());
+await page.waitForSelector("#hTimeEnd");
+await page.evaluate(() => {
+  document.getElementById("hTime").value = "06:30";
+  document.getElementById("hTimeEnd").value = "08:30";
+  document.getElementById("hSave").click();
+});
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
+const rangeText = await page.$eval("#view-habits", (el) => el.textContent);
+await assert(rangeText.includes("06:30") && rangeText.includes("08:30"), "habit time range 06:30–08:30 saved and shown");
+
+// main list stays clean — no inline edit buttons
+const listEditBtns = await page.$$(".habit-edit-btn, .habit-checkin-row [data-edit-habit], .habit-box [data-edit-habit]");
+await assert(listEditBtns.length === 0, "no inline edit buttons on habit main list");
+
+// archive lives in settings
+await page.click('[data-nav="settings"]');
+await page.waitForSelector('[data-settings="archive"]');
+await page.evaluate(() => document.querySelector('[data-settings="archive"]').click());
+await page.waitForSelector("#settingsBody .archived-habits");
+const archiveBody = await page.$eval("#settingsBody", (el) => el.textContent);
+await assert(archiveBody.includes("封存") || archiveBody.includes("尚無"), "settings archive tab renders");
+await page.click('[data-nav="habits"]');
+await page.waitForSelector(".today-strip");
+const habitsHasArchiveBlock = await page.$("#view-habits .archived-habits");
+await assert(!habitsHasArchiveBlock, "habits main view no longer shows archive block");
 
 // overview mode week strip
+await page.click('[data-habits-panel="board"]');
 await page.click('[data-habits-board-mode="overview"]');
 await page.waitForSelector(".habit-row .week-strip");
 const weekStrip = await page.$(".habit-row .week-strip");
@@ -288,8 +310,8 @@ await assert(countdownBody.includes("生日"), "countdown view renders birthday 
 
 // settings tabs smoke (no money tab)
 await page.click('[data-nav="settings"]');
-for (const tab of ["goals", "theme", "notify", "sync"]) {
-  await page.click('[data-settings="' + tab + '"]');
+for (const tab of ["goals", "archive", "theme", "notify", "sync"]) {
+  await page.evaluate((t) => document.querySelector('[data-settings="' + t + '"]').click(), tab);
   await page.waitForSelector("#settingsBody");
   const body = await page.$eval("#settingsBody", (el) => el.textContent.length > 0);
   await assert(body, "settings tab renders: " + tab);
