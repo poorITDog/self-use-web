@@ -20,7 +20,7 @@
     timetableDow: new Date().getDay(),
     habitDetailId: "",
     habitDetailMonth: startOfMonth(new Date()),
-    habitsPanel: "board",
+    habitsPanel: "today",
     countdownUnit: "days",
     focus: {
       running: false,
@@ -131,6 +131,8 @@
         habitsBoardMode: "month",
         notifyEnabled: false,
         notifyHabits: true,
+        notifyEvents: true,
+        notifyCountdowns: true,
         focusSoundEnabled: true
       },
       habits: [],
@@ -153,6 +155,8 @@
     if (!out.settings.habitsBoardMode) out.settings.habitsBoardMode = "month";
     if (out.settings.notifyEnabled === undefined) out.settings.notifyEnabled = false;
     if (out.settings.notifyHabits === undefined) out.settings.notifyHabits = true;
+    if (out.settings.notifyEvents === undefined) out.settings.notifyEvents = true;
+    if (out.settings.notifyCountdowns === undefined) out.settings.notifyCountdowns = true;
     if (out.settings.focusSoundEnabled === undefined) out.settings.focusSoundEnabled = true;
     out.countdowns = (Array.isArray(out.countdowns) ? out.countdowns : []).map(function (c) {
       var kind = c.kind || "countdown";
@@ -175,9 +179,44 @@
       if (h && h.group === "朝早") return Object.assign({}, h, { group: "早上" });
       return h;
     });
+    out.events = out.events.map(function (ev) {
+      return Object.assign({ repeat: "none", until: "", note: "", allDay: false }, ev || {}, {
+        repeat: (ev && ev.repeat) || "none",
+        until: (ev && ev.until) || ""
+      });
+    });
+    out.goals = out.goals.map(function (g) {
+      return Object.assign({ habitId: "", unit: "", current: 0, target: 1, lastBumpKey: "" }, g || {}, {
+        habitId: (g && g.habitId) || "",
+        lastBumpKey: (g && g.lastBumpKey) || ""
+      });
+    });
     if (Array.isArray(data.transactions)) out.transactions = data.transactions;
     out.syncUpdatedAt = Number(out.syncUpdatedAt) || 0;
     return out;
+  }
+
+  // Calendar appointment occurrence (not a habit).
+  function eventOccursOn(ev, key) {
+    if (!ev || !ev.date || !key) return false;
+    var repeat = ev.repeat || "none";
+    if (key < ev.date) return false;
+    if (ev.until && key > ev.until) return false;
+    if (repeat === "none") return ev.date === key;
+    if (repeat === "daily") return true;
+    var start = parseKey(ev.date);
+    var cur = parseKey(key);
+    if (repeat === "weekly") return start.getDay() === cur.getDay();
+    if (repeat === "monthly") return start.getDate() === cur.getDate();
+    if (repeat === "yearly") {
+      return start.getMonth() === cur.getMonth() && start.getDate() === cur.getDate();
+    }
+    return ev.date === key;
+  }
+
+  function eventRepeatLabel(repeat) {
+    var map = { none: "", daily: "每日", weekly: "每週", monthly: "每月", yearly: "每年" };
+    return map[repeat || "none"] || "";
   }
 
   function loadState() {
@@ -465,31 +504,80 @@
 
   function scheduleHabitNotifications() {
     clearNotifyTimers();
-    if (!state.settings.notifyEnabled || !state.settings.notifyHabits) return;
+    if (!state.settings.notifyEnabled) return;
     if (!("Notification" in window) || Notification.permission !== "granted") return;
     var now = Date.now();
-    state.habits.filter(function (h) { return !h.archived && h.timeOfDay; }).forEach(function (h) {
-      var parts = String(h.timeOfDay).split(":");
-      var target = new Date();
-      target.setHours(Number(parts[0]) || 0, Number(parts[1]) || 0, 0, 0);
-      if (target.getTime() <= now) target.setDate(target.getDate() + 1);
-      var key = dateKey(target);
-      if (!habitDueOn(h, key)) return;
-      if (isHabitDone(h, key)) return;
-      var ms = target.getTime() - now;
-      var tid = setTimeout(function () {
-        if (Notification.permission === "granted") {
+    if (state.settings.notifyHabits !== false) {
+      state.habits.filter(function (h) { return !h.archived && h.timeOfDay; }).forEach(function (h) {
+        var parts = String(h.timeOfDay).split(":");
+        var target = new Date();
+        target.setHours(Number(parts[0]) || 0, Number(parts[1]) || 0, 0, 0);
+        if (target.getTime() <= now) target.setDate(target.getDate() + 1);
+        var key = dateKey(target);
+        if (!habitDueOn(h, key)) return;
+        if (isHabitDone(h, key)) return;
+        var ms = target.getTime() - now;
+        var tid = setTimeout(function () {
+          if (Notification.permission === "granted") {
+            try {
+              new Notification("Solara 習慣提醒", {
+                body: h.name + " 的時間到了",
+                tag: "habit-" + h.id + "-" + key,
+                silent: false
+              });
+            } catch (e) { /* ignore */ }
+          }
+        }, ms);
+        notifyTimers.push(tid);
+      });
+    }
+    if (state.settings.notifyEvents !== false) {
+      var today = todayKey();
+      eventsForDate(today).forEach(function (ev) {
+        if (ev.allDay || !ev.start) return;
+        var parts = String(ev.start).split(":");
+        var target = parseKey(today);
+        target.setHours(Number(parts[0]) || 0, Number(parts[1]) || 0, 0, 0);
+        var ms = target.getTime() - now;
+        if (ms < 0 || ms > 86400000) return;
+        var tid = setTimeout(function () {
+          if (Notification.permission === "granted") {
+            try {
+              new Notification("Solara 行程提醒", {
+                body: ev.title + (ev.start ? " · " + ev.start : ""),
+                tag: "event-" + ev.id + "-" + today,
+                silent: false
+              });
+            } catch (e) { /* ignore */ }
+          }
+        }, ms);
+        notifyTimers.push(tid);
+      });
+    }
+    if (state.settings.notifyCountdowns !== false) {
+      var morning = new Date();
+      morning.setHours(9, 0, 0, 0);
+      var msCd = morning.getTime() - now;
+      if (msCd < 0) msCd += 86400000;
+      state.countdowns.forEach(function (c) {
+        var days = countdownDaysLeft(c);
+        if (days > 3) return;
+        var tid = setTimeout(function () {
+          if (Notification.permission !== "granted") return;
           try {
-            new Notification("Solara 習慣提醒", {
-              body: h.name + " 的時間到了",
-              tag: "habit-" + h.id + "-" + key,
+            var body = days <= 0
+              ? (c.title + " 就是今天")
+              : (c.title + " 還有 " + days + " 天");
+            new Notification("Solara 倒數提醒", {
+              body: body,
+              tag: "countdown-" + c.id + "-" + todayKey(),
               silent: false
             });
           } catch (e) { /* ignore */ }
-        }
-      }, ms);
-      notifyTimers.push(tid);
-    });
+        }, msCd);
+        notifyTimers.push(tid);
+      });
+    }
     notifyIntervalId = setInterval(scheduleHabitNotifications, 3600000);
   }
 
@@ -683,12 +771,36 @@
     return "完成";
   }
 
+  // Bump linked goals once per day when habit becomes done.
+  function bumpLinkedGoals(habitId, key) {
+    var names = [];
+    state.goals.forEach(function (g) {
+      if (g.habitId !== habitId) return;
+      if (g.lastBumpKey === key) return;
+      g.current = Number(g.current) + 1;
+      g.lastBumpKey = key;
+      touch(g);
+      names.push(g.title);
+    });
+    return names;
+  }
+
+  function afterHabitCompleted(habit, key) {
+    var bumped = bumpLinkedGoals(habit.id, key);
+    var s = streakFor(habit);
+    var parts = [];
+    if (s === 7 || s === 30 || s === 100) parts.push(habit.name + " 連續 " + s + " 天");
+    if (bumped.length) parts.push("目標進度 +" + bumped.length);
+    if (parts.length) toast(parts.join(" · "));
+  }
+
   function toggleHabit(habitId, dateStr) {
     var habit = state.habits.find(function (h) { return h.id === habitId; });
     if (!habit) return;
     var key = dateStr || todayKey();
     var existing = getCheckin(habitId, key);
     if (habit.type === "yesno") {
+      var wasDone = isHabitDone(habit, key);
       if (existing && existing.value) {
         state.checkins = state.checkins.filter(function (c) { return c.id !== existing.id; });
       } else if (existing) {
@@ -700,11 +812,48 @@
         }));
       }
       saveState();
+      if (!wasDone && isHabitDone(habit, key)) afterHabitCompleted(habit, key);
       if (ui.habitDetailId) refreshHabitDetail();
       render();
       return;
     }
     openHabitLogModal(habit, key);
+  }
+
+  function openQuickAdd() {
+    openModal(
+      "<h3>快速新增</h3>" +
+      '<p class="muted tiny" style="margin:0 0 12px">從任何頁面快速建立內容</p>' +
+      '<div class="quick-add-grid">' +
+      '<button type="button" class="quick-add-btn" id="qaHabit"><span>習慣</span><small>打卡追蹤</small></button>' +
+      '<button type="button" class="quick-add-btn" id="qaEvent"><span>行程</span><small>可重複約會</small></button>' +
+      '<button type="button" class="quick-add-btn" id="qaGoal"><span>目標</span><small>可連習慣</small></button>' +
+      '<button type="button" class="quick-add-btn" id="qaCountdown"><span>倒數</span><small>生日／紀念日</small></button>' +
+      "</div>" +
+      '<div class="row-actions"><button class="btn ghost" id="qaCancel">取消</button></div>'
+    );
+    document.getElementById("qaCancel").onclick = closeModal;
+    document.getElementById("qaHabit").onclick = function () { closeModal(); openHabitEditor(); };
+    document.getElementById("qaEvent").onclick = function () {
+      closeModal();
+      if (ui.view !== "calendar") {
+        ui.view = "calendar";
+        ui.calMode = "month";
+        setView("calendar");
+      }
+      openEventEditor();
+    };
+    document.getElementById("qaGoal").onclick = function () {
+      closeModal();
+      ui.settingsTab = "goals";
+      setView("settings");
+      openGoalEditor("short");
+    };
+    document.getElementById("qaCountdown").onclick = function () {
+      closeModal();
+      setView("countdown");
+      openCountdownEditor();
+    };
   }
 
   function openModal(html) {
@@ -826,6 +975,22 @@
       '</strong> · 投入 <strong>' + fmtMin(minutesOnDate(key)) + "</strong></div>";
     html += progressRingHtml(rate, 48) + "</div>";
     html += '<div class="progress-bar-slim"><i style="width:' + rate + '%"></i></div>';
+    var agenda = eventsForDate(key);
+    if (agenda.length) {
+      html += '<div class="today-agenda">';
+      agenda.slice(0, 3).forEach(function (ev) {
+        var t = ev.allDay ? "全天" : (ev.start || "");
+        var rep = eventRepeatLabel(ev.repeat);
+        html += '<button type="button" class="today-agenda-item" data-edit-event="' + ev.id + '">' +
+          '<span class="cal-event-dot" style="background:' + (ev.color || colors()[0]) + '"></span>' +
+          '<span class="today-agenda-title">' + esc(ev.title) + "</span>" +
+          '<span class="muted tiny">' + esc(t) + (rep ? " · " + rep : "") + "</span></button>";
+      });
+      if (agenda.length > 3) {
+        html += '<div class="muted tiny">還有 ' + (agenda.length - 3) + " 個行程</div>";
+      }
+      html += "</div>";
+    }
     html += "</div>";
     return html;
   }
@@ -886,8 +1051,11 @@
       checkBtnHtml(h, key, "check check-lg") +
       '<button type="button" class="habit-row-body" data-habit-open="' + h.id + '">' +
       '<div class="habit-row-name">' + habitEmoji(h) + esc(h.name) + "</div>" +
-      '<div class="habit-row-meta">連續天數 ' + streakFor(h) + " · 本月完成率 " + rate + "%</div>" +
-      weekStripHtml(h) + "</button>" +
+      '<div class="habit-row-meta">連續天數 ' + streakFor(h) + " · 最佳 " + bestStreakFor(h) +
+      " · 本月完成率 " + rate + "%</div>" +
+      weekStripHtml(h) +
+      linkedGoalBadgeHtml(h) +
+      "</button>" +
       '<button type="button" class="habit-row-chevron" data-habit-open="' + h.id + '" aria-label="詳情">' +
       chevronSvg + "</button></article>";
   }
@@ -1039,7 +1207,23 @@
       checks + "</span>" +
       '<span class="habit-box-streak" aria-label="當前連續">連續 ' + streak + "</span>" +
       '<span class="habit-box-best" aria-label="最佳連續">最佳 ' + best + "</span>" +
-      "</div></div></article>";
+      "</div></div>" +
+      linkedGoalBadgeHtml(habit) +
+      "</article>";
+  }
+
+  function linkedGoalBadgeHtml(habit) {
+    var gs = state.goals.filter(function (g) { return g.habitId === habit.id; });
+    if (!gs.length) return "";
+    var html = '<div class="habit-goal-badges">';
+    gs.slice(0, 2).forEach(function (g) {
+      var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
+      html += '<div class="habit-goal-badge"><span>' + esc(g.title) + "</span>" +
+        '<span class="muted tiny">' + g.current + "/" + g.target + " · " + pct + "%</span>" +
+        '<div class="progress-bar-slim"><i style="width:' + pct + '%"></i></div></div>';
+    });
+    html += "</div>";
+    return html;
   }
 
   function todayCheckinRowHtml(h) {
@@ -1049,14 +1233,72 @@
       checkBtnHtml(h, key, "check check-lg") +
       '<button type="button" class="habit-row-body" data-habit-open="' + h.id + '">' +
       '<div class="habit-row-name">' + habitEmoji(h) + esc(h.name) + "</div>" +
-      '<div class="habit-row-meta">' + todayStatusText(h, key) + "</div></button>" +
+      '<div class="habit-row-meta">' + todayStatusText(h, key) + "</div>" +
+      linkedGoalBadgeHtml(h) +
+      "</button>" +
       '<button type="button" class="habit-row-chevron" data-habit-open="' + h.id + '" aria-label="詳情">' +
       chevronSvg + "</button></article>";
   }
 
+  function todayUnifiedTimelineHtml() {
+    var key = todayKey();
+    var items = [];
+    eventsForDate(key).forEach(function (ev) {
+      items.push({
+        sort: ev.allDay ? -1 : timeToMinutes(ev.start || "09:00"),
+        time: ev.allDay ? "全天" : (ev.start || ""),
+        title: ev.title,
+        color: ev.color || colors()[0],
+        kind: "行程",
+        meta: eventRepeatLabel(ev.repeat),
+        eventId: ev.id
+      });
+    });
+    state.habits.filter(function (h) {
+      return !h.archived && habitDueOn(h, key) && h.timeOfDay;
+    }).forEach(function (h) {
+      var done = isHabitDone(h, key);
+      items.push({
+        sort: timeToMinutes(h.timeOfDay),
+        time: h.timeOfDay,
+        title: h.name,
+        color: h.color,
+        kind: done ? "習慣 · 已完成" : "習慣 · 點此打卡",
+        meta: "",
+        habitId: h.id,
+        done: done
+      });
+    });
+    items.sort(function (a, b) { return a.sort - b.sort; });
+    if (!items.length) return "";
+    var html = '<div class="today-timeline"><div class="section-title">今日時間軸</div>';
+    items.forEach(function (it) {
+      if (it.habitId) {
+        html += '<div class="today-timeline-item' + (it.done ? " done" : "") + '">' +
+          '<span class="today-timeline-time">' + esc(it.time) + "</span>" +
+          '<span class="today-timeline-dot" style="background:' + it.color + '"></span>' +
+          '<button type="button" class="today-timeline-body" data-toggle="' + it.habitId + '">' +
+          "<strong>" + esc(it.title) + "</strong>" +
+          '<span class="muted tiny">' + esc(it.kind) + "</span></button>" +
+          '<button type="button" class="btn sm ' + (it.done ? "soft" : "") + '" data-toggle="' + it.habitId +
+          '">' + (it.done ? "已完成" : "打卡") + "</button></div>";
+      } else {
+        html += '<button type="button" class="today-timeline-item" data-edit-event="' + it.eventId + '">' +
+          '<span class="today-timeline-time">' + esc(it.time) + "</span>" +
+          '<span class="today-timeline-dot" style="background:' + it.color + '"></span>' +
+          '<span class="today-timeline-body"><strong>' + esc(it.title) + "</strong>" +
+          '<span class="muted tiny">' + esc(it.kind) + (it.meta ? " · " + it.meta : "") +
+          "</span></span></button>";
+      }
+    });
+    html += "</div>";
+    return html;
+  }
+
   function todayCheckinHtml(todayHabits) {
     if (!todayHabits.length) {
-      return '<div class="empty compact"><p>今天沒有需要完成的習慣</p></div>';
+      return '<div class="empty compact"><p>今天沒有需要完成的習慣</p>' +
+        '<button class="btn sm" data-action="add-habit">+ 新增習慣</button></div>';
     }
     var html = '<div class="today-checkin">';
     var grouped = {};
@@ -1200,6 +1442,31 @@
     return { label: "完成日數", value: totalDoneDays(h) + " 日" };
   }
 
+  // Compact 12-week contribution heatmap (Habitify-style glance).
+  function habitYearHeatHtml(habit) {
+    var end = new Date();
+    var start = new Date();
+    start.setDate(end.getDate() - 12 * 7 + 1);
+    while (start.getDay() !== 0) start.setDate(start.getDate() - 1);
+    var html = '<div class="habit-year-heat"><div class="section-title" style="padding:8px 0 4px">近 12 週</div>' +
+      '<div class="habit-year-grid" aria-label="近十二週完成熱圖">';
+    var cur = new Date(start);
+    for (var i = 0; i < 84; i++) {
+      var key = dateKey(cur);
+      var due = habitDueOn(habit, key);
+      var done = due && isHabitDone(habit, key);
+      var cls = "heat-cell";
+      if (!due) cls += " off";
+      else if (key > todayKey()) cls += " future";
+      else if (done) cls += " done";
+      else cls += " missed";
+      html += '<span class="' + cls + '" style="--hcolor:' + habit.color + '" title="' + key + '"></span>';
+      cur.setDate(cur.getDate() + 1);
+    }
+    html += "</div></div>";
+    return html;
+  }
+
   function openHabitDetail(habit, month) {
     ui.habitDetailId = habit.id;
     ui.habitDetailMonth = month || ui.habitDetailMonth || startOfMonth(new Date());
@@ -1221,7 +1488,19 @@
       '<span class="muted cal-month-label">' + ym.getFullYear() + " 年 " + (ym.getMonth() + 1) + " 月</span>" +
       '<button type="button" class="btn sm ghost" data-hdetail-cal="next">›</button></div>' +
       habitCalGridHtml(habit, ym, "habit-full") +
-      '<div class="row-actions">' +
+      habitYearHeatHtml(habit);
+    var linkedGoals = state.goals.filter(function (g) { return g.habitId === habit.id; });
+    if (linkedGoals.length) {
+      html += '<div class="section-title" style="padding-top:8px">連結目標</div><div class="habit-linked-goals">';
+      linkedGoals.forEach(function (g) {
+        var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
+        html += '<div class="habit-linked-goal"><strong>' + esc(g.title) + "</strong>" +
+          '<span class="muted tiny">' + g.current + " / " + g.target + " " + esc(g.unit || "") +
+          " · " + pct + "%</span></div>";
+      });
+      html += "</div>";
+    }
+    html += '<div class="row-actions">' +
       '<button class="btn" data-edit-habit="' + habit.id + '">編輯</button>' +
       '<button class="btn ghost" data-archive-habit="' + habit.id + '">封存</button>' +
       '<button class="btn ghost" id="hdClose">關閉</button></div></div>';
@@ -1239,16 +1518,70 @@
   function emptyHabitsHtml() {
     return '<div class="empty">' +
       '<div class="empty-illus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>' +
-      "<p>目前沒有習慣。新增一個，開始記錄生活。</p>" +
-      '<button class="btn" data-action="add-habit">+ 新增習慣</button></div>';
+      "<p>目前沒有習慣。先加一個「是／否」習慣，例如晨跑；再用右下角 ＋ 加行程或目標。</p>" +
+      '<button class="btn" data-action="add-habit">+ 新增習慣</button>' +
+      '<button class="btn soft" data-action="quick-add" style="margin-top:8px">快速新增其他</button></div>';
+  }
+
+  function activeGoalsStripHtml() {
+    var open = state.goals.filter(function (g) {
+      return Number(g.current) < Number(g.target || 1);
+    }).slice(0, 3);
+    if (!open.length) return "";
+    var html = '<div class="goals-strip">';
+    html += '<div class="goals-strip-head"><span class="section-title">進行中目標</span>' +
+      '<button type="button" class="btn sm ghost" data-nav-jump="settings-goals">全部</button></div>';
+    open.forEach(function (g) {
+      var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
+      var habit = g.habitId ? state.habits.find(function (h) { return h.id === g.habitId; }) : null;
+      html += '<button type="button" class="goals-strip-item" data-edit-goal="' + g.id + '">' +
+        '<div class="goals-strip-top"><strong>' + esc(g.title) + "</strong>" +
+        '<span class="muted tiny">' + g.current + "/" + g.target + "</span></div>" +
+        (habit ? '<div class="tiny goal-habit-link">' + esc(habit.name) + "</div>" : "") +
+        '<div class="progress-bar-slim"><i style="width:' + pct + '%"></i></div></button>';
+    });
+    html += "</div>";
+    return html;
+  }
+
+  function weekSummaryHtml() {
+    var start = new Date();
+    start.setDate(start.getDate() - start.getDay());
+    var due = 0;
+    var done = 0;
+    var d = new Date(start);
+    for (var i = 0; i < 7; i++) {
+      var key = dateKey(d);
+      state.habits.filter(function (h) { return !h.archived && habitDueOn(h, key); }).forEach(function (h) {
+        due++;
+        if (isHabitDone(h, key)) done++;
+      });
+      d.setDate(d.getDate() + 1);
+    }
+    var rate = due ? Math.round((done / due) * 100) : 0;
+    var evtCount = 0;
+    d = new Date(start);
+    for (i = 0; i < 7; i++) {
+      evtCount += eventsForDate(dateKey(d)).length;
+      d.setDate(d.getDate() + 1);
+    }
+    return '<div class="week-summary">' +
+      '<div class="week-summary-cell"><div class="label">本週達成</div><div class="value">' + rate + "%</div></div>" +
+      '<div class="week-summary-cell"><div class="label">本週打卡</div><div class="value">' + done + "/" + due + "</div></div>" +
+      '<div class="week-summary-cell"><div class="label">最佳連續</div><div class="value">' + bestStreak() + "</div></div>" +
+      '<div class="week-summary-cell"><div class="label">本週行程</div><div class="value">' + evtCount + "</div></div>" +
+      "</div>";
   }
 
   function renderHabits() {
     var key = todayKey();
     var todayHabits = state.habits.filter(function (h) { return !h.archived && habitDueOn(h, key); });
     var active = state.habits.filter(function (h) { return !h.archived; });
-    var panel = ui.habitsPanel || "board";
+    var panel = ui.habitsPanel || "today";
     var html = todayStripHtml(todayHabits);
+    html += weekSummaryHtml();
+    html += activeGoalsStripHtml();
+    html += todayUnifiedTimelineHtml();
     html += '<div class="seg habits-seg"><button type="button" data-habits-panel="today" class="' +
       (panel === "today" ? "on" : "") + '">今天</button><button type="button" data-habits-panel="board" class="' +
       (panel === "board" ? "on" : "") + '">儀表板</button></div>';
@@ -1316,11 +1649,17 @@
     return best;
   }
 
+  function defaultTimeForGroup(group) {
+    var map = { "早上": "07:30", "下午": "14:00", "晚上": "21:00", "健康": "08:00", "工作": "10:00", "生活": "19:00" };
+    return map[group] || "09:00";
+  }
+
   function openHabitEditor(habit) {
     ui.habitDetailId = "";
     var h = habit || {
       id: "", name: "", color: colors()[0], type: "yesno",
-      frequency: [0, 1, 2, 3, 4, 5, 6], group: "早上", target: 1, timeOfDay: "",
+      frequency: [0, 1, 2, 3, 4, 5, 6], group: "早上", target: 1,
+      timeOfDay: defaultTimeForGroup("早上"),
       emoji: "", note: ""
     };
     var freq = h.frequency || [];
@@ -1335,7 +1674,8 @@
       '<div class="field"><label>目標（數量或分鐘）</label><input id="hTarget" type="number" min="1" value="' + (h.target || 1) + '" /></div>' +
       '<div class="field"><label>分組</label><select id="hGroup">' +
       GROUPS.map(function (g) { return opt(g, g, h.group); }).join("") + "</select></div>" +
-      '<div class="field"><label>建議時段（可選）</label><input id="hTime" type="time" value="' + escAttr(h.timeOfDay || "") + '" /></div>' +
+      '<div class="field"><label>建議時段</label><input id="hTime" type="time" value="' +
+      escAttr(h.timeOfDay || defaultTimeForGroup(h.group || "早上")) + '" /></div>' +
       '<div class="field"><label>備註（可選）</label><input id="hNote" value="' + escAttr(h.note || "") + '" placeholder="補充說明" /></div>' +
       '<div class="field"><label>顏色</label><div class="swatches" id="hColors">' +
       palette.map(function (c) {
@@ -1367,6 +1707,10 @@
       if (!b) return;
       b.classList.toggle("on");
     };
+    document.getElementById("hGroup").onchange = function () {
+      var timeEl = document.getElementById("hTime");
+      if (!h.id || !timeEl.value) timeEl.value = defaultTimeForGroup(this.value);
+    };
     document.getElementById("hCancel").onclick = closeModal;
     document.getElementById("hSave").onclick = function () {
       var name = document.getElementById("hName").value.trim();
@@ -1376,12 +1720,14 @@
         frequency.push(Number(b.getAttribute("data-dow")));
       });
       if (!frequency.length) return toast("至少選一日");
+      var groupVal = document.getElementById("hGroup").value;
+      var timeVal = document.getElementById("hTime").value || defaultTimeForGroup(groupVal);
       var payload = {
         name: name,
         type: document.getElementById("hType").value,
         target: Number(document.getElementById("hTarget").value) || 1,
-        group: document.getElementById("hGroup").value,
-        timeOfDay: document.getElementById("hTime").value,
+        group: groupVal,
+        timeOfDay: timeVal,
         note: document.getElementById("hNote").value.trim(),
         emoji: document.getElementById("hEmoji").value.trim(),
         color: document.getElementById("hColor").value || colors()[0],
@@ -1427,6 +1773,7 @@
     document.getElementById("logSave").onclick = function () {
       var val = Number(document.getElementById("logVal").value) || 0;
       var note = document.getElementById("logNote").value.trim();
+      var wasDone = isHabitDone(habit, key);
       if (!c) {
         c = touch({
           id: uid(), habitId: habit.id, date: key, value: val,
@@ -1441,7 +1788,8 @@
       }
       saveState();
       closeModal();
-      toast("已記錄");
+      if (!wasDone && isHabitDone(habit, key)) afterHabitCompleted(habit, key);
+      else toast("已記錄");
       if (ui.habitDetailId) refreshHabitDetail();
       render();
     };
@@ -1497,7 +1845,8 @@
         end: ev.allDay ? "" : (ev.end || ""),
         color: ev.color,
         kind: "event",
-        allDay: !!ev.allDay
+        allDay: !!ev.allDay,
+        repeatLabel: eventRepeatLabel(ev.repeat)
       };
     })).concat(dayHabits).sort(function (a, b) {
       if (a.allDay && !b.allDay) return -1;
@@ -1525,7 +1874,10 @@
       var height = Math.max(28, dur * pxPerMin);
       var kindLabel = item.kind === "habit"
         ? (item.done ? "習慣 · 已完成" : "習慣 · 未完成")
-        : (item.kind === "event" ? (item.allDay ? "行程 · 全天" : "行程 · " + esc(item.start) + (item.end ? "–" + esc(item.end) : "")) : esc(item.start) + (item.end ? "–" + esc(item.end) : ""));
+        : (item.kind === "event"
+          ? ("行程 · " + (item.allDay ? "全天" : esc(item.start) + (item.end ? "–" + esc(item.end) : "")) +
+            (item.repeatLabel ? " · " + item.repeatLabel : ""))
+          : (esc(item.start) + (item.end ? "–" + esc(item.end) : "")));
       html += '<div class="timeline-block" style="top:' + top + "px;height:" + height +
         "px;background:" + item.color + '">' + esc(item.title) +
         '<div class="tiny">' + kindLabel +
@@ -1551,18 +1903,27 @@
       if (key === ui.calSelected) cls += " selected";
       html += '<button type="button" class="' + cls + '" data-day="' + key + '">';
       html += '<div class="cal-week-col-head">' + DOW[d.getDay()] + "<br>" + d.getDate() + "</div>";
-      var due = state.habits.filter(function (h) { return !h.archived && habitDueOn(h, key); });
-      due.slice(0, 4).forEach(function (h) {
-        var done = isHabitDone(h, key);
-        html += '<div class="cal-week-item" style="background:' + h.color + ";opacity:" + (done ? "1" : "0.55") + '">' +
-          esc(h.name) + "</div>";
+      var slots = 4;
+      eventsForDate(key).slice(0, 2).forEach(function (ev) {
+        if (slots <= 0) return;
+        slots--;
+        var rep = eventRepeatLabel(ev.repeat);
+        html += '<div class="cal-week-item" style="background:' + (ev.color || colors()[0]) + '">' +
+          esc(ev.title) + (rep ? " ·" : "") + "</div>";
       });
       blocksForDate(key).slice(0, 2).forEach(function (b) {
+        if (slots <= 0) return;
+        slots--;
         html += '<div class="cal-week-item" style="background:' + b.color + '">' + esc(b.title) + "</div>";
       });
-      eventsForDate(key).slice(0, 2).forEach(function (ev) {
-        html += '<div class="cal-week-item" style="background:' + (ev.color || colors()[0]) + '">' + esc(ev.title) + "</div>";
-      });
+      if (state.settings.calShowHabits !== false) {
+        var due = state.habits.filter(function (h) { return !h.archived && habitDueOn(h, key); });
+        due.slice(0, slots).forEach(function (h) {
+          var done = isHabitDone(h, key);
+          html += '<div class="cal-week-item" style="background:' + h.color + ";opacity:" + (done ? "1" : "0.55") + '">' +
+            esc(h.name) + "</div>";
+        });
+      }
       html += "</button>";
     }
     html += "</div>";
@@ -1649,10 +2010,11 @@
       html += '<div class="section-title" style="padding-top:4px">當日行程</div><div class="cal-event-list">';
       selEvents.forEach(function (ev) {
         var timeLabel = ev.allDay ? "全天" : ((ev.start || "") + (ev.end ? "–" + ev.end : ""));
+        var rep = eventRepeatLabel(ev.repeat);
         html += '<div class="cal-event-row">' +
           '<span class="cal-event-dot" style="background:' + (ev.color || colors()[0]) + '"></span>' +
           '<div class="cal-event-info"><strong>' + esc(ev.title) + '</strong>' +
-          '<span class="muted tiny">' + esc(timeLabel) + "</span></div>" +
+          '<span class="muted tiny">' + esc(timeLabel) + (rep ? " · " + rep : "") + "</span></div>" +
           '<button type="button" class="btn sm ghost" data-edit-event="' + ev.id + '">編輯</button></div>';
       });
       html += "</div>";
@@ -1690,7 +2052,7 @@
   }
 
   function eventsForDate(key) {
-    return state.events.filter(function (ev) { return ev.date === key; }).sort(function (a, b) {
+    return state.events.filter(function (ev) { return eventOccursOn(ev, key); }).sort(function (a, b) {
       if (a.allDay && !b.allDay) return -1;
       if (!a.allDay && b.allDay) return 1;
       return String(a.start || "").localeCompare(String(b.start || ""));
@@ -1765,10 +2127,14 @@
       end: "10:00",
       allDay: false,
       note: "",
-      color: colors()[2]
+      color: colors()[2],
+      repeat: "none",
+      until: ""
     };
+    var repeat = ev.repeat || "none";
     openModal(
       "<h3>" + (ev.id ? "編輯行程" : "新增行程") + "</h3>" +
+      '<p class="muted tiny" style="margin:0 0 10px">行程可重複，與習慣分開管理。</p>' +
       '<div class="field"><label>標題</label><input id="eTitle" value="' + escAttr(ev.title) + '" placeholder="約會、會議…" /></div>' +
       '<div class="field"><label>日期</label><input id="eDate" type="date" value="' + escAttr(ev.date || ui.calSelected) + '" /></div>' +
       '<div class="field"><label class="inline-check"><input type="checkbox" id="eAllDay"' +
@@ -1778,6 +2144,15 @@
       (ev.allDay ? " disabled" : "") + " /></div>" +
       '<div class="field"><label>結束</label><input id="eEnd" type="time" value="' + escAttr(ev.end || "10:00") + '"' +
       (ev.allDay ? " disabled" : "") + " /></div></div>" +
+      '<div class="grid-2"><div class="field"><label>重複</label><select id="eRepeat">' +
+      opt("none", "不重複", repeat) +
+      opt("daily", "每日", repeat) +
+      opt("weekly", "每週", repeat) +
+      opt("monthly", "每月", repeat) +
+      opt("yearly", "每年", repeat) +
+      "</select></div>" +
+      '<div class="field"><label>結束於（可選）</label><input id="eUntil" type="date" value="' +
+      escAttr(ev.until || "") + '" /></div></div>' +
       '<div class="field"><label>備註</label><textarea id="eNote" rows="2">' + esc(ev.note || "") + "</textarea></div>" +
       '<div class="field"><label>顏色</label><select id="eColor">' +
       colors().map(function (c) { return opt(c, c, ev.color); }).join("") + "</select></div>" +
@@ -1799,6 +2174,8 @@
       var dateVal = document.getElementById("eDate").value;
       if (!dateVal) return toast("請選擇日期");
       var allDay = allDayEl.checked;
+      var untilVal = document.getElementById("eUntil").value;
+      if (untilVal && untilVal < dateVal) return toast("結束日期不可早於開始日期");
       var payload = {
         title: title,
         date: dateVal,
@@ -1806,7 +2183,9 @@
         end: allDay ? "" : document.getElementById("eEnd").value,
         allDay: allDay,
         note: document.getElementById("eNote").value.trim(),
-        color: document.getElementById("eColor").value
+        color: document.getElementById("eColor").value,
+        repeat: document.getElementById("eRepeat").value || "none",
+        until: untilVal || ""
       };
       if (ev.id) {
         Object.assign(ev, payload);
@@ -2069,6 +2448,21 @@
     var todayFocus = state.focusSessions.filter(function (s) { return dateKey(s.startedAt) === todayKey(); });
     var sum = todayFocus.reduce(function (a, s) { return a + Number(s.minutes || 0); }, 0);
     html += '<div class="focus-stats">今天專注 ' + todayFocus.length + " 次 · " + fmtMin(sum) + "</div>";
+    var recent = state.focusSessions.slice().sort(function (a, b) {
+      return Number(b.startedAt) - Number(a.startedAt);
+    }).slice(0, 8);
+    if (recent.length) {
+      html += '<div class="focus-history"><div class="section-title">最近專注</div>';
+      recent.forEach(function (s) {
+        var habit = s.habitId ? state.habits.find(function (h) { return h.id === s.habitId; }) : null;
+        html += '<div class="focus-history-row"><strong>' + fmtMin(s.minutes) + "</strong>" +
+          '<span class="muted tiny">' + dateKey(s.startedAt) +
+          (habit ? " · " + esc(habit.name) : "") + "</span></div>";
+      });
+      html += "</div>";
+    } else {
+      html += '<div class="focus-history"><p class="muted tiny" style="margin:8px 0 0">完成一輪番茄鐘後，記錄會顯示在這裡。</p></div>';
+    }
     return html;
   }
 
@@ -2197,22 +2591,33 @@
 
   function goalRow(g) {
     var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
+    var habit = g.habitId ? state.habits.find(function (h) { return h.id === g.habitId; }) : null;
+    var habitLine = habit
+      ? '<div class="tiny goal-habit-link">連結習慣：' + esc(habit.name) +
+        (isHabitDone(habit, todayKey()) ? " · 今日已打卡" : " · 今日未打卡") + "</div>"
+      : "";
     return '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%">' +
       '<span class="settings-row-label"><strong>' + esc(g.title) + "</strong></span>" +
       '<span class="settings-row-value">' + g.current + " / " + g.target + " " + esc(g.unit || "") + "</span></div>" +
       (g.dueAt ? '<div class="tiny">期限 ' + dateKey(g.dueAt) + "</div>" : "") +
+      habitLine +
       '<div class="progress"><i style="width:' + pct + '%"></i></div>' +
       '<div class="row-actions" style="margin-top:6px">' +
       '<button class="btn sm soft" data-goal-plus="' + g.id + '">+1</button>' +
+      (habit ? '<button class="btn sm soft" data-goal-check="' + g.id + '">打卡並 +1</button>' : "") +
       '<button class="btn sm ghost" data-edit-goal="' + g.id + '">編輯</button></div></div>';
   }
 
   function openGoalEditor(kind, item) {
     var g = item || {
-      id: "", title: "", kind: kind || "short", target: 10, current: 0, unit: "", dueAt: ""
+      id: "", title: "", kind: kind || "short", target: 10, current: 0, unit: "", dueAt: "", habitId: ""
     };
     var due = g.dueAt ? dateKey(g.dueAt) : "";
+    var habitOpts = '<option value="">— 不連結 —</option>' +
+      state.habits.filter(function (h) { return !h.archived; }).map(function (h) {
+        return opt(h.id, h.name, g.habitId || "");
+      }).join("");
     openModal(
       "<h3>" + (g.id ? "編輯目標" : (g.kind === "long" ? "新增長期目標" : "新增短期目標")) + "</h3>" +
       '<div class="field"><label>標題</label><input id="gTitle" value="' + escAttr(g.title) + '" /></div>' +
@@ -2220,6 +2625,7 @@
       '<div class="field"><label>目標</label><input id="gTarget" type="number" value="' + g.target + '" /></div></div>' +
       '<div class="field"><label>單位</label><input id="gUnit" value="' + escAttr(g.unit || "") + '" placeholder="頁 / km / 次" /></div>' +
       '<div class="field"><label>期限（可選）</label><input id="gDue" type="date" value="' + due + '" /></div>' +
+      '<div class="field"><label>連結習慣（可選）</label><select id="gHabit">' + habitOpts + "</select></div>" +
       '<div class="row-actions"><button class="btn" id="gSave">儲存</button>' +
       (g.id ? '<button class="btn warn" id="gDel">刪除</button>' : "") +
       '<button class="btn ghost" id="gCancel">取消</button></div>'
@@ -2235,7 +2641,8 @@
         current: Number(document.getElementById("gCur").value) || 0,
         target: Number(document.getElementById("gTarget").value) || 1,
         unit: document.getElementById("gUnit").value.trim(),
-        dueAt: dueVal ? parseKey(dueVal).getTime() : null
+        dueAt: dueVal ? parseKey(dueVal).getTime() : null,
+        habitId: document.getElementById("gHabit").value || ""
       };
       if (g.id) {
         Object.assign(g, payload);
@@ -2259,6 +2666,36 @@
     }
   }
 
+  // Mark linked yes/no habit done for today; linked goals bump via afterHabitCompleted.
+  function goalCheckAndPlus(goalId) {
+    var goal = state.goals.find(function (x) { return x.id === goalId; });
+    if (!goal) return;
+    var key = todayKey();
+    if (goal.habitId) {
+      var habit = state.habits.find(function (h) { return h.id === goal.habitId; });
+      if (habit && habit.type === "yesno" && !isHabitDone(habit, key)) {
+        var existing = getCheckin(habit.id, key);
+        if (existing) {
+          existing.value = 1;
+          touch(existing);
+        } else {
+          state.checkins.push(touch({
+            id: uid(), habitId: habit.id, date: key, value: 1, minutes: 0, note: ""
+          }));
+        }
+        afterHabitCompleted(habit, key);
+        saveState();
+        render();
+        return;
+      }
+    }
+    goal.current = Number(goal.current) + 1;
+    touch(goal);
+    saveState();
+    render();
+    toast("已更新目標進度");
+  }
+
   function renderNotifyPanel() {
     var supported = "Notification" in window;
     var perm = supported ? Notification.permission : "unsupported";
@@ -2278,7 +2715,15 @@
       (state.settings.notifyHabits !== false ? " checked" : "") +
       (state.settings.notifyEnabled && supported ? "" : " disabled") +
       " /> 習慣提醒（使用習慣的建議時段）</label></div>";
-    html += '<div class="settings-row"><label class="settings-row-label"><input type="checkbox" id="focusSoundEnabled"' +
+    html += '<div class="settings-row"><label class="settings-row-label"><input type="checkbox" id="notifyEvents"' +
+      (state.settings.notifyEvents !== false ? " checked" : "") +
+      (state.settings.notifyEnabled && supported ? "" : " disabled") +
+      " /> 行程提醒（當日開始時間）</label></div>";
+    html += '<div class="settings-row"><label class="settings-row-label"><input type="checkbox" id="notifyCountdowns"' +
+      (state.settings.notifyCountdowns !== false ? " checked" : "") +
+      (state.settings.notifyEnabled && supported ? "" : " disabled") +
+      " /> 倒數提醒（3 日內，早上 9 時）</label></div>";
+    html += '<div class="settings-row"><label class="settings-row-label"><input type="checkbox" id="settingsFocusSound"' +
       (state.settings.focusSoundEnabled !== false ? " checked" : "") +
       " /> 專注提示音</label></div>";
     html += "</div>";
@@ -2480,6 +2925,10 @@
     else if (ui.view === "countdown") renderCountdown();
     else if (ui.view === "focus") renderFocus();
     else if (ui.view === "settings") renderSettings();
+    var fab = document.getElementById("globalFab");
+    if (fab) {
+      fab.hidden = ui.view === "calendar" && ui.calMode === "timetable";
+    }
     if (state.settings.notifyEnabled) scheduleHabitNotifications();
   }
 
@@ -2581,6 +3030,17 @@
       return;
     }
 
+    var jump = t.closest("[data-nav-jump]");
+    if (jump) {
+      var dest = jump.getAttribute("data-nav-jump");
+      if (dest === "settings-goals") {
+        ui.view = "settings";
+        ui.settingsTab = "goals";
+        render();
+      }
+      return;
+    }
+
     var action = t.closest("[data-action]");
     if (action) {
       var act = action.getAttribute("data-action");
@@ -2590,6 +3050,7 @@
       else if (act === "add-event") openEventEditor();
       else if (act === "add-goal-short") openGoalEditor("short");
       else if (act === "add-goal-long") openGoalEditor("long");
+      else if (act === "quick-add") openQuickAdd();
       return;
     }
 
@@ -2638,6 +3099,12 @@
         saveState();
         render();
       }
+      return;
+    }
+
+    var goalCheck = t.closest("[data-goal-check]");
+    if (goalCheck) {
+      goalCheckAndPlus(goalCheck.getAttribute("data-goal-check"));
       return;
     }
 
@@ -2741,10 +3208,26 @@
       toast(state.settings.notifyHabits ? "已開啟習慣提醒" : "已關閉習慣提醒");
       return;
     }
-    if (e.target.id === "focusSoundEnabled") {
+    if (e.target.id === "notifyEvents") {
+      state.settings.notifyEvents = e.target.checked;
+      saveStateLocal();
+      scheduleHabitNotifications();
+      toast(state.settings.notifyEvents ? "已開啟行程提醒" : "已關閉行程提醒");
+      return;
+    }
+    if (e.target.id === "notifyCountdowns") {
+      state.settings.notifyCountdowns = e.target.checked;
+      saveStateLocal();
+      scheduleHabitNotifications();
+      toast(state.settings.notifyCountdowns ? "已開啟倒數提醒" : "已關閉倒數提醒");
+      return;
+    }
+    if (e.target.id === "focusSoundEnabled" || e.target.id === "settingsFocusSound") {
       state.settings.focusSoundEnabled = e.target.checked;
       saveStateLocal();
       toast(state.settings.focusSoundEnabled ? "已開啟提示音" : "已關閉提示音");
+      if (ui.view === "focus") renderFocus();
+      if (ui.view === "settings") renderSettingsBody();
       return;
     }
     if (e.target.id === "autoSyncToggle") {

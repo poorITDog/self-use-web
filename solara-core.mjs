@@ -45,6 +45,7 @@ export function defaultState() {
       habitsBoardMode: "month",
       notifyEnabled: false,
       notifyHabits: true,
+      notifyEvents: true,
       focusSoundEnabled: true,
     },
     habits: [],
@@ -64,6 +65,7 @@ export function normalizeState(data) {
   const out = { ...base, ...data };
   out.settings = { ...base.settings, ...(data.settings || {}) };
   if (out.settings.focusSoundEnabled === undefined) out.settings.focusSoundEnabled = true;
+  if (out.settings.notifyEvents === undefined) out.settings.notifyEvents = true;
   for (const k of [
     "habits",
     "checkins",
@@ -76,8 +78,48 @@ export function normalizeState(data) {
   ]) {
     if (!Array.isArray(out[k])) out[k] = [];
   }
+  out.events = out.events.map((ev) =>
+    Object.assign({ repeat: "none", until: "", note: "", allDay: false }, ev || {}, {
+      repeat: (ev && ev.repeat) || "none",
+      until: (ev && ev.until) || "",
+    })
+  );
+  out.goals = out.goals.map((g) =>
+    Object.assign({ habitId: "", unit: "", current: 0, target: 1 }, g || {}, {
+      habitId: (g && g.habitId) || "",
+    })
+  );
   out.syncUpdatedAt = Number(out.syncUpdatedAt) || 0;
   return out;
+}
+
+// Does a calendar appointment (not a habit) occur on YYYY-MM-DD?
+export function eventOccursOn(ev, key) {
+  if (!ev || !ev.date || !key) return false;
+  const repeat = ev.repeat || "none";
+  if (key < ev.date) return false;
+  if (ev.until && key > ev.until) return false;
+  if (repeat === "none") return ev.date === key;
+  if (repeat === "daily") return true;
+  const start = parseKey(ev.date);
+  const cur = parseKey(key);
+  if (repeat === "weekly") return start.getDay() === cur.getDay();
+  if (repeat === "monthly") return start.getDate() === cur.getDate();
+  if (repeat === "yearly") {
+    return start.getMonth() === cur.getMonth() && start.getDate() === cur.getDate();
+  }
+  return ev.date === key;
+}
+
+export function eventRepeatLabel(repeat) {
+  const map = {
+    none: "",
+    daily: "每日",
+    weekly: "每週",
+    monthly: "每月",
+    yearly: "每年",
+  };
+  return map[repeat || "none"] || "";
 }
 
 /** Last-write-wins: pick newer snapshot by syncUpdatedAt / remote updatedAt. */
