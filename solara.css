@@ -825,7 +825,7 @@ main {
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: 6px;
 }
 
 .cal-dow {
@@ -931,7 +931,7 @@ main {
 .cal-week-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: 6px;
   padding: 0 0 12px;
 }
 
