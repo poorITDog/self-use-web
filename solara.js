@@ -34,11 +34,14 @@
 
   var syncStatus = "disconnected";
   var uploadDebounce = null;
+  var syncInFlight = null;
+  var autoSyncTimer = null;
   var googleTokenClient = null;
   var tokenPromiseResolve = null;
   var notifyTimers = [];
   var notifyIntervalId = null;
   var audioCtx = null;
+  var AUTO_SYNC_MS = 3 * 60 * 1000;
 
   var THEME_COLORS = {
     sunshine: "#FFF8F0",
@@ -375,18 +378,44 @@
     return next;
   }
 
+  // Automatic git-like sync when connected + autoSync on.
+  function autoDriveSync() {
+    if (!state.settings.googleConnected || state.settings.autoSync === false) {
+      return Promise.resolve();
+    }
+    return driveSync({ push: true });
+  }
+
+  function startAutoSyncLoop() {
+    clearInterval(autoSyncTimer);
+    if (!state.settings.googleConnected || state.settings.autoSync === false) return;
+    autoSyncTimer = setInterval(function () {
+      if (document.visibilityState === "visible") autoDriveSync();
+    }, AUTO_SYNC_MS);
+  }
+
   // Git-like Drive sync: fetch → merge → push (never push empty over cloud).
+  // Always fetch+merge first; push only when needed. Coalesces concurrent calls.
   function driveSync(opts) {
     opts = opts || {};
     var wantPush = opts.push !== false;
     if (!state.settings.googleConnected) return Promise.resolve();
     // Scheduled/background sync respects autoSync; manual force always runs.
     if (!opts.force && state.settings.autoSync === false) return Promise.resolve();
+    if (syncInFlight) return syncInFlight;
     setSyncStatus("syncing");
-    return getAccessToken("").then(function (token) {
+    var done = function (value) {
+      syncInFlight = null;
+      return value;
+    };
+    var fail = function () {
+      syncInFlight = null;
+      setSyncStatus("failed");
+    };
+    syncInFlight = getAccessToken("").then(function (token) {
       if (!token) {
         setSyncStatus("disconnected");
-        return;
+        return done();
       }
       return driveFindFile(token).then(function (file) {
         var loadRemote = !file
@@ -430,7 +459,7 @@
           }
           if (!doPush) {
             setSyncStatus("synced");
-            return result;
+            return done(result);
           }
           var payload = state;
           var write = pack.file
@@ -440,13 +469,13 @@
             state.syncBaseAt = Date.now();
             saveStateLocal();
             setSyncStatus("synced");
-            return result;
+            return done(result);
           });
         });
       });
-    }).catch(function () {
-      setSyncStatus("failed");
     });
+    syncInFlight.catch(fail);
+    return syncInFlight;
   }
 
   function drivePull() {
@@ -462,9 +491,9 @@
   function scheduleDriveUpload() {
     if (!state.settings.googleConnected || state.settings.autoSync === false) return;
     clearTimeout(uploadDebounce);
-    // Fetch+merge before push — same spirit as git pull --rebase && push.
+    // Automatic fetch+merge before push after every real edit.
     uploadDebounce = setTimeout(function () {
-      driveSync({ push: true, force: true });
+      autoDriveSync();
     }, 1500);
   }
 
@@ -486,6 +515,7 @@
       state.settings.autoSync = true;
       saveStateLocal();
       driveSync({ push: true, force: true }).then(function () {
+        startAutoSyncLoop();
         toast("已連接 Google Drive");
         render();
       });
@@ -495,6 +525,8 @@
   function disconnectGoogleDrive() {
     state.settings.googleConnected = false;
     clearStoredToken();
+    clearInterval(autoSyncTimer);
+    autoSyncTimer = null;
     saveStateLocal();
     setSyncStatus("disconnected");
     toast("已中斷連接");
@@ -3585,7 +3617,15 @@
     if (e.target.id === "autoSyncToggle") {
       state.settings.autoSync = e.target.checked;
       saveStateLocal();
-      toast(state.settings.autoSync ? "已開啟自動同步" : "已關閉自動同步");
+      if (state.settings.autoSync) {
+        startAutoSyncLoop();
+        autoDriveSync();
+        toast("已開啟自動同步");
+      } else {
+        clearInterval(autoSyncTimer);
+        autoSyncTimer = null;
+        toast("已關閉自動同步");
+      }
       return;
     }
     if (e.target.id === "googleClientId") {
@@ -3617,10 +3657,14 @@
     }
   });
 
+  // Auto fetch+merge when returning to the app (no manual button needed).
   document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState === "visible" && state.settings.googleConnected && state.settings.autoSync !== false) {
-      driveSync({ push: true });
-    }
+    if (document.visibilityState === "visible") autoDriveSync();
+  });
+
+  // Auto fetch+merge when network comes back.
+  window.addEventListener("online", function () {
+    autoDriveSync();
   });
 
   function bootSync() {
@@ -3628,7 +3672,8 @@
       if (state.settings.googleClientId) initGoogleAuth();
       if (state.settings.googleConnected) {
         setSyncStatus("syncing");
-        driveSync({ push: true });
+        autoDriveSync();
+        startAutoSyncLoop();
       } else {
         setSyncStatus("disconnected");
       }
