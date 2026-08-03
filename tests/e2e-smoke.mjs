@@ -163,8 +163,11 @@ await assert(rangeText.includes("06:30") && rangeText.includes("08:30"), "habit 
 // pull habit detail sheet down to return to main habits page
 await page.click('[data-habit-box-open]');
 await page.waitForSelector(".habit-detail .sheet-handle");
+await page.waitForSelector("#hdBack");
 const pullHint = await page.$(".sheet-pull-hint");
 await assert(!!pullHint, "habit detail shows pull-to-back hint");
+const backBtn = await page.$eval("#hdBack", (el) => el.textContent.includes("返回"));
+await assert(backBtn, "habit detail shows back button");
 await page.evaluate(() => {
   const modal = document.getElementById("modal");
   const rect = modal.getBoundingClientRect();
