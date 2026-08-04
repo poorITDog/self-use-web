@@ -576,12 +576,12 @@ main {
 }
 
 .goal-habit-dot {
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
   background: var(--hcolor, var(--accent-2));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--hcolor, var(--accent)) 28%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--hcolor, var(--accent)) 32%, #fff);
 }
 
 .goal-habit-chip {
