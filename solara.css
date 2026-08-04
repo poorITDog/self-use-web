@@ -803,25 +803,26 @@ button.linkish {
   border-left: 5px solid var(--hcolor, var(--accent-2));
   background: linear-gradient(
     105deg,
-    color-mix(in srgb, var(--hcolor, var(--accent)) 44%, var(--surface)) 0%,
-    color-mix(in srgb, var(--hcolor, var(--accent)) 18%, var(--surface)) 65%,
+    color-mix(in srgb, var(--hcolor, var(--accent)) 22%, var(--surface)) 0%,
+    color-mix(in srgb, var(--hcolor, var(--accent)) 10%, var(--surface)) 65%,
     var(--surface) 100%
   );
-  box-shadow:
-    inset 5px 0 0 var(--hcolor, var(--accent-2)),
-    inset 0 0 0 1px color-mix(in srgb, var(--hcolor, var(--accent)) 22%, transparent);
+  box-shadow: inset 5px 0 0 var(--hcolor, var(--accent-2));
 }
 
 .goal-row.has-habit .progress > i {
   background: linear-gradient(
     90deg,
-    var(--hcolor, var(--accent)),
+    color-mix(in srgb, var(--hcolor, var(--accent)) 78%, #141916),
     color-mix(in srgb, var(--hcolor, var(--accent)) 55%, var(--accent-2))
   );
 }
 
 .goal-row.has-habit .goal-pct-ring {
-  background: conic-gradient(var(--hcolor, var(--accent-2)) var(--p), var(--surface-2) 0);
+  background: conic-gradient(
+    color-mix(in srgb, var(--hcolor, var(--accent-2)) 78%, #141916) var(--p),
+    var(--surface-2) 0
+  );
 }
 
 .goal-row .settings-row-label strong {
@@ -872,7 +873,8 @@ button.linkish {
   font-family: var(--display);
   font-size: 1.05rem;
   font-weight: 800;
-  color: var(--hcolor, var(--accent-2));
+  /* Mix toward ink so light swatches stay readable on pale cards */
+  color: color-mix(in srgb, var(--hcolor, var(--accent-2)) 62%, #141916);
   line-height: 1;
 }
 
@@ -929,13 +931,16 @@ button.linkish {
 .goals-strip-item .progress-bar-slim > i {
   background: linear-gradient(
     90deg,
-    var(--hcolor, var(--accent)),
+    color-mix(in srgb, var(--hcolor, var(--accent)) 78%, #141916),
     color-mix(in srgb, var(--hcolor, var(--accent)) 55%, var(--accent-2))
   );
 }
 
 .goals-strip-item .goal-pct-ring {
-  background: conic-gradient(var(--hcolor, var(--accent-2)) var(--p), var(--surface-2) 0);
+  background: conic-gradient(
+    color-mix(in srgb, var(--hcolor, var(--accent-2)) 78%, #141916) var(--p),
+    var(--surface-2) 0
+  );
 }
 
 .goals-strip-top {

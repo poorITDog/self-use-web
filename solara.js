@@ -117,9 +117,10 @@
   }
 
   function goalColorPalette() {
+    // Prefer mid/deep accents so strip text and progress stay readable.
     var extra = [
       "#7C6CF0", "#E91E8C", "#00B4D8", "#FF6B6B", "#6A994E", "#BC6C25",
-      "#5E60CE", "#F72585", "#118AB2", "#06D6A0", "#FFD166", "#EF476F",
+      "#5E60CE", "#F72585", "#118AB2", "#0FA968", "#D4A017", "#EF476F",
       "#8338EC", "#FB8500", "#2D6A4F", "#9B2226"
     ];
     var seen = {};
@@ -3297,7 +3298,11 @@
     });
     var due = g.dueAt ? dateKey(g.dueAt) : "";
     var palette = goalColorPalette();
-    var selectedColor = g.color || palette[0];
+    var linkedHabit = g.habitId
+      ? state.habits.find(function (h) { return h.id === g.habitId; })
+      : null;
+    // Match strip accent so a no-op save does not overwrite displayed color.
+    var selectedColor = goalAccentColor(g, linkedHabit) || palette[0];
     var habitOpts = '<option value="">— 不連結 —</option>' +
       state.habits.filter(function (h) { return !h.archived; }).map(function (h) {
         return opt(h.id, h.name, g.habitId || "");
