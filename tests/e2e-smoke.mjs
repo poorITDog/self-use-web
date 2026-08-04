@@ -74,6 +74,16 @@ await page.waitForSelector('[data-habits-panel="board"]');
 const boardTab = await page.$eval('[data-habits-panel="board"]', (el) => el.textContent);
 await assert(boardTab.includes("儀表板"), "habits board tab label is Traditional Chinese");
 
+// first-run empty state guides the user
+await page.waitForSelector(".empty-steps");
+const emptyGuide = await page.$eval(".empty", (el) => el.textContent);
+await assert(emptyGuide.includes("開始你的每日節奏"), "empty state has friendly headline");
+await assert(!!(await page.$(".empty-steps li")), "empty state shows step-by-step guide");
+await assert(
+  await page.$eval("#toast", (el) => el.getAttribute("aria-live") === "polite"),
+  "toast has aria-live for status updates"
+);
+
 async function clickAction(action) {
   await page.waitForSelector('[data-action="' + action + '"]');
   await page.evaluate((act) => {
@@ -134,6 +144,8 @@ const yearHeat = await page.$(".habit-year-heat");
 await assert(!!yearHeat, "habit detail year heatmap renders");
 const detailEdit = await page.$('#modal [data-edit-habit]');
 await assert(!!detailEdit, "habit detail has edit button");
+await assert(!!(await page.$("#modal .sheet-top-edit")), "habit detail topbar has always-visible 編輯");
+await assert(!!(await page.$(".habit-detail-quick-actions")), "habit detail shows quick actions before calendar");
 const detailDelete = await page.$('#modal [data-delete-habit]');
 await assert(!!detailDelete, "habit detail has delete button");
 await page.evaluate(() => document.querySelector('#modal [data-edit-habit]').click());
