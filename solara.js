@@ -1222,6 +1222,8 @@
     function onPointerDown(e) {
       if (!backdrop.classList.contains("open")) return;
       if (e.pointerType === "mouse" && e.button !== 0) return;
+      // Don't steal pointer from buttons/inputs — otherwise click never fires.
+      if (e.target.closest("button, a, input, select, textarea, label, [role='button']")) return;
       if (sheetScroller().scrollTop > 0) return;
       startY = e.clientY;
       dragY = 0;
