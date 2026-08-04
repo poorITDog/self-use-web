@@ -5,7 +5,7 @@
   var TOKEN_KEY = "solara-google-token";
   var DRIVE_FILE = "solara-v1.json";
   var DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.appdata";
-  var BASE_COLORS = ["#F4A261", "#2A9D8F", "#E76F51", "#457B9D", "#E9C46A", "#90BE6D", "#F28482", "#1D8A99"];
+  var BASE_COLORS = ["#C67139", "#7A8A5E", "#D45A3C", "#3F7F9A", "#BC6C25", "#6A994E", "#E07A5F", "#556344"];
   var GROUPS = ["早上", "下午", "晚上", "健康", "工作", "生活"];
   var TIME_GROUPS = ["早上", "下午", "晚上", "其他"];
   var DOW = ["日", "一", "二", "三", "四", "五", "六"];
@@ -45,10 +45,10 @@
   var AUTO_SYNC_MS = 3 * 60 * 1000;
 
   var THEME_COLORS = {
-    sunshine: "#FFF8F0",
-    sea: "#E8F4FA",
-    fire: "#FFF0EB",
-    photo: "#FAFAF8"
+    sunshine: "#f5ead8",
+    sea: "#e7eef2",
+    fire: "#f6e4d6",
+    photo: "#f5ead8"
   };
 
   function colors() {
@@ -749,14 +749,22 @@
     var metaTheme = document.querySelector('meta[name="theme-color"]');
     if (metaTheme) metaTheme.setAttribute("content", THEME_COLORS[t] || THEME_COLORS.sunshine);
     if (t === "photo" && state.settings.photoDataUrl) {
-      document.body.style.setProperty("--photo", "linear-gradient(180deg, rgba(255,255,255,0.45), rgba(0,0,0,0.25)), url('" + state.settings.photoDataUrl + "')");
+      // Washed photo sit-back treatment (Organic .washed feel)
+      document.body.style.setProperty("--photo",
+        "linear-gradient(180deg, rgba(251,246,238,0.72), rgba(245,234,216,0.82)), url('" + state.settings.photoDataUrl + "')");
       if (state.settings.palette && state.settings.palette[0]) {
-        document.documentElement.style.setProperty("--accent", state.settings.palette[0]);
-        document.documentElement.style.setProperty("--accent-2", state.settings.palette[1] || state.settings.palette[0]);
-        document.documentElement.style.setProperty("--accent-soft", "color-mix(in srgb, " + state.settings.palette[0] + " 22%, white)");
+        var a0 = state.settings.palette[0];
+        var a1 = state.settings.palette[1] || a0;
+        document.documentElement.style.setProperty("--color-accent", a0);
+        document.documentElement.style.setProperty("--color-accent-2", a1);
+        document.documentElement.style.setProperty("--accent", a0);
+        document.documentElement.style.setProperty("--accent-2", a1);
+        document.documentElement.style.setProperty("--accent-soft", "color-mix(in srgb, " + a0 + " 22%, white)");
       }
     } else {
       document.body.style.removeProperty("--photo");
+      document.documentElement.style.removeProperty("--color-accent");
+      document.documentElement.style.removeProperty("--color-accent-2");
       document.documentElement.style.removeProperty("--accent");
       document.documentElement.style.removeProperty("--accent-2");
       document.documentElement.style.removeProperty("--accent-soft");
@@ -3501,9 +3509,9 @@
   function renderThemePanel() {
     var cur = state.settings.theme || "sunshine";
     var themes = [
-      { id: "sunshine", name: "Sunshine", previewClass: "preview-sunshine" },
-      { id: "sea", name: "Blue Sea", previewClass: "preview-sea" },
-      { id: "fire", name: "Warm Fire", previewClass: "preview-fire" },
+      { id: "sunshine", name: "Organic 暖沙", previewClass: "preview-sunshine" },
+      { id: "sea", name: "Organic 海霧", previewClass: "preview-sea" },
+      { id: "fire", name: "Organic 赤陶", previewClass: "preview-fire" },
       { id: "photo", name: "自訂相片", previewClass: "preview-photo", photo: state.settings.photoDataUrl }
     ];
     var html = '<div class="settings-group"><div class="settings-group-title">主題</div>';
