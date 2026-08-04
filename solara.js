@@ -302,6 +302,8 @@
     var el = document.getElementById("syncChip");
     if (!el) return;
     el.className = "chip sync-chip sync-" + syncStatus;
+    el.setAttribute("title", "雲端同步狀態");
+    el.setAttribute("aria-label", "雲端同步狀態：" + syncStatusLabel());
     el.innerHTML = "雲端 <strong>" + syncStatusLabel() + "</strong>";
   }
 
@@ -1296,6 +1298,8 @@
     var chip = document.getElementById("syncChip");
     if (chip) {
       chip.className = "chip sync-chip sync-" + syncStatus;
+      chip.setAttribute("title", "雲端同步狀態");
+      chip.setAttribute("aria-label", "雲端同步狀態：" + syncStatusLabel());
       chip.innerHTML = "雲端 <strong>" + syncStatusLabel() + "</strong>";
     }
   }
@@ -1343,8 +1347,9 @@
     }
     html += '</div><div class="app-bar-actions">' + appBarActionHtml(view);
     if (view === "habits") {
-      html += '<span class="chip sync-chip sync-' + syncStatus + '" id="syncChip">雲端 <strong>' +
-        syncStatusLabel() + "</strong></span>";
+      html += '<span class="chip sync-chip sync-' + syncStatus +
+        '" id="syncChip" title="雲端同步狀態" aria-label="雲端同步狀態：' +
+        escAttr(syncStatusLabel()) + '">雲端 <strong>' + syncStatusLabel() + "</strong></span>";
     }
     html += "</div>";
     var bar = document.getElementById("appBar");
@@ -1910,7 +1915,8 @@
       '<div class="sheet-topbar">' +
       '<button type="button" class="sheet-back" id="hdBack" aria-label="返回習慣主頁">‹ 返回</button>' +
       '<div class="sheet-handle-wrap" aria-hidden="true"><span class="sheet-handle"></span></div>' +
-      '<span class="sheet-topbar-spacer" aria-hidden="true"></span></div>' +
+      '<button type="button" class="btn sm soft sheet-top-edit" data-edit-habit="' + habit.id +
+      '" aria-label="編輯習慣 ' + escAttr(habit.name) + '">編輯</button></div>' +
       '<div class="habit-detail-hero" style="--hcolor:' + habit.color + '">' +
       '<span class="dot dot-lg" style="--hcolor:' + habit.color + '"></span>' +
       "<h3>" + esc(habit.name) + "</h3>" +
@@ -1924,10 +1930,14 @@
       '<div class="detail-stat"><div class="label">本月完成</div><div class="value">' + monthDoneDays(habit) + " 日</div></div>" +
       '<div class="detail-stat"><div class="label">' + stat.label + '</div><div class="value">' + stat.value + "</div></div>" +
       "</div>" +
+      '<div class="habit-detail-quick-actions" role="group" aria-label="習慣操作">' +
+      '<button type="button" class="btn sm" data-edit-habit="' + habit.id + '">編輯</button>' +
+      '<button type="button" class="btn sm ghost" data-archive-habit="' + habit.id + '">封存</button>' +
+      '<button type="button" class="btn sm ghost" id="hdCloseTop">關閉</button></div>' +
       '<div class="habit-cal-nav">' +
-      '<button type="button" class="btn sm ghost" data-hdetail-cal="prev">‹</button>' +
+      '<button type="button" class="btn sm ghost" data-hdetail-cal="prev" aria-label="上個月">‹</button>' +
       '<span class="muted cal-month-label">' + ym.getFullYear() + " 年 " + (ym.getMonth() + 1) + " 月</span>" +
-      '<button type="button" class="btn sm ghost" data-hdetail-cal="next">›</button></div>' +
+      '<button type="button" class="btn sm ghost" data-hdetail-cal="next" aria-label="下個月">›</button></div>' +
       habitCalGridHtml(habit, ym, "habit-full") +
       habitYearHeatHtml(habit);
     var linkedGoals = state.goals.filter(function (g) { return g.habitId === habit.id; });
@@ -1952,7 +1962,7 @@
       });
       html += "</div>";
     }
-    html += '<div class="row-actions">' +
+    html += '<div class="row-actions habit-detail-footer">' +
       '<button class="btn" data-edit-habit="' + habit.id + '">編輯</button>' +
       '<button class="btn ghost" data-archive-habit="' + habit.id + '">封存</button>' +
       '<button class="btn warn" data-delete-habit="' + habit.id + '">永久刪除</button>' +
@@ -1960,6 +1970,8 @@
     openModal(html);
     document.getElementById("hdBack").onclick = closeModal;
     document.getElementById("hdClose").onclick = closeModal;
+    var hdCloseTop = document.getElementById("hdCloseTop");
+    if (hdCloseTop) hdCloseTop.onclick = closeModal;
   }
 
   // Permanently remove habit and related check-ins / links.
@@ -2035,7 +2047,11 @@
   function emptyHabitsHtml() {
     return '<div class="empty">' +
       '<div class="empty-illus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>' +
-      "<p>目前沒有習慣。先加一個「是／否」習慣，例如晨跑；再用右下角 ＋ 加行程或目標。</p>" +
+      "<p><strong>開始你的每日節奏</strong></p>" +
+      '<ol class="empty-steps">' +
+      "<li>新增一個習慣（例如晨跑）</li>" +
+      "<li>每天在這裡打卡</li>" +
+      "<li>在「設定 → 目標」連結進度</li></ol>" +
       '<button class="btn" data-action="add-habit">+ 新增習慣</button>' +
       '<button class="btn soft" data-action="quick-add" style="margin-top:8px">快速新增其他</button></div>';
   }
@@ -2045,7 +2061,7 @@
     if (!open.length) return "";
     var html = '<div class="goals-strip">';
     html += '<div class="goals-strip-head"><span class="section-title">進行中目標</span>' +
-      '<button type="button" class="btn sm ghost" data-nav-jump="settings-goals">設定 → 目標</button></div>';
+      '<button type="button" class="btn sm soft" data-nav-jump="settings-goals" aria-label="前往管理目標">管理目標</button></div>';
     open.forEach(function (g) {
       var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
       var habit = g.habitId ? state.habits.find(function (h) { return h.id === g.habitId; }) : null;
@@ -2107,7 +2123,7 @@
     var panel = ui.habitsPanel || "today";
     var html = todayStripHtml(todayHabits);
     html += weekSummaryHtml();
-    html += activeGoalsStripHtml();
+    // Daily tasks / habits first; goals come after so the first page opens on today's work.
     html += todayUnifiedTimelineHtml();
     html += '<div class="seg habits-seg"><button type="button" data-habits-panel="today" class="' +
       (panel === "today" ? "on" : "") + '">今天</button><button type="button" data-habits-panel="board" class="' +
@@ -2119,6 +2135,7 @@
     } else {
       html += todayCheckinHtml(todayHabits);
     }
+    html += activeGoalsStripHtml();
     document.getElementById("view-habits").innerHTML = html;
   }
 
@@ -2870,7 +2887,11 @@
     html += '<div class="countdown-cards">';
     if (!state.countdowns.length) {
       html += '<div class="empty"><div class="empty-illus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="13" r="8"/><polyline points="12 9 12 13 15 15"/></svg></div>' +
-        "<p>目前沒有倒數。考試、旅行、deadline 都可以新增。</p>" +
+        "<p><strong>用倒數抓住重要日子</strong></p>" +
+        '<ol class="empty-steps">' +
+        "<li>新增考試、旅行或生日</li>" +
+        "<li>用天／週／月檢視距離</li>" +
+        "<li>到日前可收到提醒</li></ol>" +
         '<button class="btn" data-action="add-countdown">+ 新增倒數</button></div>';
     } else {
       state.countdowns.slice().sort(function (a, b) {

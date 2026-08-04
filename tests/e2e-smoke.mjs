@@ -74,6 +74,16 @@ await page.waitForSelector('[data-habits-panel="board"]');
 const boardTab = await page.$eval('[data-habits-panel="board"]', (el) => el.textContent);
 await assert(boardTab.includes("儀表板"), "habits board tab label is Traditional Chinese");
 
+// first-run empty state guides the user
+await page.waitForSelector(".empty-steps");
+const emptyGuide = await page.$eval(".empty", (el) => el.textContent);
+await assert(emptyGuide.includes("開始你的每日節奏"), "empty state has friendly headline");
+await assert(!!(await page.$(".empty-steps li")), "empty state shows step-by-step guide");
+await assert(
+  await page.$eval("#toast", (el) => el.getAttribute("aria-live") === "polite"),
+  "toast has aria-live for status updates"
+);
+
 async function clickAction(action) {
   await page.waitForSelector('[data-action="' + action + '"]');
   await page.evaluate((act) => {
@@ -134,6 +144,8 @@ const yearHeat = await page.$(".habit-year-heat");
 await assert(!!yearHeat, "habit detail year heatmap renders");
 const detailEdit = await page.$('#modal [data-edit-habit]');
 await assert(!!detailEdit, "habit detail has edit button");
+await assert(!!(await page.$("#modal .sheet-top-edit")), "habit detail topbar has always-visible 編輯");
+await assert(!!(await page.$(".habit-detail-quick-actions")), "habit detail shows quick actions before calendar");
 const detailDelete = await page.$('#modal [data-delete-habit]');
 await assert(!!detailDelete, "habit detail has delete button");
 await page.evaluate(() => document.querySelector('#modal [data-edit-habit]').click());
@@ -303,8 +315,25 @@ await assert(!!(await page.$(".goal-habit-chip")), "linked habit shows colored c
 await assert(!!(await page.$(".goal-habit-dot")), "linked habit chip shows color dot");
 await assert(!!(await page.$(".goal-row.has-habit")), "linked goal row uses habit accent class");
 
-// habit detail linked goals: manage button + colored block
+// habits page: daily tasks/habits before goals strip
 await page.click('[data-nav="habits"]');
+await page.waitForSelector(".goals-strip");
+const habitsBeforeGoals = await page.evaluate(() => {
+  const root = document.getElementById("view-habits");
+  const goals = root.querySelector(".goals-strip");
+  const timeline = root.querySelector(".today-timeline");
+  const habits = root.querySelector(".habit-checkin-row, .habit-card, .habits-seg");
+  if (!goals || !habits) return false;
+  const pos = (el) => el.compareDocumentPosition(goals);
+  // goals is after habits/timeline (DOCUMENT_POSITION_FOLLOWING = 4)
+  const afterHabits = (habits.compareDocumentPosition(goals) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+  const afterTimeline = !timeline ||
+    (timeline.compareDocumentPosition(goals) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+  return afterHabits && afterTimeline;
+});
+await assert(habitsBeforeGoals, "habits page shows daily habits/tasks before goals");
+
+// habit detail linked goals: manage button + colored block
 await page.waitForSelector("[data-habit-open]");
 await page.evaluate(() => document.querySelector("[data-habit-open]").click());
 await page.waitForSelector(".habit-linked-goal");
