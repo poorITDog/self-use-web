@@ -3764,9 +3764,9 @@
       var dest = jump.getAttribute("data-nav-jump");
       if (dest === "settings-goals") {
         closeModal();
-        ui.view = "settings";
         ui.settingsTab = "goals";
-        render();
+        // Must setView so .view/.nav active classes update (render alone keeps habits visible).
+        setView("settings");
       }
       return;
     }
