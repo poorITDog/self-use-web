@@ -103,6 +103,20 @@
     return s ? "開始於 " + s : "";
   }
 
+  // Compact start / setup chips for goal↔habit surfaces
+  function goalMetaChipsHtml(item, setupText) {
+    var start = startedLabel(item);
+    var html = '<div class="goal-meta-chips">';
+    if (start) {
+      html += '<span class="goal-meta-chip">' + esc(start) + "</span>";
+    }
+    if (setupText) {
+      html += '<span class="goal-meta-chip setup">' + esc(setupText) + "</span>";
+    }
+    html += "</div>";
+    return html;
+  }
+
   function esc(s) {
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;")
@@ -1902,9 +1916,7 @@
       "<h3>" + esc(habit.name) + "</h3>" +
       '<p class="muted">' + typeLabel(habit.type) + " · " + esc(habit.group || "未分組") +
       (habitTimeLabel(habit) ? " · " + esc(habitTimeLabel(habit)) : "") + "</p>" +
-      (startedLabel(habit)
-        ? '<p class="goal-meta-line">' + esc(startedLabel(habit)) + " · 設定於「習慣」分頁</p>"
-        : '<p class="goal-meta-line">設定於「習慣」分頁</p>') +
+      goalMetaChipsHtml(habit, "設定於「習慣」分頁") +
       '<p class="sheet-pull-hint">向下拉亦可返回主頁</p></div>' +
       '<div class="habit-detail-stats">' +
       '<div class="detail-stat"><div class="label">連續天數</div><div class="value">' + streakFor(habit) + "</div></div>" +
@@ -1921,13 +1933,11 @@
     var linkedGoals = state.goals.filter(function (g) { return g.habitId === habit.id; });
     if (linkedGoals.length) {
       html += '<div class="linked-goals-head"><span class="section-title">連結目標</span>' +
-        '<button type="button" class="btn sm soft" data-nav-jump="settings-goals">管理目標</button></div>' +
-        '<p class="goal-meta-line" style="margin:0 0 6px">設定於「設定 → 目標」</p>' +
+        '<button type="button" class="btn sm" data-nav-jump="settings-goals">管理目標</button></div>' +
         '<div class="habit-linked-goals">';
       linkedGoals.forEach(function (g) {
         var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
         var unit = goalUnitLabel(g);
-        var start = startedLabel(g);
         html += '<button type="button" class="habit-linked-goal" style="--hcolor:' +
           escAttr(habit.color) + '" data-edit-goal="' + g.id + '">' +
           '<strong><span class="goal-habit-dot" aria-hidden="true"></span> ' + esc(g.title) + "</strong>" +
@@ -1935,7 +1945,7 @@
           goalTypeLabel(g.goalType) + (isGoalFinished(g) ? " · 成就" : "") + "</span>" +
           '<span class="muted tiny">' + g.current + " / " + g.target +
           (unit ? " " + esc(unit) : "") + " · " + pct + "%</span>" +
-          (start ? '<span class="goal-meta-line">' + esc(start) + "</span>" : "") +
+          goalMetaChipsHtml(g, "設定於「設定 → 目標」") +
           (g.outcome ? '<span class="tiny">' + esc(g.outcome) + "</span>" : "") +
           '<div class="progress-bar-slim"><i style="width:' + pct + '%"></i></div>' +
           "</button>";
@@ -2040,7 +2050,6 @@
       var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
       var habit = g.habitId ? state.habits.find(function (h) { return h.id === g.habitId; }) : null;
       var unit = goalUnitLabel(g);
-      var start = startedLabel(g);
       var hcolor = habit ? habit.color : "";
       html += '<button type="button" class="goals-strip-item' + (habit ? " has-habit" : "") + '"' +
         (hcolor ? ' style="--hcolor:' + escAttr(hcolor) + '"' : "") +
@@ -2052,8 +2061,7 @@
         (habit ? ' · <span class="goal-habit-chip" style="--hcolor:' + escAttr(habit.color) + '">' +
           '<span class="goal-habit-dot" aria-hidden="true"></span>' + esc(habit.name) + "</span>" : "") +
         "</div>" +
-        (start ? '<div class="goal-meta-line">' + esc(start) + " · 設定於「設定 → 目標」</div>" :
-          '<div class="goal-meta-line">設定於「設定 → 目標」</div>') +
+        goalMetaChipsHtml(g, "設定於「設定 → 目標」") +
         '<div class="goal-progress-wrap">' +
         '<div class="progress-bar-slim"><i style="width:' + pct + '%"></i></div>' +
         '<div class="goal-pct-ring" style="--p:' + pct + '%" aria-label="完成 ' + pct + '%"><span>' + pct +
@@ -3172,7 +3180,6 @@
     var habit = g.habitId ? state.habits.find(function (h) { return h.id === g.habitId; }) : null;
     var unit = goalUnitLabel(g);
     var plusLabel = g.unitMode === "hours" ? "+1 小時" : "+1";
-    var start = startedLabel(g);
     var habitLine = habit
       ? '<div class="goal-habit-line">' +
         '<button type="button" class="goal-habit-chip" style="--hcolor:' + escAttr(habit.color) +
@@ -3192,8 +3199,7 @@
       (unit ? " " + esc(unit) : "") + " · " + pct + "%</span></div>" +
       (g.outcome ? '<div class="tiny goal-outcome-preview">成果：' + esc(g.outcome) + "</div>" : "") +
       (g.dueAt ? '<div class="tiny">期限 ' + dateKey(g.dueAt) + "</div>" : "") +
-      '<div class="goal-meta-line">' +
-      (start ? esc(start) + " · " : "") + "設定於「設定 → 目標」</div>" +
+      goalMetaChipsHtml(g, "設定於「設定 → 目標」") +
       habitLine +
       '<div class="goal-progress-wrap">' +
       '<div class="progress"><i style="width:' + pct + '%"></i></div>' +

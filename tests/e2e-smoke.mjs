@@ -295,6 +295,8 @@ await assert(goalsBody.includes("跑步目標"), "goal saved");
 await assert(goalsBody.includes("連結習慣"), "goal shows linked habit");
 await assert(goalsBody.includes("設定於「設定 → 目標」"), "goal shows setup location");
 await assert(goalsBody.includes("開始於"), "goal shows start date");
+await assert(!!(await page.$(".goal-meta-chip.setup")), "goal shows setup meta chip");
+await assert(!!(await page.$(".goal-meta-chip")), "goal shows start meta chip");
 await assert(goalsBody.includes("成果"), "goal shows outcome type badge");
 await assert(!!(await page.$("[data-goal-check]")), "goal has check-and-plus when habit linked");
 await assert(!!(await page.$(".goal-habit-chip")), "linked habit shows colored chip");
