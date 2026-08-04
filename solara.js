@@ -117,11 +117,11 @@
   }
 
   function goalColorPalette() {
-    // Prefer mid/deep accents so strip text and progress stay readable.
+    // Warm Organic extras — muted terracotta / sage / sand / clay (no neon).
     var extra = [
-      "#7C6CF0", "#E91E8C", "#00B4D8", "#FF6B6B", "#6A994E", "#BC6C25",
-      "#5E60CE", "#F72585", "#118AB2", "#0FA968", "#D4A017", "#EF476F",
-      "#8338EC", "#FB8500", "#2D6A4F", "#9B2226"
+      "#C67139", "#8F4A22", "#B05F2C", "#D4894F", "#BC6C25",
+      "#7A8A5E", "#556344", "#6A994E", "#8A7A52", "#2D6A4F",
+      "#3F7F9A", "#2A5669", "#A89880", "#9A3A24", "#5C5138", "#E07A5F"
     ];
     var seen = {};
     return colors().concat(extra).filter(function (c) {
