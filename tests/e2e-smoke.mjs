@@ -293,8 +293,37 @@ await page.waitForFunction(() => !document.getElementById("modalBackdrop").class
 const goalsBody = await page.$eval("#settingsBody", (el) => el.textContent);
 await assert(goalsBody.includes("跑步目標"), "goal saved");
 await assert(goalsBody.includes("連結習慣"), "goal shows linked habit");
+await assert(goalsBody.includes("設定於「設定 → 目標」"), "goal shows setup location");
+await assert(goalsBody.includes("開始於"), "goal shows start date");
+await assert(!!(await page.$(".goal-meta-chip.setup")), "goal shows setup meta chip");
+await assert(!!(await page.$(".goal-meta-chip")), "goal shows start meta chip");
 await assert(goalsBody.includes("成果"), "goal shows outcome type badge");
 await assert(!!(await page.$("[data-goal-check]")), "goal has check-and-plus when habit linked");
+await assert(!!(await page.$(".goal-habit-chip")), "linked habit shows colored chip");
+await assert(!!(await page.$(".goal-habit-dot")), "linked habit chip shows color dot");
+await assert(!!(await page.$(".goal-row.has-habit")), "linked goal row uses habit accent class");
+
+// habit detail linked goals: manage button + colored block
+await page.click('[data-nav="habits"]');
+await page.waitForSelector("[data-habit-open]");
+await page.evaluate(() => document.querySelector("[data-habit-open]").click());
+await page.waitForSelector(".habit-linked-goal");
+await assert(!!(await page.$('[data-nav-jump="settings-goals"].btn')), "habit detail has 管理目標 button");
+await assert(!!(await page.$(".habit-linked-goal .goal-habit-dot")), "habit detail linked goal has color dot");
+// Click the in-modal 管理目標 button (not the habits-strip twin).
+await page.evaluate(() => {
+  const btn = document.querySelector('#modal [data-nav-jump="settings-goals"]');
+  if (!btn) throw new Error("missing modal manage-goals button");
+  btn.click();
+});
+await page.waitForSelector('#view-settings.active [data-settings="goals"].on');
+const jumped = await page.evaluate(() => ({
+  view: document.querySelector("#nav button.active")?.getAttribute("data-nav"),
+  tabOn: document.querySelector("#view-settings.active [data-settings='goals']")?.classList.contains("on"),
+  modalOpen: document.getElementById("modalBackdrop").classList.contains("open")
+}));
+await assert(jumped.view === "settings" && jumped.tabOn && !jumped.modalOpen,
+  "管理目標 jumps to visible settings goals view");
 
 // hours + cert goal, finish into achievements
 await page.waitForSelector('[data-action="add-goal-long"]');

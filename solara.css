@@ -507,17 +507,167 @@ main {
   margin: 8px 0 4px;
 }
 
+.linked-goals-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  margin-bottom: 4px;
+}
+
+.linked-goals-head .section-title {
+  margin: 0;
+  padding: 0;
+}
+
 .habit-linked-goal {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px;
+  gap: 3px;
+  width: 100%;
+  padding: 10px 12px;
   border-radius: var(--radius-xs);
-  background: var(--surface-2);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: linear-gradient(
+    105deg,
+    color-mix(in srgb, var(--hcolor, var(--accent)) 48%, var(--surface)) 0%,
+    color-mix(in srgb, var(--hcolor, var(--accent)) 22%, var(--surface)) 70%,
+    var(--surface) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--hcolor, var(--accent)) 60%, var(--line));
+  border-left: 5px solid var(--hcolor, var(--accent-2));
+  box-shadow:
+    inset 5px 0 0 var(--hcolor, var(--accent-2)),
+    0 1px 0 color-mix(in srgb, var(--hcolor, var(--accent)) 22%, transparent);
+  transition: background 0.15s var(--ease), transform 0.15s var(--ease);
+}
+
+.habit-linked-goal:hover,
+.habit-linked-goal:focus-visible {
+  background: linear-gradient(
+    105deg,
+    color-mix(in srgb, var(--hcolor, var(--accent)) 58%, var(--surface)) 0%,
+    color-mix(in srgb, var(--hcolor, var(--accent)) 28%, var(--surface)) 70%,
+    var(--surface) 100%
+  );
+}
+
+.habit-linked-goal:active {
+  transform: scale(0.99);
+}
+
+.habit-linked-goal .progress-bar-slim {
+  margin-top: 6px;
+}
+
+.habit-linked-goal .progress-bar-slim > i {
+  background: linear-gradient(
+    90deg,
+    var(--hcolor, var(--accent)),
+    color-mix(in srgb, var(--hcolor, var(--accent)) 50%, var(--accent-2))
+  );
 }
 
 .goal-habit-link {
   color: var(--accent-2);
+  font-weight: 600;
+}
+
+.goal-habit-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--hcolor, var(--accent-2));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--hcolor, var(--accent)) 32%, #fff);
+}
+
+.goal-habit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--hcolor, var(--accent)) 34%, var(--surface));
+  color: var(--text);
+  border: 1px solid color-mix(in srgb, var(--hcolor, var(--accent)) 58%, var(--line));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hcolor, var(--accent)) 22%, transparent);
+  font-weight: 700;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  vertical-align: middle;
+}
+
+button.goal-habit-chip {
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.goal-habit-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.goal-meta-line {
+  color: var(--text);
+  opacity: 0.78;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.goal-meta-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.goal-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text);
+  background: color-mix(in srgb, var(--hcolor, var(--accent)) 22%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--hcolor, var(--accent)) 40%, var(--line));
+}
+
+.goal-meta-chip.setup {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 36%, var(--line));
+  color: var(--text);
+}
+
+.habit-detail-hero .goal-meta-chips {
+  margin-top: 8px;
+}
+
+button.linkish {
+  display: inline;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-2);
+  font: inherit;
+  font-size: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .goal-type-badge {
@@ -604,6 +754,31 @@ main {
   transition: background 0.15s var(--ease);
 }
 
+.goal-row.has-habit {
+  border-left: 5px solid var(--hcolor, var(--accent-2));
+  background: linear-gradient(
+    105deg,
+    color-mix(in srgb, var(--hcolor, var(--accent)) 44%, var(--surface)) 0%,
+    color-mix(in srgb, var(--hcolor, var(--accent)) 18%, var(--surface)) 65%,
+    var(--surface) 100%
+  );
+  box-shadow:
+    inset 5px 0 0 var(--hcolor, var(--accent-2)),
+    inset 0 0 0 1px color-mix(in srgb, var(--hcolor, var(--accent)) 22%, transparent);
+}
+
+.goal-row.has-habit .progress > i {
+  background: linear-gradient(
+    90deg,
+    var(--hcolor, var(--accent)),
+    color-mix(in srgb, var(--hcolor, var(--accent)) 55%, var(--accent-2))
+  );
+}
+
+.goal-row.has-habit .goal-pct-ring {
+  background: conic-gradient(var(--hcolor, var(--accent-2)) var(--p), var(--surface-2) 0);
+}
+
 .goal-row .settings-row-label strong {
   font-size: 0.98rem;
 }
@@ -644,14 +819,53 @@ main {
   flex-direction: column;
   gap: 4px;
   width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--hcolor, var(--accent)) 50%, var(--line));
+  border-left: 5px solid var(--hcolor, var(--accent-2));
   border-radius: var(--radius-xs);
-  background: var(--surface-2);
+  background: linear-gradient(
+    105deg,
+    color-mix(in srgb, var(--hcolor, var(--accent)) 48%, var(--surface)) 0%,
+    color-mix(in srgb, var(--hcolor, var(--accent)) 20%, var(--surface)) 70%,
+    var(--surface) 100%
+  );
+  box-shadow:
+    inset 5px 0 0 var(--hcolor, var(--accent-2)),
+    0 1px 0 color-mix(in srgb, var(--hcolor, var(--accent)) 20%, transparent);
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
+  transition: background 0.15s var(--ease);
+}
+
+.goals-strip-item:hover,
+.goals-strip-item:focus-visible {
+  background: linear-gradient(
+    105deg,
+    color-mix(in srgb, var(--hcolor, var(--accent)) 56%, var(--surface)) 0%,
+    color-mix(in srgb, var(--hcolor, var(--accent)) 26%, var(--surface)) 70%,
+    var(--surface) 100%
+  );
+}
+
+.goals-strip-item .progress-bar-slim,
+.habit-goal-badge .progress-bar-slim,
+.habit-linked-goal .progress-bar-slim,
+.goal-row.has-habit .progress {
+  background: color-mix(in srgb, var(--hcolor, var(--accent)) 20%, var(--surface-2));
+}
+
+.goals-strip-item .progress-bar-slim > i {
+  background: linear-gradient(
+    90deg,
+    var(--hcolor, var(--accent)),
+    color-mix(in srgb, var(--hcolor, var(--accent)) 55%, var(--accent-2))
+  );
+}
+
+.goals-strip-item .goal-pct-ring {
+  background: conic-gradient(var(--hcolor, var(--accent-2)) var(--p), var(--surface-2) 0);
 }
 
 .goals-strip-top {
@@ -1461,11 +1675,47 @@ main {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  padding: 6px 8px;
+  padding: 8px 10px;
   border-radius: var(--radius-xs);
-  background: var(--accent-soft);
+  background: linear-gradient(
+    105deg,
+    color-mix(in srgb, var(--hcolor, var(--accent)) 48%, var(--surface)) 0%,
+    color-mix(in srgb, var(--hcolor, var(--accent)) 20%, var(--surface)) 70%,
+    var(--surface) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--hcolor, var(--accent)) 58%, var(--line));
+  border-left: 5px solid var(--hcolor, var(--accent-2));
+  box-shadow:
+    inset 5px 0 0 var(--hcolor, var(--accent-2)),
+    0 1px 0 color-mix(in srgb, var(--hcolor, var(--accent)) 18%, transparent);
   font-size: 0.78rem;
   font-weight: 600;
+}
+
+.habit-goal-badge-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.habit-linked-goal strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.habit-goal-badge .progress-bar-slim {
+  margin-top: 4px;
+}
+
+.habit-goal-badge .progress-bar-slim > i {
+  background: linear-gradient(
+    90deg,
+    var(--hcolor, var(--accent)),
+    color-mix(in srgb, var(--hcolor, var(--accent)) 55%, var(--accent-2))
+  );
 }
 
 .week-summary {
