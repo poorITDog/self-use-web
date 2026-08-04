@@ -892,19 +892,17 @@ button.linkish {
   gap: 4px;
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--hcolor, var(--accent)) 50%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--hcolor, var(--accent)) 36%, var(--line));
   border-left: 5px solid var(--hcolor, var(--accent-2));
   border-radius: var(--radius-xs);
   background: linear-gradient(
     105deg,
-    color-mix(in srgb, var(--hcolor, var(--accent)) 48%, var(--surface)) 0%,
-    color-mix(in srgb, var(--hcolor, var(--accent)) 20%, var(--surface)) 70%,
+    color-mix(in srgb, var(--hcolor, var(--accent)) 22%, var(--surface)) 0%,
+    color-mix(in srgb, var(--hcolor, var(--accent)) 10%, var(--surface)) 65%,
     var(--surface) 100%
   );
-  box-shadow:
-    inset 5px 0 0 var(--hcolor, var(--accent-2)),
-    0 1px 0 color-mix(in srgb, var(--hcolor, var(--accent)) 20%, transparent);
-  color: inherit;
+  box-shadow: inset 5px 0 0 var(--hcolor, var(--accent-2));
+  color: var(--text);
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -915,8 +913,8 @@ button.linkish {
 .goals-strip-item:focus-visible {
   background: linear-gradient(
     105deg,
-    color-mix(in srgb, var(--hcolor, var(--accent)) 56%, var(--surface)) 0%,
-    color-mix(in srgb, var(--hcolor, var(--accent)) 26%, var(--surface)) 70%,
+    color-mix(in srgb, var(--hcolor, var(--accent)) 30%, var(--surface)) 0%,
+    color-mix(in srgb, var(--hcolor, var(--accent)) 14%, var(--surface)) 65%,
     var(--surface) 100%
   );
 }
@@ -2673,18 +2671,30 @@ button.linkish {
 .swatches {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 
 .swatch {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(255, 255, 255, 0.85);
   box-shadow: 0 0 0 1px var(--line);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.12s var(--ease), box-shadow 0.12s var(--ease);
 }
 
-.swatch.active { outline: 2px solid var(--text); outline-offset: 2px; }
+.swatch:hover,
+.swatch:focus-visible {
+  transform: scale(1.08);
+}
+
+.swatch.active {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 1px var(--line), 0 2px 8px rgba(0, 0, 0, 0.16);
+}
 
 /* Sync */
 .sync-chip { font-weight: 600; }

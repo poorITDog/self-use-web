@@ -117,7 +117,11 @@
   }
 
   function goalColorPalette() {
-    var extra = ["#7C6CF0", "#E91E8C", "#00B4D8", "#FF6B6B", "#6A994E", "#BC6C25", "#5E60CE", "#F72585"];
+    var extra = [
+      "#7C6CF0", "#E91E8C", "#00B4D8", "#FF6B6B", "#6A994E", "#BC6C25",
+      "#5E60CE", "#F72585", "#118AB2", "#06D6A0", "#FFD166", "#EF476F",
+      "#8338EC", "#FB8500", "#2D6A4F", "#9B2226"
+    ];
     var seen = {};
     return colors().concat(extra).filter(function (c) {
       if (seen[c]) return false;
@@ -949,8 +953,8 @@
     var d = parseKey(key).getDay();
     var freq = (habit.frequency || [0, 1, 2, 3, 4, 5, 6]).map(Number);
     if (freq.indexOf(d) < 0) return false;
-    // Not due before the habit existed — keeps past completion rates stable.
-    var startMs = Number(habit.createdAt) || Number(habit.updatedAt) || 0;
+    // Only createdAt gates history. Never use updatedAt — edits must not rewrite the past.
+    var startMs = Number(habit.createdAt) || 0;
     if (startMs && key < dateKey(startMs)) return false;
     return true;
   }
@@ -3319,11 +3323,16 @@
       '<div class="field" id="gUnitCustomWrap"' + (g.unitMode === "custom" ? "" : ' style="display:none"') +
       '><label>自訂單位名稱</label><input id="gUnit" value="' + escAttr(g.unitMode === "custom" ? g.unit : "") +
       '" placeholder="頁 / km / 場" /></div>' +
-      '<div class="field"><label>顏色</label><div class="swatches" id="gColors">' +
+      '<div class="field"><label>顏色（選一個）</label><div class="swatches" id="gColors" role="listbox" aria-label="目標顏色">' +
       palette.map(function (c) {
-        return '<button type="button" class="swatch' + (c === selectedColor ? " active" : "") +
-          '" data-color="' + c + '" style="background:' + c + '" aria-label="目標顏色 ' + c + '"></button>';
-      }).join("") + '</div><input type="hidden" id="gColor" value="' + escAttr(selectedColor) + '" /></div>' +
+        var on = c === selectedColor;
+        return '<button type="button" class="swatch' + (on ? " active" : "") +
+          '" data-color="' + c + '" style="background:' + c + '"' +
+          ' role="option" aria-selected="' + (on ? "true" : "false") + '"' +
+          ' aria-label="目標顏色 ' + c + '"></button>';
+      }).join("") +
+      '</div><p class="tiny muted" style="margin:6px 0 0">每個目標只會套用一個顏色。</p>' +
+      '<input type="hidden" id="gColor" value="' + escAttr(selectedColor) + '" /></div>' +
       '<div class="field"><label>成果／結果（可選）</label><textarea id="gOutcome" rows="2" placeholder="例如：拿到 AWS Solutions Architect Associate；或成為職業聯賽選手">' +
       esc(g.outcome || "") + "</textarea></div>" +
       '<div class="field"><label>期限（可選）</label><input id="gDue" type="date" value="' + due + '" /></div>' +
@@ -3344,7 +3353,9 @@
       selectedColor = b.getAttribute("data-color");
       document.getElementById("gColor").value = selectedColor;
       Array.prototype.forEach.call(document.querySelectorAll("#gColors .swatch"), function (el) {
-        el.classList.toggle("active", el.getAttribute("data-color") === selectedColor);
+        var on = el.getAttribute("data-color") === selectedColor;
+        el.classList.toggle("active", on);
+        el.setAttribute("aria-selected", on ? "true" : "false");
       });
     };
     document.getElementById("gCancel").onclick = closeModal;

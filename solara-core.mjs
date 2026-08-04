@@ -348,8 +348,8 @@ export function habitDueOn(habit, key) {
   const d = parseKey(key).getDay();
   const freq = (habit.frequency || [0, 1, 2, 3, 4, 5, 6]).map(Number);
   if (!freq.includes(d)) return false;
-  // Not due before the habit existed — keeps past completion rates stable.
-  const startMs = Number(habit.createdAt) || Number(habit.updatedAt) || 0;
+  // Only createdAt gates history. Never use updatedAt — edits must not rewrite the past.
+  const startMs = Number(habit.createdAt) || 0;
   if (startMs && key < dateKey(startMs)) return false;
   return true;
 }
