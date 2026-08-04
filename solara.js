@@ -2463,16 +2463,18 @@
       var mins = timeToMinutes(item.start);
       var top = Math.max(0, (mins - startHour * 60) * pxPerMin);
       var dur = item.allDay ? 30 : (item.end ? Math.max(30, timeToMinutes(item.end) - mins) : 45);
-      var height = Math.max(28, dur * pxPerMin);
+      // Keep enough height for padded title text (Organic: text must not kiss edges).
+      var height = Math.max(48, dur * pxPerMin);
+      var shortCls = height < 64 ? " is-short" : "";
       var kindLabel = item.kind === "habit"
         ? (item.done ? "習慣 · 已完成" : "習慣 · 未完成")
         : (item.kind === "event"
           ? ("行程 · " + (item.allDay ? "全天" : esc(item.start) + (item.end ? "–" + esc(item.end) : "")) +
             (item.repeatLabel ? " · " + item.repeatLabel : ""))
           : (esc(item.start) + (item.end ? "–" + esc(item.end) : "")));
-      html += '<div class="timeline-block" style="top:' + top + "px;height:" + height +
-        "px;background:" + item.color + '">' + esc(item.title) +
-        '<div class="tiny">' + kindLabel +
+      html += '<div class="timeline-block' + shortCls + '" style="top:' + top + "px;height:" + height +
+        "px;background:" + item.color + '"><span class="timeline-block-title">' + esc(item.title) +
+        '</span><div class="tiny">' + kindLabel +
         "</div></div>";
     });
     html += "</div>";
