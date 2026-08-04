@@ -2107,7 +2107,7 @@
     var panel = ui.habitsPanel || "today";
     var html = todayStripHtml(todayHabits);
     html += weekSummaryHtml();
-    html += activeGoalsStripHtml();
+    // Daily tasks / habits first; goals come after so the first page opens on today's work.
     html += todayUnifiedTimelineHtml();
     html += '<div class="seg habits-seg"><button type="button" data-habits-panel="today" class="' +
       (panel === "today" ? "on" : "") + '">今天</button><button type="button" data-habits-panel="board" class="' +
@@ -2119,6 +2119,7 @@
     } else {
       html += todayCheckinHtml(todayHabits);
     }
+    html += activeGoalsStripHtml();
     document.getElementById("view-habits").innerHTML = html;
   }
 
