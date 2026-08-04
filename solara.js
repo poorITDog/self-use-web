@@ -1396,7 +1396,8 @@
     var html = '<div class="today-strip">';
     html += '<div class="today-strip-head">';
     html += '<div class="today-progress-text">已完成 <strong>' + doneCount + "/" + total +
-      '</strong> · 投入 <strong>' + fmtMin(minutesOnDate(key)) + "</strong></div>";
+      '</strong><span class="stat-sep" aria-hidden="true">·</span>投入 <strong>' +
+      fmtMin(minutesOnDate(key)) + "</strong></div>";
     html += progressRingHtml(rate, 48) + "</div>";
     html += '<div class="progress-bar-slim"><i style="width:' + rate + '%"></i></div>';
     var agenda = eventsForDate(key);
@@ -1719,8 +1720,10 @@
           '<button type="button" class="today-timeline-body" data-toggle="' + it.habitId + '">' +
           "<strong>" + esc(it.title) + "</strong>" +
           '<span class="muted tiny">' + esc(it.kind) + "</span></button>" +
-          '<button type="button" class="btn sm ' + (it.done ? "soft" : "") + '" data-toggle="' + it.habitId +
-          '">' + (it.done ? "已完成" : "打卡") + "</button></div>";
+          '<button type="button" class="btn sm timeline-check-btn' + (it.done ? " soft" : "") +
+          '" data-toggle="' + it.habitId + '" aria-label="' +
+          (it.done ? "取消完成 " : "打卡 ") + escAttr(it.title) + '">' +
+          (it.done ? "已完成" : "打卡") + "</button></div>";
       } else {
         html += '<button type="button" class="today-timeline-item" data-edit-event="' + it.eventId + '">' +
           '<span class="today-timeline-time">' + esc(it.time) + "</span>" +
@@ -2061,7 +2064,7 @@
     if (!open.length) return "";
     var html = '<div class="goals-strip">';
     html += '<div class="goals-strip-head"><span class="section-title">進行中目標</span>' +
-      '<button type="button" class="btn sm soft" data-nav-jump="settings-goals" aria-label="前往管理目標">管理目標</button></div>';
+      '<button type="button" class="btn sm" data-nav-jump="settings-goals" aria-label="前往管理目標">管理目標</button></div>';
     open.forEach(function (g) {
       var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
       var habit = g.habitId ? state.habits.find(function (h) { return h.id === g.habitId; }) : null;
@@ -2071,12 +2074,11 @@
         (hcolor ? ' style="--hcolor:' + escAttr(hcolor) + '"' : "") +
         ' data-edit-goal="' + g.id + '">' +
         '<div class="goals-strip-top"><strong>' + esc(g.title) + "</strong>" +
-        '<span class="muted tiny">' + g.current + "/" + g.target + (unit ? " " + unit : "") +
-        " · " + pct + "%</span></div>" +
+        '<span class="goal-strip-pct">' + pct + "%</span></div>" +
         '<div class="tiny">' + goalTypeLabel(g.goalType) +
         (habit ? ' · <span class="goal-habit-chip" style="--hcolor:' + escAttr(habit.color) + '">' +
           '<span class="goal-habit-dot" aria-hidden="true"></span>' + esc(habit.name) + "</span>" : "") +
-        "</div>" +
+        " · " + g.current + "/" + g.target + (unit ? " " + unit : "") + "</div>" +
         goalMetaChipsHtml(g, "設定於「設定 → 目標」") +
         '<div class="goal-progress-wrap">' +
         '<div class="progress-bar-slim"><i style="width:' + pct + '%"></i></div>' +
@@ -3173,12 +3175,12 @@
     var shorts = state.goals.filter(function (g) { return g.kind === "short" && isGoalOpen(g); });
     if (!shorts.length) html += '<div class="settings-row"><span class="settings-row-label muted">尚無進行中短期目標</span></div>';
     else shorts.forEach(function (g) { html += goalRow(g); });
-    html += '<div class="settings-row"><button class="btn sm soft block" data-action="add-goal-short">+ 新增短期目標</button></div>';
+    html += '<div class="settings-row"><button class="btn sm block" data-action="add-goal-short">+ 新增短期目標</button></div>';
     html += '</div><div class="settings-group"><div class="settings-group-title">長期目標</div>';
     var longs = state.goals.filter(function (g) { return g.kind === "long" && isGoalOpen(g); });
     if (!longs.length) html += '<div class="settings-row"><span class="settings-row-label muted">尚無進行中長期目標</span></div>';
     else longs.forEach(function (g) { html += goalRow(g); });
-    html += '<div class="settings-row"><button class="btn sm soft block" data-action="add-goal-long">+ 新增長期目標</button></div></div>';
+    html += '<div class="settings-row"><button class="btn sm block" data-action="add-goal-long">+ 新增長期目標</button></div></div>';
 
     var achievements = state.goals.filter(isGoalFinished).sort(function (a, b) {
       return Number(b.finishedAt) - Number(a.finishedAt);
@@ -3423,7 +3425,7 @@
     html += '<div class="settings-row"><span class="settings-row-label">通知權限</span>' +
       '<span class="settings-row-value">' + (permLabel[perm] || perm) + "</span></div>";
     if (supported && perm !== "granted") {
-      html += '<div class="settings-row"><button class="btn sm soft block" data-notify="request">請求通知權限</button></div>';
+      html += '<div class="settings-row"><button class="btn sm block" data-notify="request">請求通知權限</button></div>';
     }
     html += '<div class="settings-row"><label class="settings-row-label"><input type="checkbox" id="notifyEnabled"' +
       (state.settings.notifyEnabled ? " checked" : "") + (supported ? "" : " disabled") +
