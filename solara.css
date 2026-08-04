@@ -792,7 +792,7 @@ button.linkish {
 }
 
 .goals-strip {
-  margin: 0 0 12px;
+  margin: 14px 0 8px;
   padding: 12px 14px;
   border-radius: var(--radius);
   background: var(--surface);
