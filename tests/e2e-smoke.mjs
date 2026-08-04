@@ -305,15 +305,24 @@ await page.waitForFunction(() => !document.getElementById("modalBackdrop").class
 const goalsBody = await page.$eval("#settingsBody", (el) => el.textContent);
 await assert(goalsBody.includes("跑步目標"), "goal saved");
 await assert(goalsBody.includes("連結習慣"), "goal shows linked habit");
-await assert(goalsBody.includes("設定於「設定 → 目標」"), "goal shows setup location");
+await assert(!goalsBody.includes("設定於「設定 → 目標」"), "goal does not show setup-location copy");
 await assert(goalsBody.includes("開始於"), "goal shows start date");
-await assert(!!(await page.$(".goal-meta-chip.setup")), "goal shows setup meta chip");
+await assert(!(await page.$(".goal-meta-chip.setup")), "setup meta chip removed");
 await assert(!!(await page.$(".goal-meta-chip")), "goal shows start meta chip");
 await assert(goalsBody.includes("成果"), "goal shows outcome type badge");
 await assert(!!(await page.$("[data-goal-check]")), "goal has check-and-plus when habit linked");
 await assert(!!(await page.$(".goal-habit-chip")), "linked habit shows colored chip");
 await assert(!!(await page.$(".goal-habit-dot")), "linked habit chip shows color dot");
 await assert(!!(await page.$(".goal-row.has-habit")), "linked goal row uses habit accent class");
+await assert(!!(await page.$("#gColors, .goal-row.has-habit")), "goal color support present");
+
+// reopen editor to assert color palette choices
+await page.evaluate(() => document.querySelector("[data-edit-goal]").click());
+await page.waitForSelector("#gColors .swatch");
+const goalSwatches = await page.$$eval("#gColors .swatch", (els) => els.length);
+await assert(goalSwatches >= 16, "goal editor offers many color choices");
+await page.evaluate(() => document.getElementById("gCancel").click());
+await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
 
 // habits page: daily tasks/habits before goals strip
 await page.click('[data-nav="habits"]');
@@ -324,7 +333,6 @@ const habitsBeforeGoals = await page.evaluate(() => {
   const timeline = root.querySelector(".today-timeline");
   const habits = root.querySelector(".habit-checkin-row, .habit-card, .habits-seg");
   if (!goals || !habits) return false;
-  const pos = (el) => el.compareDocumentPosition(goals);
   // goals is after habits/timeline (DOCUMENT_POSITION_FOLLOWING = 4)
   const afterHabits = (habits.compareDocumentPosition(goals) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
   const afterTimeline = !timeline ||
@@ -438,6 +446,75 @@ const syncChip = await page.$("#syncChip");
 await assert(!!syncChip, "sync status chip visible");
 
 await assert(errors.filter((e) => !e.includes("favicon")).length === 0, "no page errors: " + JSON.stringify(errors));
+
+// Past completion must ignore habits created after that day (run last; reseeds storage)
+const pastRateStable = await page.evaluate(() => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yKey = yesterday.getFullYear() + "-" +
+    String(yesterday.getMonth() + 1).padStart(2, "0") + "-" +
+    String(yesterday.getDate()).padStart(2, "0");
+  const yDow = yesterday.getDay();
+  const oldMs = Date.now() - 3 * 86400000;
+  const raw = {
+    habits: [1, 2, 3].map((n) => ({
+      id: "old" + n,
+      name: "舊習慣" + n,
+      type: "yesno",
+      target: 1,
+      frequency: [yDow],
+      color: "#2A9D8F",
+      archived: false,
+      createdAt: oldMs,
+      updatedAt: oldMs
+    })),
+    checkins: [1, 2, 3].map((n) => ({
+      id: "c" + n,
+      habitId: "old" + n,
+      date: yKey,
+      value: 1,
+      updatedAt: oldMs
+    })),
+    goals: [],
+    events: [],
+    settings: {}
+  };
+  raw.habits.push({
+    id: "newToday",
+    name: "新習慣",
+    type: "yesno",
+    target: 1,
+    frequency: [0, 1, 2, 3, 4, 5, 6],
+    color: "#E76F51",
+    archived: false,
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  });
+  localStorage.setItem("solara-v1", JSON.stringify(raw));
+  return yKey;
+});
+await page.reload({ waitUntil: "networkidle0" });
+const yRate = await page.evaluate((yKey) => {
+  const raw = JSON.parse(localStorage.getItem("solara-v1") || "{}");
+  function dueOn(h, key) {
+    const d = new Date(key + "T12:00:00").getDay();
+    const freq = (h.frequency || []).map(Number);
+    if (!freq.includes(d)) return false;
+    const start = Number(h.createdAt) || 0;
+    if (start) {
+      const sd = new Date(start);
+      const sk = sd.getFullYear() + "-" + String(sd.getMonth() + 1).padStart(2, "0") + "-" +
+        String(sd.getDate()).padStart(2, "0");
+      if (key < sk) return false;
+    }
+    return true;
+  }
+  const due = (raw.habits || []).filter((h) => !h.archived && dueOn(h, yKey));
+  const done = due.filter((h) => (raw.checkins || []).some((c) => c.habitId === h.id && c.date === yKey && c.value));
+  return { rate: Math.round((done.length / Math.max(1, due.length)) * 100), due: due.length };
+}, pastRateStable);
+await assert(yRate.due === 3 && yRate.rate === 100,
+  "yesterday stays 100% after adding a new habit today");
 
 await browser.close();
 console.log("\nAll e2e smoke tests passed.");

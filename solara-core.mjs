@@ -155,6 +155,7 @@ export function normalizeGoal(g) {
       outcome: "",
       finishedAt: null,
       createdAt: null,
+      color: "",
       lastBumpKey: "",
       lastBumpAmount: 0,
     },
@@ -167,6 +168,7 @@ export function normalizeGoal(g) {
       outcome: raw.outcome || "",
       finishedAt,
       createdAt,
+      color: raw.color || "",
       lastBumpKey: raw.lastBumpKey || "",
       lastBumpAmount: Number(raw.lastBumpAmount) || 0,
       current: Number(raw.current) || 0,
@@ -345,7 +347,11 @@ export function shouldPushAfterMerge(result, hasRemoteFile) {
 export function habitDueOn(habit, key) {
   const d = parseKey(key).getDay();
   const freq = (habit.frequency || [0, 1, 2, 3, 4, 5, 6]).map(Number);
-  return freq.includes(d);
+  if (!freq.includes(d)) return false;
+  // Only createdAt gates history. Never use updatedAt — edits must not rewrite the past.
+  const startMs = Number(habit.createdAt) || 0;
+  if (startMs && key < dateKey(startMs)) return false;
+  return true;
 }
 
 export function isHabitDone(habit, checkin) {
