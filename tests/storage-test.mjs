@@ -179,6 +179,16 @@ run("habitDueOn respects frequency", () => {
   assert.equal(habitDueOn(habit, "2026-08-04"), false);
 });
 
+run("habitDueOn ignores days before createdAt", () => {
+  // Created on Aug 4; yesterday Aug 3 must not count even if frequency matches.
+  const habit = {
+    frequency: [0, 1, 2, 3, 4, 5, 6],
+    createdAt: new Date(2026, 7, 4, 10, 0, 0).getTime(),
+  };
+  assert.equal(habitDueOn(habit, "2026-08-03"), false);
+  assert.equal(habitDueOn(habit, "2026-08-04"), true);
+});
+
 run("isHabitDone yesno/count/duration", () => {
   assert.equal(isHabitDone({ type: "yesno", target: 1 }, { value: 1 }), true);
   assert.equal(isHabitDone({ type: "count", target: 5 }, { value: 3 }), false);

@@ -103,18 +103,27 @@
     return s ? "開始於 " + s : "";
   }
 
-  // Compact start / setup chips for goal↔habit surfaces
-  function goalMetaChipsHtml(item, setupText) {
+  // Compact start chip for goal↔habit surfaces (no setup-location copy)
+  function goalMetaChipsHtml(item) {
     var start = startedLabel(item);
-    var html = '<div class="goal-meta-chips">';
-    if (start) {
-      html += '<span class="goal-meta-chip">' + esc(start) + "</span>";
-    }
-    if (setupText) {
-      html += '<span class="goal-meta-chip setup">' + esc(setupText) + "</span>";
-    }
-    html += "</div>";
-    return html;
+    if (!start) return "";
+    return '<div class="goal-meta-chips"><span class="goal-meta-chip">' + esc(start) + "</span></div>";
+  }
+
+  function goalAccentColor(g, habit) {
+    if (g && g.color) return g.color;
+    if (habit && habit.color) return habit.color;
+    return colors()[0];
+  }
+
+  function goalColorPalette() {
+    var extra = ["#7C6CF0", "#E91E8C", "#00B4D8", "#FF6B6B", "#6A994E", "#BC6C25", "#5E60CE", "#F72585"];
+    var seen = {};
+    return colors().concat(extra).filter(function (c) {
+      if (seen[c]) return false;
+      seen[c] = true;
+      return true;
+    });
   }
 
   function esc(s) {
@@ -939,7 +948,11 @@
   function habitDueOn(habit, key) {
     var d = parseKey(key).getDay();
     var freq = (habit.frequency || [0, 1, 2, 3, 4, 5, 6]).map(Number);
-    return freq.indexOf(d) >= 0;
+    if (freq.indexOf(d) < 0) return false;
+    // Not due before the habit existed — keeps past completion rates stable.
+    var startMs = Number(habit.createdAt) || Number(habit.updatedAt) || 0;
+    if (startMs && key < dateKey(startMs)) return false;
+    return true;
   }
 
   function getCheckin(habitId, key) {
@@ -1055,6 +1068,7 @@
       outcome: "",
       finishedAt: null,
       createdAt: null,
+      color: "",
       lastBumpKey: "",
       lastBumpAmount: 0
     }, raw, {
@@ -1065,6 +1079,7 @@
       outcome: raw.outcome || "",
       finishedAt: raw.finishedAt ? Number(raw.finishedAt) || null : null,
       createdAt: createdAt,
+      color: raw.color || "",
       lastBumpKey: raw.lastBumpKey || "",
       lastBumpAmount: Number(raw.lastBumpAmount) || 0,
       current: Number(raw.current) || 0,
@@ -1654,7 +1669,7 @@
       var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
       var unit = goalUnitLabel(g);
       var start = startedLabel(g);
-      html += '<div class="habit-goal-badge" style="--hcolor:' + escAttr(habit.color) + '">' +
+      html += '<div class="habit-goal-badge" style="--hcolor:' + escAttr(goalAccentColor(g, habit)) + '">' +
         '<span class="habit-goal-badge-title"><span class="goal-habit-dot" aria-hidden="true"></span>目標 · ' +
         esc(g.title) + "</span>" +
         '<span class="muted tiny">' + g.current + "/" + g.target +
@@ -1925,7 +1940,7 @@
       "<h3>" + esc(habit.name) + "</h3>" +
       '<p class="muted">' + typeLabel(habit.type) + " · " + esc(habit.group || "未分組") +
       (habitTimeLabel(habit) ? " · " + esc(habitTimeLabel(habit)) : "") + "</p>" +
-      goalMetaChipsHtml(habit, "設定於「習慣」分頁") +
+      goalMetaChipsHtml(habit) +
       '<p class="sheet-pull-hint">向下拉亦可返回主頁</p></div>' +
       '<div class="habit-detail-stats">' +
       '<div class="detail-stat"><div class="label">連續天數</div><div class="value">' + streakFor(habit) + "</div></div>" +
@@ -1952,13 +1967,13 @@
         var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
         var unit = goalUnitLabel(g);
         html += '<button type="button" class="habit-linked-goal" style="--hcolor:' +
-          escAttr(habit.color) + '" data-edit-goal="' + g.id + '">' +
+          escAttr(goalAccentColor(g, habit)) + '" data-edit-goal="' + g.id + '">' +
           '<strong><span class="goal-habit-dot" aria-hidden="true"></span> ' + esc(g.title) + "</strong>" +
           ' <span class="goal-type-badge type-' + escAttr(g.goalType || "general") + '">' +
           goalTypeLabel(g.goalType) + (isGoalFinished(g) ? " · 成就" : "") + "</span>" +
           '<span class="muted tiny">' + g.current + " / " + g.target +
           (unit ? " " + esc(unit) : "") + " · " + pct + "%</span>" +
-          goalMetaChipsHtml(g, "設定於「設定 → 目標」") +
+          goalMetaChipsHtml(g) +
           (g.outcome ? '<span class="tiny">' + esc(g.outcome) + "</span>" : "") +
           '<div class="progress-bar-slim"><i style="width:' + pct + '%"></i></div>' +
           "</button>";
@@ -2054,7 +2069,7 @@
       '<ol class="empty-steps">' +
       "<li>新增一個習慣（例如晨跑）</li>" +
       "<li>每天在這裡打卡</li>" +
-      "<li>在「設定 → 目標」連結進度</li></ol>" +
+      "<li>可為習慣連結目標追蹤進度</li></ol>" +
       '<button class="btn" data-action="add-habit">+ 新增習慣</button>' +
       '<button class="btn soft" data-action="quick-add" style="margin-top:8px">快速新增其他</button></div>';
   }
@@ -2069,9 +2084,9 @@
       var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
       var habit = g.habitId ? state.habits.find(function (h) { return h.id === g.habitId; }) : null;
       var unit = goalUnitLabel(g);
-      var hcolor = habit ? habit.color : "";
-      html += '<button type="button" class="goals-strip-item' + (habit ? " has-habit" : "") + '"' +
-        (hcolor ? ' style="--hcolor:' + escAttr(hcolor) + '"' : "") +
+      var gcolor = goalAccentColor(g, habit);
+      html += '<button type="button" class="goals-strip-item' + (gcolor ? " has-habit" : "") + '"' +
+        (gcolor ? ' style="--hcolor:' + escAttr(gcolor) + '"' : "") +
         ' data-edit-goal="' + g.id + '">' +
         '<div class="goals-strip-top"><strong>' + esc(g.title) + "</strong>" +
         '<span class="goal-strip-pct">' + pct + "%</span></div>" +
@@ -2079,7 +2094,7 @@
         (habit ? ' · <span class="goal-habit-chip" style="--hcolor:' + escAttr(habit.color) + '">' +
           '<span class="goal-habit-dot" aria-hidden="true"></span>' + esc(habit.name) + "</span>" : "") +
         " · " + g.current + "/" + g.target + (unit ? " " + unit : "") + "</div>" +
-        goalMetaChipsHtml(g, "設定於「設定 → 目標」") +
+        goalMetaChipsHtml(g) +
         '<div class="goal-progress-wrap">' +
         '<div class="progress-bar-slim"><i style="width:' + pct + '%"></i></div>' +
         '<div class="goal-pct-ring" style="--p:' + pct + '%" aria-label="完成 ' + pct + '%"><span>' + pct +
@@ -3203,6 +3218,7 @@
     var habit = g.habitId ? state.habits.find(function (h) { return h.id === g.habitId; }) : null;
     var unit = goalUnitLabel(g);
     var plusLabel = g.unitMode === "hours" ? "+1 小時" : "+1";
+    var gcolor = goalAccentColor(g, habit);
     var habitLine = habit
       ? '<div class="goal-habit-line">' +
         '<button type="button" class="goal-habit-chip" style="--hcolor:' + escAttr(habit.color) +
@@ -3211,9 +3227,8 @@
         '<span class="muted tiny">' +
         (isHabitDone(habit, todayKey()) ? "今日已打卡" : "今日未打卡") + "</span></div>"
       : "";
-    return '<div class="settings-row goal-row' + (habit ? " has-habit" : "") + '"' +
-      (habit ? ' style="--hcolor:' + escAttr(habit.color) + ';flex-direction:column;align-items:stretch"' :
-        ' style="flex-direction:column;align-items:stretch"') + ">" +
+    return '<div class="settings-row goal-row' + (gcolor ? " has-habit" : "") + '"' +
+      ' style="--hcolor:' + escAttr(gcolor) + ';flex-direction:column;align-items:stretch">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%">' +
       '<span class="settings-row-label"><strong>' + esc(g.title) + "</strong>" +
       ' <span class="goal-type-badge type-' + escAttr(g.goalType || "general") + '">' +
@@ -3222,7 +3237,7 @@
       (unit ? " " + esc(unit) : "") + " · " + pct + "%</span></div>" +
       (g.outcome ? '<div class="tiny goal-outcome-preview">成果：' + esc(g.outcome) + "</div>" : "") +
       (g.dueAt ? '<div class="tiny">期限 ' + dateKey(g.dueAt) + "</div>" : "") +
-      goalMetaChipsHtml(g, "設定於「設定 → 目標」") +
+      goalMetaChipsHtml(g) +
       habitLine +
       '<div class="goal-progress-wrap">' +
       '<div class="progress"><i style="width:' + pct + '%"></i></div>' +
@@ -3273,9 +3288,12 @@
   function openGoalEditor(kind, item) {
     var g = normalizeGoal(item || {
       id: "", title: "", kind: kind || "short", target: 10, current: 0,
-      unitMode: "count", unit: "次", dueAt: "", habitId: "", goalType: "general", outcome: ""
+      unitMode: "count", unit: "次", dueAt: "", habitId: "", goalType: "general",
+      outcome: "", color: colors()[1] || colors()[0]
     });
     var due = g.dueAt ? dateKey(g.dueAt) : "";
+    var palette = goalColorPalette();
+    var selectedColor = g.color || palette[0];
     var habitOpts = '<option value="">— 不連結 —</option>' +
       state.habits.filter(function (h) { return !h.archived; }).map(function (h) {
         return opt(h.id, h.name, g.habitId || "");
@@ -3301,6 +3319,11 @@
       '<div class="field" id="gUnitCustomWrap"' + (g.unitMode === "custom" ? "" : ' style="display:none"') +
       '><label>自訂單位名稱</label><input id="gUnit" value="' + escAttr(g.unitMode === "custom" ? g.unit : "") +
       '" placeholder="頁 / km / 場" /></div>' +
+      '<div class="field"><label>顏色</label><div class="swatches" id="gColors">' +
+      palette.map(function (c) {
+        return '<button type="button" class="swatch' + (c === selectedColor ? " active" : "") +
+          '" data-color="' + c + '" style="background:' + c + '" aria-label="目標顏色 ' + c + '"></button>';
+      }).join("") + '</div><input type="hidden" id="gColor" value="' + escAttr(selectedColor) + '" /></div>' +
       '<div class="field"><label>成果／結果（可選）</label><textarea id="gOutcome" rows="2" placeholder="例如：拿到 AWS Solutions Architect Associate；或成為職業聯賽選手">' +
       esc(g.outcome || "") + "</textarea></div>" +
       '<div class="field"><label>期限（可選）</label><input id="gDue" type="date" value="' + due + '" /></div>' +
@@ -3314,6 +3337,15 @@
     var customWrap = document.getElementById("gUnitCustomWrap");
     unitModeEl.onchange = function () {
       customWrap.style.display = unitModeEl.value === "custom" ? "" : "none";
+    };
+    document.getElementById("gColors").onclick = function (e) {
+      var b = e.target.closest("[data-color]");
+      if (!b) return;
+      selectedColor = b.getAttribute("data-color");
+      document.getElementById("gColor").value = selectedColor;
+      Array.prototype.forEach.call(document.querySelectorAll("#gColors .swatch"), function (el) {
+        el.classList.toggle("active", el.getAttribute("data-color") === selectedColor);
+      });
     };
     document.getElementById("gCancel").onclick = closeModal;
     document.getElementById("gSave").onclick = function () {
@@ -3333,6 +3365,7 @@
         target: Number(document.getElementById("gTarget").value) || 1,
         unitMode: unitMode,
         unit: unit,
+        color: document.getElementById("gColor").value || selectedColor || palette[0],
         outcome: document.getElementById("gOutcome").value.trim(),
         dueAt: dueVal ? parseKey(dueVal).getTime() : null,
         habitId: document.getElementById("gHabit").value || "",
