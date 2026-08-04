@@ -1007,6 +1007,17 @@ button.linkish {
   border-color: color-mix(in srgb, var(--hcolor, var(--accent-2)) 70%, var(--line-strong));
 }
 
+.check-lg:not(.on) {
+  border-color: var(--hcolor, var(--accent-2));
+  background: color-mix(in srgb, var(--hcolor, var(--accent)) 12%, var(--surface));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--hcolor, var(--accent)) 20%, transparent);
+}
+
+.check-lg:not(.on):active {
+  transform: scale(0.96);
+  background: color-mix(in srgb, var(--hcolor, var(--accent)) 22%, var(--surface));
+}
+
 .check-md {
   width: 40px;
   height: 40px;

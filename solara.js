@@ -2061,7 +2061,7 @@
     if (!open.length) return "";
     var html = '<div class="goals-strip">';
     html += '<div class="goals-strip-head"><span class="section-title">進行中目標</span>' +
-      '<button type="button" class="btn sm ghost" data-nav-jump="settings-goals">設定 → 目標</button></div>';
+      '<button type="button" class="btn sm soft" data-nav-jump="settings-goals" aria-label="前往管理目標">管理目標</button></div>';
     open.forEach(function (g) {
       var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
       var habit = g.habitId ? state.habits.find(function (h) { return h.id === g.habitId; }) : null;
