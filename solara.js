@@ -1237,7 +1237,7 @@
     html += '<div class="day-journal-head"><span class="section-title">' + title + "</span>";
     if (holidayOn) {
       html += '<span class="tag tag-accent-2">' +
-        (fullDay ? "全日放假" : ("部分放假 · " + holidayIds.length)) +
+        (fullDay ? "全日放假" : ("部分放假 " + holidayIds.length)) +
         " · 連續保留</span>";
     }
     html += "</div>";
@@ -1277,9 +1277,9 @@
       });
       html += "</div>";
       html += '<div class="holiday-row holiday-bulk">' +
-        '<button type="button" class="btn sm soft" data-holiday-select-all="' + escAttr(key) +
+        '<button type="button" class="btn sm" data-holiday-select-all="' + escAttr(key) +
         '">全選放假</button>' +
-        '<button type="button" class="btn sm soft" data-holiday-clear-all="' + escAttr(key) +
+        '<button type="button" class="btn sm ghost" data-holiday-clear-all="' + escAttr(key) +
         '"' + (holidayOn ? "" : " disabled") + ">清除放假</button></div>";
     }
     if (holidayOn) {
@@ -1684,17 +1684,20 @@
       html += '<div class="holiday-chip-ring" aria-label="全日放假">假</div></div>';
       html += '<div class="tiny muted" style="margin-top:8px">全日放假不會計入未完成。</div>';
     } else if (partialHoliday) {
-      html += '<div class="today-progress-text">已完成 <strong>' + doneCount + "/" + total +
-        '</strong><span class="stat-sep" aria-hidden="true">·</span>' +
-        holidayCount + ' 個放假<span class="stat-sep" aria-hidden="true">·</span>投入 <strong>' +
-        fmtMin(minutesOnDate(key)) + "</strong></div>";
+      html += '<div class="today-progress-text">' +
+        '<span class="today-stat">已完成 <strong>' + doneCount + "/" + total + "</strong></span>" +
+        '<span class="stat-sep" aria-hidden="true">|</span>' +
+        '<span class="today-stat today-stat-holiday">' + holidayCount + " 個放假</span>" +
+        '<span class="stat-sep" aria-hidden="true">|</span>' +
+        '<span class="today-stat">投入 <strong>' + fmtMin(minutesOnDate(key)) + "</strong></span></div>";
       html += progressRingHtml(rate, 48) + "</div>";
       html += '<div class="progress-bar-slim"><i style="width:' + rate + '%"></i></div>';
       html += '<div class="tiny muted" style="margin-top:8px">已放假習慣不計未完成，其餘仍可打卡。</div>';
     } else {
-      html += '<div class="today-progress-text">已完成 <strong>' + doneCount + "/" + total +
-        '</strong><span class="stat-sep" aria-hidden="true">·</span>投入 <strong>' +
-        fmtMin(minutesOnDate(key)) + "</strong></div>";
+      html += '<div class="today-progress-text">' +
+        '<span class="today-stat">已完成 <strong>' + doneCount + "/" + total + "</strong></span>" +
+        '<span class="stat-sep" aria-hidden="true">|</span>' +
+        '<span class="today-stat">投入 <strong>' + fmtMin(minutesOnDate(key)) + "</strong></span></div>";
       html += progressRingHtml(rate, 48) + "</div>";
       html += '<div class="progress-bar-slim"><i style="width:' + rate + '%"></i></div>';
     }
