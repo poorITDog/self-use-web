@@ -1147,6 +1147,11 @@
     while (d <= end) {
       var key = dateKey(d);
       if (!habitDueOn(habit, key)) {
+        // Match streakFor: done-then-excused days still count toward streak.
+        if (isHabitHoliday(habit, key) && isHabitDone(habit, key)) {
+          cur++;
+          if (cur > best) best = cur;
+        }
         d.setDate(d.getDate() + 1);
         continue;
       }
@@ -1181,7 +1186,13 @@
     // Full-day holiday has no due habits to score; partial still scores the rest.
     if (isFullDayHoliday(key)) return null;
     var due = state.habits.filter(function (h) { return !h.archived && habitDueOn(h, key); });
-    if (!due.length) return 0;
+    if (!due.length) {
+      // All scheduled habits excused (mixed frequency) — not a 0% failure day.
+      var excusedDue = state.habits.some(function (h) {
+        return !h.archived && isHabitHoliday(h, key) && habitScheduleDueOn(h, key);
+      });
+      return excusedDue ? null : 0;
+    }
     var done = due.filter(function (h) { return isHabitDone(h, key); }).length;
     return Math.round((done / due.length) * 100);
   }
@@ -2909,16 +2920,16 @@
     var selLabel = selected === todayKey() ? "今天" : selected.slice(5).replace("-", "月") + "日";
     var holidayToday = isHoliday(selected);
     var fullHolidayToday = isFullDayHoliday(selected);
+    var rateIsRest = fullHolidayToday || (holidayToday && selRate === null);
+    var holidayTag = fullHolidayToday ? "全日放假" : (selRate === null ? "放假" : "部分放假");
     html += '<div class="day-panel">';
     html += '<div class="day-panel-head"><strong>' + selLabel + '</strong>' +
       '<span class="muted">星期' + DOW[parseKey(selected).getDay()] + '</span>' +
-      (holidayToday
-        ? '<span class="tag tag-accent-2">' + (fullHolidayToday ? "全日放假" : "部分放假") + "</span>"
-        : "") +
+      (holidayToday ? '<span class="tag tag-accent-2">' + holidayTag + "</span>" : "") +
       '<button type="button" class="btn sm soft" data-action="add-event">+ 行程</button></div>';
     html += '<div class="day-panel-stats">' +
       '<div class="stat-cell"><div class="label">達成率</div><div class="value">' +
-      (fullHolidayToday ? "放假" : (selRate === null ? "—" : (selRate + "%"))) + '</div></div>' +
+      (rateIsRest ? "放假" : (selRate === null ? "—" : (selRate + "%"))) + '</div></div>' +
       '<div class="stat-cell"><div class="label">投入時數</div><div class="value">' + fmtMin(selMins) + "</div></div>" +
       "</div>";
     html += dayJournalHtml(selected, "calendar");
