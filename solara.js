@@ -1144,7 +1144,7 @@
       '" data-journal-surface="' + escAttr(surface) + '">';
     html += '<div class="day-journal-head"><span class="section-title">' + title + "</span>";
     if (holidayOn) {
-      html += '<span class="tag tag-accent-2">放假 · 連擊保留</span>';
+      html += '<span class="tag tag-accent-2">放假 · 連續紀錄保留</span>';
     }
     html += "</div>";
     html += '<p class="tiny muted day-journal-hint">記錄心情與說明，例如為什麼今天沒做運動。</p>';
@@ -1556,11 +1556,11 @@
     var html = '<div class="today-strip">';
     html += '<div class="today-strip-head">';
     if (holiday) {
-      html += '<div class="today-progress-text">今天放假 <strong>連擊保留</strong>' +
+      html += '<div class="today-progress-text">今天放假 <strong>連續紀錄保留</strong>' +
         '<span class="stat-sep" aria-hidden="true">·</span>投入 <strong>' +
         fmtMin(minutesOnDate(key)) + "</strong></div>";
       html += '<div class="holiday-chip-ring" aria-label="放假日">假</div></div>';
-      html += '<div class="progress-bar-slim holiday"><i style="width:100%"></i></div>';
+      html += '<div class="tiny muted" style="margin-top:8px">放假日不會計入未完成。</div>';
     } else {
       html += '<div class="today-progress-text">已完成 <strong>' + doneCount + "/" + total +
         '</strong><span class="stat-sep" aria-hidden="true">·</span>投入 <strong>' +
@@ -3700,7 +3700,7 @@
       '<span class="chip sync-chip sync-' + syncStatus + '">' + syncStatusLabel() + "</span></div>";
     html += '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
       '<p class="muted tiny" style="margin:0">Git 式同步：先拉取合併，再上傳（' + DRIVE_FILE +
-      "）。空本機唔會覆寫雲端。</p></div>";
+      "）。空本機不會覆寫雲端。</p></div>";
     html += '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
       '<label class="settings-row-label">OAuth Client ID</label>' +
       '<input id="googleClientId" value="' + escAttr(state.settings.googleClientId || "") +

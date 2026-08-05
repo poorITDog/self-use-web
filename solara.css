@@ -3412,8 +3412,8 @@ button.habit-box-day:active {
 }
 
 .mood-btn.on {
-  background: var(--color-accent);
-  border-color: var(--color-accent-600);
+  background: var(--color-accent-700);
+  border-color: var(--color-accent-800);
   color: var(--color-neutral-100);
   box-shadow: var(--shadow-sm);
 }
@@ -3513,6 +3513,6 @@ button.habit-box-day:active {
 }
 
 @media (max-width: 380px) {
-  .mood-caption { font-size: 0.64rem; }
+  .mood-caption { font-size: 0.72rem; }
   .mood-btn { min-height: 58px; padding: 6px 2px; }
 }
