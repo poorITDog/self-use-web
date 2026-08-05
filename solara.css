@@ -247,16 +247,27 @@
   --color-neutral-100: rgba(28, 34, 50, 0.92);
   --color-neutral-200: #1a2030;
   --color-neutral-300: #2c3548;
+  --color-neutral-400: #6b758c;
+  --color-neutral-500: #8b95ab;
+  --color-neutral-600: #aeb6c8;
+  --color-neutral-700: #c8d0e0;
+  --color-neutral-800: #dde3f0;
+  --color-neutral-900: #f0f3fa;
   --color-accent-100: #243044;
   --color-accent-200: #2f405c;
   --color-accent-500: #6ea8ff;
   --color-accent-600: #5b93e6;
   --color-accent-700: #9ec5ff;
+  --color-accent-800: #b8d4ff;
+  --color-accent-900: #d6e6ff;
   --color-accent-2-100: #2a2440;
   --color-accent-2-200: #3a3258;
+  --color-accent-2-300: #5a4a80;
   --color-accent-2-500: #c9a0ff;
   --color-accent-2-600: #b48aef;
   --color-accent-2-700: #ddc4ff;
+  --color-accent-2-800: #e8d6ff;
+  --color-accent-2-900: #f3ebff;
   --bg: var(--color-bg);
   --bg-gradient: linear-gradient(180deg, #0b1020 0%, #151c2e 45%, #1c2438 100%);
   --bg-elevated: color-mix(in srgb, var(--color-neutral-100) 94%, transparent);
@@ -351,16 +362,27 @@
   --color-neutral-100: rgba(24, 32, 48, 0.92);
   --color-neutral-200: #182030;
   --color-neutral-300: #2a364c;
+  --color-neutral-400: #6a7690;
+  --color-neutral-500: #8a96b0;
+  --color-neutral-600: #aeb8cc;
+  --color-neutral-700: #c9d2e4;
+  --color-neutral-800: #dde4f2;
+  --color-neutral-900: #f0f4fc;
   --color-accent-100: #1c3340;
   --color-accent-200: #254a55;
   --color-accent-500: #5ce1c5;
   --color-accent-600: #45c7ab;
   --color-accent-700: #9af0dc;
+  --color-accent-800: #b8f5e6;
+  --color-accent-900: #d6faf0;
   --color-accent-2-100: #1e2a44;
   --color-accent-2-200: #2a3c62;
+  --color-accent-2-300: #3d5588;
   --color-accent-2-500: #7aa7ff;
   --color-accent-2-600: #628ee6;
   --color-accent-2-700: #b4cbff;
+  --color-accent-2-800: #cddcff;
+  --color-accent-2-900: #e6eeff;
   --bg: var(--color-bg);
   --bg-gradient: linear-gradient(180deg, #0c1220 0%, #152033 50%, #1a2740 100%);
   --bg-elevated: color-mix(in srgb, var(--color-neutral-100) 94%, transparent);
@@ -3395,7 +3417,7 @@ details.advanced-sync summary {
 
 .habit-checkin-row {
   display: grid;
-  grid-template-columns: auto auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
   gap: 10px;
   align-items: center;
   padding: var(--space-4);
@@ -3447,6 +3469,22 @@ details.advanced-sync summary {
 
 .diary-page-hint {
   margin: var(--space-2) var(--space-4) var(--space-3);
+}
+
+.diary-date-chip {
+  font-size: 0.78rem;
+}
+
+.diary-holiday-list {
+  margin: var(--space-3) var(--space-4) var(--space-4);
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.diary-holiday-list .habit-group-label {
+  padding: var(--space-3) var(--space-4) var(--space-2);
 }
 
 .today-checkin {

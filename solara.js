@@ -1234,14 +1234,23 @@
   }
 
   function holidayBannerText(key) {
+    var dayWord = key === todayKey() ? "今天" : "當日";
     if (isFullDayHoliday(key)) {
-      return "今天全日放假——習慣已暫停，連續紀錄保留。";
+      return dayWord + "全日放假——習慣已暫停，連續紀錄保留。";
     }
     var excusedDue = state.habits.filter(function (h) {
       return !h.archived && isHabitHoliday(h, key) && habitScheduleDueOn(h, key);
     });
     if (!excusedDue.length) return "";
-    return "今日有 " + excusedDue.length + " 個習慣放假，其餘仍可打卡。連續紀錄保留。";
+    return dayWord + "有 " + excusedDue.length + " 個習慣放假，其餘仍可打卡。連續紀錄保留。";
+  }
+
+  function diaryDateChipLabel(key) {
+    key = key || todayKey();
+    var d = parseKey(key);
+    var label = (d.getMonth() + 1) + "月" + d.getDate() + "日";
+    if (key === todayKey()) return "今天 · " + label;
+    return label + " · 星期" + DOW[d.getDay()];
   }
 
   function captureDayJournalDraft(key) {
@@ -1263,7 +1272,8 @@
     if (ui.diaryDate) captureDayJournalDraft(ui.diaryDate);
   }
 
-  // Day journal: mood + comment (+ holiday reason). Per-habit holiday is on check-in rows.
+  // Day journal: mood + comment (+ holiday reason). Per-habit holiday is on check-in rows (today)
+  // or the diary holiday list (past/future days opened from calendar).
   function dayJournalHtml(key, surface) {
     surface = surface || "main";
     var entry = getDayEntry(key) || normalizeDayEntry({ date: key });
@@ -1277,13 +1287,18 @@
     var html = '<div class="day-journal" data-day-journal="' + escAttr(key) +
       '" data-journal-surface="' + escAttr(surface) + '">';
     html += '<div class="day-journal-head"><span class="section-title">' + title + "</span>";
+    html += '<span class="date-chip diary-date-chip">' + esc(diaryDateChipLabel(key)) + "</span>";
     if (holidayOn) {
       html += '<span class="tag tag-accent-2">' +
         (fullDay ? "全日放假" : ("部分放假 " + holidayHabitIdList(key).length)) +
         " · 連續保留</span>";
     }
     html += "</div>";
-    html += '<p class="tiny muted day-journal-hint">記錄心情與說明。個別習慣放假請在「今天」打卡列的放假按鈕設定。</p>';
+    if (isToday) {
+      html += '<p class="tiny muted day-journal-hint">記錄心情與說明。個別習慣放假請在「今天」打卡列的放假按鈕設定。</p>';
+    } else {
+      html += '<p class="tiny muted day-journal-hint">記錄當日心情與說明。放假可在下方習慣列設定。</p>';
+    }
     html += '<div class="mood-row" role="group" aria-label="' + moodAria + '">';
     [1, 2, 3, 4, 5].forEach(function (n) {
       html += '<button type="button" class="mood-btn' + (mood === n ? " on" : "") +
@@ -1305,6 +1320,25 @@
     }
     html += '<div class="row-actions"><button type="button" class="btn" data-save-day-journal="' +
       escAttr(key) + '">儲存日記</button></div>';
+    html += "</div>";
+    return html;
+  }
+
+  // Compact holiday toggles for a non-today diary date (calendar → 日記).
+  function diaryHolidayListHtml(key) {
+    var due = state.habits.filter(function (h) {
+      return !h.archived && habitScheduleDueOn(h, key);
+    });
+    if (!due.length) return "";
+    var html = '<div class="diary-holiday-list"><div class="habit-group-label">當日放假</div>';
+    due.forEach(function (h) {
+      html += '<div class="excused-habit-row">' +
+        '<span class="holiday-habit-swatch" style="background:' + escAttr(h.color || colors()[0]) +
+        '" aria-hidden="true"></span>' +
+        '<span class="excused-habit-name">' + esc(h.name || "未命名") + "</span>" +
+        holidayBtnHtml(h, key) +
+        "</div>";
+    });
     html += "</div>";
     return html;
   }
@@ -1661,6 +1695,8 @@
     html += '<h1 class="app-bar-title">' + title + "</h1>";
     if (view === "habits") {
       html += '<span class="date-chip">' + dateChipLabel() + "</span>";
+    } else if (view === "diary") {
+      html += '<span class="date-chip">' + esc(diaryDateChipLabel(ui.diaryDate || todayKey())) + "</span>";
     }
     html += '</div><div class="app-bar-actions">' + appBarActionHtml(view);
     if (view === "habits") {
@@ -2015,12 +2051,12 @@
     var done = isHabitDone(h, key);
     return '<article class="habit-card habit-checkin-row' + (done ? " done" : "") + '" style="--hcolor:' + h.color + '">' +
       checkBtnHtml(h, key, "check check-lg") +
-      holidayBtnHtml(h, key) +
       '<button type="button" class="habit-row-body" data-habit-open="' + h.id + '">' +
       '<div class="habit-row-name">' + habitEmoji(h) + esc(h.name) + "</div>" +
       '<div class="habit-row-meta">' + todayStatusText(h, key) + "</div>" +
       linkedGoalBadgeHtml(h) +
       "</button>" +
+      holidayBtnHtml(h, key) +
       '<button type="button" class="habit-row-chevron" data-habit-open="' + h.id + '" aria-label="詳情">' +
       chevronSvg + "</button></article>";
   }
@@ -2028,11 +2064,12 @@
   function holidayBtnHtml(h, key) {
     key = key || todayKey();
     var on = isHabitHoliday(h, key);
+    var dayBit = key === todayKey() ? "今天此習慣放假" : "此日此習慣放假";
     return '<button type="button" class="habit-holiday-btn' + (on ? " on" : "") +
       '" data-toggle-habit-holiday="' + escAttr(h.id) + '" data-day-key="' + escAttr(key) + '"' +
       ' aria-pressed="' + (on ? "true" : "false") + '"' +
       ' aria-label="' + (on ? "取消放假" : "設為放假") + '" title="' +
-      (on ? "取消放假" : "今天此習慣放假") + '">' +
+      (on ? "取消放假" : dayBit) + '">' +
       (on ? "取消" : "放假") + "</button>";
   }
 
@@ -2532,9 +2569,15 @@
     var key = ui.diaryDate || todayKey();
     var banner = holidayBannerText(key);
     var html = '<div class="diary-page">';
-    html += '<p class="tiny muted diary-page-hint">日記專頁。放假請在習慣列的「放假」按鈕設定。</p>';
+    if (key === todayKey()) {
+      html += '<p class="tiny muted diary-page-hint">日記專頁。放假請在習慣列的「放假」按鈕設定。</p>';
+    } else {
+      html += '<p class="tiny muted diary-page-hint">正在編輯 ' + esc(diaryDateChipLabel(key)) +
+        "。放假可在下方設定。</p>";
+    }
     if (banner) html += '<div class="holiday-banner">' + esc(banner) + "</div>";
     html += dayJournalHtml(key, "diary");
+    if (key !== todayKey()) html += diaryHolidayListHtml(key);
     html += "</div>";
     document.getElementById("view-diary").innerHTML = html;
   }
@@ -4101,6 +4144,8 @@
   }
 
   function render() {
+    // Capture unsaved diary fields before any re-render (incl. auto-sync).
+    flushDayJournalDrafts();
     applyTheme();
     renderAppBar();
     renderTopChips();

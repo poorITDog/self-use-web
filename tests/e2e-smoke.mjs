@@ -651,8 +651,18 @@ const selectedCalDay = await page.evaluate(() => {
   const tKey = today.getFullYear() + "-" +
     String(today.getMonth() + 1).padStart(2, "0") + "-" +
     String(today.getDate()).padStart(2, "0");
-  const other = Array.from(document.querySelectorAll(".cal-day[data-day]"))
-    .find((el) => el.getAttribute("data-day") && el.getAttribute("data-day") !== tKey);
+  const tDow = today.getDay();
+  const days = Array.from(document.querySelectorAll(".cal-day[data-day]"));
+  // Prefer same weekday so scheduled habits appear on diary holiday list
+  const sameDow = days.find((el) => {
+    const key = el.getAttribute("data-day");
+    if (!key || key === tKey) return false;
+    return new Date(key + "T12:00:00").getDay() === tDow;
+  });
+  const other = sameDow || days.find((el) => {
+    const key = el.getAttribute("data-day");
+    return key && key !== tKey;
+  });
   if (!other) return null;
   other.click();
   return other.getAttribute("data-day");
@@ -679,6 +689,25 @@ const diaryTitleLabel = await page.$eval("#view-diary .day-journal-head .section
   el.textContent.trim()
 );
 await assert(diaryTitleLabel === "當日日記", "non-today diary uses 當日日記 title");
+const diaryDateChip = await page.$eval("#appBar .date-chip, .app-bar .date-chip", (el) =>
+  el.textContent.trim()
+);
+await assert(!!diaryDateChip && !diaryDateChip.includes("今天"), "diary app bar shows selected date");
+const diaryHeadDate = await page.$eval("#view-diary .diary-date-chip", (el) => el.textContent.trim());
+await assert(!!diaryHeadDate, "diary journal head shows date chip");
+const habitsNavOnDiary = await page.$eval('#nav [data-nav="habits"]', (el) =>
+  el.classList.contains("active")
+);
+await assert(habitsNavOnDiary, "habits nav stays active on diary page");
+await page.waitForSelector("#view-diary .diary-holiday-list [data-toggle-habit-holiday]");
+await page.click("#view-diary .diary-holiday-list [data-toggle-habit-holiday]");
+await page.waitForFunction(() => {
+  const b = document.querySelector("#view-diary .holiday-banner");
+  return b && b.textContent.includes("當日") && b.textContent.includes("放假");
+});
+const pastBanner = await page.$eval("#view-diary .holiday-banner", (el) => el.textContent);
+await assert(pastBanner.includes("當日") && !pastBanner.includes("今天"),
+  "past-day holiday banner uses 當日 not 今天");
 
 // Scenic themes available (+ theme-scene layer)
 await page.click('[data-nav="settings"]');
