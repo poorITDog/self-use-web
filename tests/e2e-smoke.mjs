@@ -451,44 +451,70 @@ await assert(!!syncChip, "sync status chip visible");
 
 await assert(errors.filter((e) => !e.includes("favicon")).length === 0, "no page errors: " + JSON.stringify(errors));
 
-// Diary + per-habit holiday live on「日記」panel (not habits today main)
+// Diary is its own page (not a habits tab); holiday sits next to finish on today rows
 await page.click('[data-nav="habits"]');
-await page.waitForSelector('[data-habits-panel="journal"]');
+await page.waitForSelector('[data-habits-panel="today"].on');
+await assert(!await page.$('[data-habits-panel="journal"]'), "habits has no 日記 tab");
+const segLabels = await page.$$eval(".habits-seg button", (els) => els.map((el) => el.textContent.trim()));
+await assert(
+  segLabels.length === 2 && segLabels.includes("今天") && segLabels.includes("儀表板"),
+  "habits seg is only 今天 | 儀表板"
+);
 const gate = await page.$(".day-journal-gate");
-await assert(!!gate, "today shows diary gate, not full holiday picker");
-await assert(!await page.$("#view-habits .holiday-habit-list"), "holiday picker hidden on today main");
-await page.click('[data-habits-panel="journal"]');
-await page.waitForSelector('[data-habits-panel="journal"].on');
-await page.waitForSelector(".day-journal .mood-btn[data-mood='4']");
-await page.waitForSelector("[data-toggle-habit-holiday]");
-await page.evaluate(() => document.querySelector('.day-journal .mood-btn[data-mood="4"]').click());
-await page.waitForFunction(() => {
-  const btn = document.querySelector('.day-journal .mood-btn[data-mood="4"]');
-  return btn && btn.classList.contains("on");
-});
-const moodOn = await page.$eval('.day-journal .mood-btn[data-mood="4"]', (el) => el.classList.contains("on"));
-await assert(moodOn, "mood 4 selected");
+await assert(!!gate, "today shows diary gate to open diary page");
+await assert(!await page.$("#view-habits .day-journal"), "full journal not embedded on habits today");
+await assert(!await page.$("#view-habits .holiday-habit-list"), "no holiday checklist on habits today");
 
-// Partial holiday: excuse only the first habit
+// Holiday toggle lives beside check/finish on the check-in row
+await page.waitForSelector(".habit-checkin-row .habit-holiday-btn");
+const holidayBesideCheck = await page.$eval(".habit-checkin-row", (row) => {
+  const check = row.querySelector(".check-lg, [data-toggle]");
+  const hol = row.querySelector(".habit-holiday-btn, [data-toggle-habit-holiday]");
+  return !!(check && hol);
+});
+await assert(holidayBesideCheck, "放假 button sits on same row as finish/check");
+
 const firstHabitHolidayId = await page.$eval(
-  "[data-toggle-habit-holiday]",
+  ".habit-checkin-row [data-toggle-habit-holiday]",
   (el) => el.getAttribute("data-toggle-habit-holiday")
 );
-await page.click("[data-toggle-habit-holiday]");
-await page.waitForSelector(".holiday-banner");
-const holidayBanner = await page.$(".holiday-banner");
-await assert(!!holidayBanner, "holiday banner shows on journal panel");
-const bannerText = await page.$eval(".holiday-banner", (el) => el.textContent);
+await page.click(".habit-checkin-row [data-toggle-habit-holiday]");
+await page.waitForSelector(".excused-habits, .day-journal-gate .tag-accent-2");
+
+// Open dedicated diary page via gate
+await page.click(".day-journal-gate");
+await page.waitForSelector("#view-diary.active, #view-diary.view.active");
+await page.waitForFunction(() => {
+  const v = document.getElementById("view-diary");
+  return v && v.classList.contains("active");
+});
+await page.waitForSelector("#view-diary .day-journal .mood-btn[data-mood='4']");
+const diaryTitle = await page.$eval(".app-bar-title", (el) => el.textContent.trim());
+await assert(diaryTitle === "日記", "diary page shows 日記 title");
 await assert(
-  bannerText.includes("放假") && bannerText.includes("連續") && bannerText.includes("其餘"),
-  "partial holiday banner explains remaining check-ins"
+  !await page.$("#view-diary [data-toggle-habit-holiday]"),
+  "diary page has no per-habit holiday checklist"
 );
-await page.waitForSelector('input[id^="holidayReason-"]');
-const reasonSel = await page.$('input[id^="holidayReason-"]');
-await assert(!!reasonSel, "holiday reason field visible");
-await page.type('textarea[id^="dayComment-"]', "颱風停工，今天沒去健身房");
-await page.type('input[id^="holidayReason-"]', "颱風");
-await page.click("[data-save-day-journal]");
+await page.evaluate(() => document.querySelector('#view-diary .mood-btn[data-mood="4"]').click());
+await page.waitForFunction(() => {
+  const btn = document.querySelector('#view-diary .mood-btn[data-mood="4"]');
+  return btn && btn.classList.contains("on");
+});
+const moodOn = await page.$eval('#view-diary .mood-btn[data-mood="4"]', (el) => el.classList.contains("on"));
+await assert(moodOn, "mood 4 selected on diary page");
+
+await page.waitForSelector("#view-diary .holiday-banner, #view-diary input[id^='holidayReason-']");
+const holidayBanner = await page.$("#view-diary .holiday-banner");
+await assert(!!holidayBanner, "holiday banner shows on diary page after partial holiday");
+const bannerText = await page.$eval("#view-diary .holiday-banner", (el) => el.textContent);
+await assert(
+  bannerText.includes("放假") && bannerText.includes("連續"),
+  "partial holiday banner explains streak retention"
+);
+await page.waitForSelector('#view-diary input[id^="holidayReason-"]');
+await page.type('#view-diary textarea[id^="dayComment-"]', "颱風停工，今天沒去健身房");
+await page.type('#view-diary input[id^="holidayReason-"]', "颱風");
+await page.click("#view-diary [data-save-day-journal]");
 await page.waitForFunction((hid) => {
   const raw = JSON.parse(localStorage.getItem("solara-v1") || "{}");
   const today = new Date();
@@ -517,9 +543,13 @@ await assert(
 await assert((journalSaved.holidayReason || "").includes("颱風") ||
   (journalSaved.comment || "").includes("颱風"), "holiday reason or comment saved");
 
-// Back to today: remaining habits still checkable; no picker on main
-await page.click('[data-habits-panel="today"]');
-await page.waitForSelector(".today-checkin");
+// Back to habits today: remaining habits still checkable; gate shows holiday status
+await page.click('#appBar [data-nav="habits"], .app-bar [data-nav="habits"]');
+await page.waitForFunction(() => {
+  const v = document.getElementById("view-habits");
+  return v && v.classList.contains("active");
+});
+await page.waitForSelector(".today-checkin, .excused-habits");
 const remainingChecks = await page.$$(".today-checkin .check-lg");
 await assert(remainingChecks.length >= 1, "non-holiday habits remain on today list");
 const todayGate = await page.$(".day-journal-gate");
@@ -527,43 +557,63 @@ await assert(!!todayGate, "today shows diary gate after partial holiday");
 const todayGateHoliday = await page.$eval(".day-journal-gate", (el) =>
   el.textContent.includes("放假")
 );
-await assert(todayGateHoliday, "today gate shows holiday status without picker");
-await assert(!await page.$("#view-habits .holiday-habit-list"), "today still has no holiday picker");
+await assert(todayGateHoliday, "today gate shows holiday status without embedding diary");
+await assert(!await page.$("#view-habits .day-journal"), "today still has no embedded diary");
 await assert(
   !await page.$("#view-habits .holiday-banner"),
   "today has no duplicate holiday banner (strip + gate cover status)"
 );
 
-// Journal again: full-day via select-all
-await page.click('[data-habits-panel="journal"]');
-await page.waitForSelector("[data-holiday-select-all]");
-await page.click("[data-holiday-select-all]");
+// Mark remaining habits holiday via row buttons → full-day banner on diary
+for (let guard = 0; guard < 20; guard++) {
+  const hasOpen = await page.$(".habit-checkin-row [data-toggle-habit-holiday]");
+  if (!hasOpen) break;
+  await page.click(".habit-checkin-row [data-toggle-habit-holiday]");
+  await page.waitForFunction(() => true, { timeout: 50 }).catch(() => {});
+}
+await page.click(".day-journal-gate");
 await page.waitForFunction(() => {
-  const b = document.querySelector(".holiday-banner");
+  const b = document.querySelector("#view-diary .holiday-banner");
   return b && b.textContent.includes("全日放假");
 });
-const fullBanner = await page.$eval(".holiday-banner", (el) => el.textContent);
-await assert(fullBanner.includes("全日放假"), "select-all shows full-day holiday banner");
+const fullBanner = await page.$eval("#view-diary .holiday-banner", (el) => el.textContent);
+await assert(fullBanner.includes("全日放假"), "all row holidays show full-day banner on diary");
 
-// Clear holiday
-await page.click("[data-holiday-clear-all]");
-await page.waitForFunction(() => !document.querySelector(".holiday-banner"));
+// Clear holidays one-by-one (each click re-renders)
+await page.click('#appBar [data-nav="habits"]');
+await page.waitForFunction(() => {
+  const v = document.getElementById("view-habits");
+  return v && v.classList.contains("active");
+});
+await page.waitForSelector(".excused-habits [data-toggle-habit-holiday].on");
+for (let guard = 0; guard < 20; guard++) {
+  const onBtn = await page.$(".excused-habits [data-toggle-habit-holiday].on");
+  if (!onBtn) break;
+  await onBtn.click();
+  await new Promise((r) => setTimeout(r, 40));
+}
+await page.waitForFunction(() => !document.querySelector(".excused-habits"));
 
-// Mood click must not wipe unsaved comment (draft capture)
-await page.click("[data-toggle-habit-holiday]");
-await page.waitForSelector(".holiday-banner");
-await page.type('textarea[id^="dayComment-"]', "草稿測試");
-await page.click('[data-mood="2"]');
-const draftKept = await page.$eval('textarea[id^="dayComment-"]', (el) => el.value.includes("草稿測試"));
+// Re-open diary: mood click must not wipe unsaved comment
+await page.click(".habit-checkin-row [data-toggle-habit-holiday], .habit-holiday-btn");
+await page.click(".day-journal-gate");
+await page.waitForSelector("#view-diary .holiday-banner");
+await page.type('#view-diary textarea[id^="dayComment-"]', "草稿測試");
+await page.click('#view-diary [data-mood="2"]');
+const draftKept = await page.$eval(
+  '#view-diary textarea[id^="dayComment-"]',
+  (el) => el.value.includes("草稿測試")
+);
 await assert(draftKept, "mood change keeps unsaved journal draft");
 
-// Draft must also survive switching away from 日記 without pressing 儲存
+// Draft must survive leaving diary without pressing 儲存
 await page.evaluate(() => {
-  const el = document.querySelector("#view-habits textarea[data-day-comment]");
+  const el = document.querySelector("#view-diary textarea[data-day-comment]");
   if (el) el.value = String(el.value || "") + "分頁草稿";
-  document.querySelector('#view-habits [data-habits-panel="today"]').click();
+  const back = document.querySelector('#appBar [data-nav="habits"], .app-bar [data-nav="habits"]');
+  if (back) back.click();
 });
-await page.waitForSelector("#view-habits .day-journal-gate");
+await page.waitForSelector("#view-habits.active, #view-habits.view.active");
 await page.waitForFunction(() => {
   const raw = JSON.parse(localStorage.getItem("solara-v1") || "{}");
   const today = new Date();
@@ -573,24 +623,118 @@ await page.waitForFunction(() => {
   const e = (raw.dayEntries || []).find((d) => d.date === key);
   return e && String(e.comment || "").includes("分頁草稿");
 });
-await page.click('#view-habits [data-habits-panel="journal"]');
-await page.waitForSelector("#view-habits textarea[data-day-comment]");
-const draftAcrossPanel = await page.$eval(
-  "#view-habits textarea[data-day-comment]",
+await page.click(".day-journal-gate");
+await page.waitForSelector("#view-diary textarea[data-day-comment]");
+const draftAcrossPage = await page.$eval(
+  "#view-diary textarea[data-day-comment]",
   (el) => el.value.includes("分頁草稿")
 );
-await assert(draftAcrossPanel, "journal draft kept across habits panel switch");
+await assert(draftAcrossPage, "journal draft kept across diary page switch");
 
-// Calendar day panel also shows journal + partial holiday
+// Calendar is schedule-focused: hint + diary button, no embedded journal / holiday picker
 await page.click('[data-nav="calendar"]');
-await page.waitForSelector(".day-panel .day-journal");
+await page.waitForSelector(".day-panel");
+await page.waitForSelector(".cal-page-hint");
+await assert(!await page.$(".day-panel .day-journal"), "calendar has no embedded diary");
+await assert(!await page.$(".day-panel .holiday-habit-list"), "calendar has no holiday checklist");
+await page.waitForSelector('.day-panel [data-open-diary]');
+const calDiaryBtn = await page.$eval('.day-panel [data-open-diary]', (el) => el.textContent.trim());
+await assert(calDiaryBtn.includes("日記"), "calendar day panel links out to diary");
 const calShowsHoliday = await page.$eval(".day-panel", (el) =>
   el.textContent.includes("放假") || el.textContent.includes("部分放假")
 );
-await assert(calShowsHoliday, "calendar day panel shows holiday state");
-await page.waitForSelector(".day-panel [data-toggle-habit-holiday]");
-const calPicker = await page.$(".day-panel .holiday-habit-list");
-await assert(!!calPicker, "calendar journal has per-habit holiday picker");
+await assert(calShowsHoliday, "calendar day panel shows holiday state tag");
+
+// Calendar → diary must open the *selected* (possibly non-today) date
+const selectedCalDay = await page.evaluate(() => {
+  const today = new Date();
+  const tKey = today.getFullYear() + "-" +
+    String(today.getMonth() + 1).padStart(2, "0") + "-" +
+    String(today.getDate()).padStart(2, "0");
+  const tDow = today.getDay();
+  const days = Array.from(document.querySelectorAll(".cal-day[data-day]"));
+  // Prefer same weekday so scheduled habits appear on diary holiday list
+  const sameDow = days.find((el) => {
+    const key = el.getAttribute("data-day");
+    if (!key || key === tKey) return false;
+    return new Date(key + "T12:00:00").getDay() === tDow;
+  });
+  const other = sameDow || days.find((el) => {
+    const key = el.getAttribute("data-day");
+    return key && key !== tKey;
+  });
+  if (!other) return null;
+  other.click();
+  return other.getAttribute("data-day");
+});
+await assert(!!selectedCalDay, "found a non-today calendar day to select");
+await page.waitForFunction((key) => {
+  const btn = document.querySelector(".day-panel [data-open-diary]");
+  return btn && btn.getAttribute("data-open-diary") === key;
+}, {}, selectedCalDay);
+await page.click(".day-panel [data-open-diary]");
+await page.waitForFunction(() => {
+  const v = document.getElementById("view-diary");
+  return v && v.classList.contains("active");
+});
+const diaryOpenedFor = await page.$eval(
+  "#view-diary .day-journal",
+  (el) => el.getAttribute("data-day-journal")
+);
+await assert(
+  diaryOpenedFor === selectedCalDay,
+  "calendar diary opens journal for selected day (" + selectedCalDay + ")"
+);
+const diaryTitleLabel = await page.$eval("#view-diary .day-journal-head .section-title", (el) =>
+  el.textContent.trim()
+);
+await assert(diaryTitleLabel === "當日日記", "non-today diary uses 當日日記 title");
+const diaryDateChip = await page.$eval("#appBar .date-chip, .app-bar .date-chip", (el) =>
+  el.textContent.trim()
+);
+await assert(!!diaryDateChip && !diaryDateChip.includes("今天"), "diary app bar shows selected date");
+const diaryHeadDate = await page.$eval("#view-diary .diary-date-chip", (el) => el.textContent.trim());
+await assert(!!diaryHeadDate, "diary journal head shows date chip");
+const habitsNavOnDiary = await page.$eval('#nav [data-nav="habits"]', (el) =>
+  el.classList.contains("active")
+);
+await assert(habitsNavOnDiary, "habits nav stays active on diary page");
+await page.waitForSelector("#view-diary .diary-holiday-list [data-toggle-habit-holiday]");
+await page.click("#view-diary .diary-holiday-list [data-toggle-habit-holiday]");
+await page.waitForFunction(() => {
+  const b = document.querySelector("#view-diary .holiday-banner");
+  return b && b.textContent.includes("當日") && b.textContent.includes("放假");
+});
+const pastBanner = await page.$eval("#view-diary .holiday-banner", (el) => el.textContent);
+await assert(pastBanner.includes("當日") && !pastBanner.includes("今天"),
+  "past-day holiday banner uses 當日 not 今天");
+
+// Scenic themes available (+ theme-scene layer)
+await page.click('[data-nav="settings"]');
+await page.evaluate(() => document.querySelector('[data-settings="theme"]').click());
+await page.waitForSelector('[data-theme-pick="ocean"]');
+await page.waitForSelector('[data-theme-pick="nightcity"]');
+await page.waitForSelector('[data-theme-pick="forest"]');
+await page.waitForSelector('[data-theme-pick="aurora"]');
+await page.evaluate(() => document.querySelector('[data-theme-pick="ocean"]').click());
+const oceanTheme = await page.evaluate(() => ({
+  body: document.body.getAttribute("data-theme"),
+  scene: document.getElementById("themeScene") &&
+    document.getElementById("themeScene").getAttribute("data-scene")
+}));
+await assert(oceanTheme.body === "ocean" && oceanTheme.scene === "ocean",
+  "scenic ocean theme applies to body + themeScene");
+await page.evaluate(() => document.querySelector('[data-theme-pick="nightcity"]').click());
+const nightTheme = await page.evaluate(() => ({
+  body: document.body.getAttribute("data-theme"),
+  scene: document.getElementById("themeScene") &&
+    document.getElementById("themeScene").getAttribute("data-scene")
+}));
+await assert(nightTheme.body === "nightcity" && nightTheme.scene === "nightcity",
+  "scenic nightcity theme applies to body + themeScene");
+await page.evaluate(() => document.querySelector('[data-theme-pick="dusk"]').click());
+const duskTheme = await page.evaluate(() => document.body.getAttribute("data-theme"));
+await assert(duskTheme === "dusk", "scenic dusk theme applies");
 
 // Past completion must ignore habits created after that day (run last; reseeds storage)
 const pastRateStable = await page.evaluate(() => {

@@ -21,6 +21,7 @@
     habitDetailId: "",
     habitDetailMonth: startOfMonth(new Date()),
     habitsPanel: "today",
+    diaryDate: dateKey(new Date()),
     countdownUnit: "days",
     focus: {
       running: false,
@@ -50,6 +51,12 @@
     sunshine: "#f5ead8",
     sea: "#e7eef2",
     fire: "#f6e4d6",
+    ocean: "#cfe8f2",
+    nightcity: "#1a1f2e",
+    forest: "#e4efe6",
+    mountain: "#e8eef5",
+    aurora: "#1c2433",
+    dusk: "#f3e0d4",
     photo: "#f5ead8"
   };
 
@@ -1227,14 +1234,23 @@
   }
 
   function holidayBannerText(key) {
+    var dayWord = key === todayKey() ? "今天" : "當日";
     if (isFullDayHoliday(key)) {
-      return "今天全日放假——習慣已暫停，連續紀錄保留。";
+      return dayWord + "全日放假——習慣已暫停，連續紀錄保留。";
     }
     var excusedDue = state.habits.filter(function (h) {
       return !h.archived && isHabitHoliday(h, key) && habitScheduleDueOn(h, key);
     });
     if (!excusedDue.length) return "";
-    return "今日有 " + excusedDue.length + " 個習慣放假，其餘仍可打卡。連續紀錄保留。";
+    return dayWord + "有 " + excusedDue.length + " 個習慣放假，其餘仍可打卡。連續紀錄保留。";
+  }
+
+  function diaryDateChipLabel(key) {
+    key = key || todayKey();
+    var d = parseKey(key);
+    var label = (d.getMonth() + 1) + "月" + d.getDate() + "日";
+    if (key === todayKey()) return "今天 · " + label;
+    return label + " · 星期" + DOW[d.getDay()];
   }
 
   function captureDayJournalDraft(key) {
@@ -1253,17 +1269,17 @@
   function flushDayJournalDrafts() {
     captureDayJournalDraft(todayKey());
     if (ui.calSelected) captureDayJournalDraft(ui.calSelected);
+    if (ui.diaryDate) captureDayJournalDraft(ui.diaryDate);
   }
 
-  // Day journal + per-habit holiday picker (日記 panel + calendar day panel).
+  // Day journal: mood + comment (+ holiday reason). Per-habit holiday is on check-in rows (today)
+  // or the diary holiday list (past/future days opened from calendar).
   function dayJournalHtml(key, surface) {
     surface = surface || "main";
     var entry = getDayEntry(key) || normalizeDayEntry({ date: key });
     var mood = Number(entry.mood) || 0;
-    var holidayIds = holidayHabitIdList(key);
-    var holidayOn = holidayIds.length > 0;
+    var holidayOn = isHoliday(key);
     var fullDay = isFullDayHoliday(key);
-    var activeHabits = state.habits.filter(function (h) { return !h.archived; });
     var isToday = key === todayKey();
     var title = isToday ? "今日日記" : "當日日記";
     var moodAria = isToday ? "今日心情" : "當日心情";
@@ -1271,13 +1287,18 @@
     var html = '<div class="day-journal" data-day-journal="' + escAttr(key) +
       '" data-journal-surface="' + escAttr(surface) + '">';
     html += '<div class="day-journal-head"><span class="section-title">' + title + "</span>";
+    html += '<span class="date-chip diary-date-chip">' + esc(diaryDateChipLabel(key)) + "</span>";
     if (holidayOn) {
       html += '<span class="tag tag-accent-2">' +
-        (fullDay ? "全日放假" : ("部分放假 " + holidayIds.length)) +
+        (fullDay ? "全日放假" : ("部分放假 " + holidayHabitIdList(key).length)) +
         " · 連續保留</span>";
     }
     html += "</div>";
-    html += '<p class="tiny muted day-journal-hint">記錄心情與說明。下方可只為部分習慣放假（例如只放健身房）。</p>';
+    if (isToday) {
+      html += '<p class="tiny muted day-journal-hint">記錄心情與說明。個別習慣放假請在「今天」打卡列的放假按鈕設定。</p>';
+    } else {
+      html += '<p class="tiny muted day-journal-hint">記錄當日心情與說明。放假可在下方習慣列設定。</p>';
+    }
     html += '<div class="mood-row" role="group" aria-label="' + moodAria + '">';
     [1, 2, 3, 4, 5].forEach(function (n) {
       html += '<button type="button" class="mood-btn' + (mood === n ? " on" : "") +
@@ -1289,57 +1310,48 @@
     html += "</div>";
     html += '<div class="field day-journal-comment"><label for="dayComment-' + escAttr(uidSuffix) +
       '">說明</label><textarea id="dayComment-' + escAttr(uidSuffix) +
-      '" data-day-comment rows="3" placeholder="例如：颱風只影響健身房；今天太累；完成後感覺很好…">' +
+      '" data-day-comment rows="4" placeholder="例如：颱風只影響健身房；今天太累；完成後感覺很好…">' +
       esc(entry.comment || "") + "</textarea></div>";
-    html += '<div class="holiday-picker">';
-    html += '<div class="holiday-row">' +
-      '<span class="holiday-picker-label">哪些習慣放假？</span>' +
-      '<span class="tiny muted">未勾選的仍可打卡；放假不計未完成</span></div>';
-    if (!activeHabits.length) {
-      html += '<p class="tiny muted">新增習慣後，可指定個別放假。</p>';
-    } else {
-      html += '<div class="holiday-habit-list" role="group" aria-label="放假習慣">';
-      activeHabits.forEach(function (h) {
-        var on = holidayIds.indexOf(h.id) >= 0;
-        html += '<button type="button" class="holiday-habit-item' + (on ? " on" : "") +
-          '" data-toggle-habit-holiday="' + escAttr(h.id) +
-          '" data-day-key="' + escAttr(key) + '"' +
-          ' aria-pressed="' + (on ? "true" : "false") + '"' +
-          ' aria-label="' + escAttr((h.name || "未命名") + (on ? "，已放假" : "，未放假")) + '">' +
-          '<span class="holiday-habit-check" aria-hidden="true">' + (on ? "✓" : "") + "</span>" +
-          '<span class="holiday-habit-swatch" style="background:' + escAttr(h.color || colors()[0]) +
-          '" aria-hidden="true"></span>' +
-          '<span class="holiday-habit-name">' + esc(h.name || "未命名") + "</span></button>";
-      });
-      html += "</div>";
-      html += '<div class="holiday-row holiday-bulk">' +
-        '<button type="button" class="btn sm" data-holiday-select-all="' + escAttr(key) +
-        '">全選放假</button>' +
-        '<button type="button" class="btn sm ghost" data-holiday-clear-all="' + escAttr(key) +
-        '"' + (holidayOn ? "" : " disabled") + ">清除放假</button></div>";
-    }
     if (holidayOn) {
       html += '<div class="field"><label for="holidayReason-' + escAttr(uidSuffix) +
         '">放假原因</label><input id="holidayReason-' + escAttr(uidSuffix) +
         '" data-holiday-reason type="text" value="' + escAttr(entry.holidayReason || "") +
         '" placeholder="例如：颱風／旅行／病假" /></div>';
     }
-    html += "</div>";
     html += '<div class="row-actions"><button type="button" class="btn" data-save-day-journal="' +
       escAttr(key) + '">儲存日記</button></div>';
     html += "</div>";
     return html;
   }
 
-  // Compact entry on habits「今天」— full picker lives on「日記」panel.
+  // Compact holiday toggles for a non-today diary date (calendar → 日記).
+  function diaryHolidayListHtml(key) {
+    var due = state.habits.filter(function (h) {
+      return !h.archived && habitScheduleDueOn(h, key);
+    });
+    if (!due.length) return "";
+    var html = '<div class="diary-holiday-list"><div class="habit-group-label">當日放假</div>';
+    due.forEach(function (h) {
+      html += '<div class="excused-habit-row">' +
+        '<span class="holiday-habit-swatch" style="background:' + escAttr(h.color || colors()[0]) +
+        '" aria-hidden="true"></span>' +
+        '<span class="excused-habit-name">' + esc(h.name || "未命名") + "</span>" +
+        holidayBtnHtml(h, key) +
+        "</div>";
+    });
+    html += "</div>";
+    return html;
+  }
+
+  // Compact entry on habits「今天」→ opens dedicated diary page.
   function dayJournalGateHtml(key) {
     var entry = getDayEntry(key) || normalizeDayEntry({ date: key });
     var mood = Number(entry.mood) || 0;
     var holidayIds = holidayHabitIdList(key);
     var holidayOn = holidayIds.length > 0;
     var fullDay = isFullDayHoliday(key);
-    var html = '<button type="button" class="day-journal-gate" data-habits-panel="journal"' +
-      ' aria-label="打開今日日記與放假設定">';
+    var html = '<button type="button" class="day-journal-gate" data-open-diary="' + escAttr(key) + '"' +
+      ' aria-label="打開今日日記">';
     html += '<div class="day-journal-gate-head"><span class="section-title">今日日記</span>';
     if (holidayOn) {
       html += '<span class="tag tag-accent-2">' +
@@ -1348,7 +1360,7 @@
       html += '<span class="tag tag-accent">' + moodEmoji(mood) + " " + moodLabel(mood) + "</span>";
     }
     html += "</div>";
-    html += '<p class="tiny muted">記錄心情、說明，並設定個別習慣放假</p>';
+    html += '<p class="tiny muted">記錄心情與說明</p>';
     html += '<span class="day-journal-gate-cta">打開日記 →</span>';
     html += "</button>";
     return html;
@@ -1646,6 +1658,7 @@
 
   var VIEW_TITLES = {
     habits: "習慣",
+    diary: "日記",
     calendar: "日曆",
     countdown: "倒數",
     focus: "專注",
@@ -1653,6 +1666,9 @@
   };
 
   function appBarActionHtml(view) {
+    if (view === "diary") {
+      return '<button type="button" class="btn sm soft" data-nav="habits">返回習慣</button>';
+    }
     if (view === "habits") {
       return '<button type="button" class="icon-btn" data-action="add-habit" aria-label="新增習慣">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>';
@@ -1679,6 +1695,8 @@
     html += '<h1 class="app-bar-title">' + title + "</h1>";
     if (view === "habits") {
       html += '<span class="date-chip">' + dateChipLabel() + "</span>";
+    } else if (view === "diary") {
+      html += '<span class="date-chip">' + esc(diaryDateChipLabel(ui.diaryDate || todayKey())) + "</span>";
     }
     html += '</div><div class="app-bar-actions">' + appBarActionHtml(view);
     if (view === "habits") {
@@ -2038,8 +2056,21 @@
       '<div class="habit-row-meta">' + todayStatusText(h, key) + "</div>" +
       linkedGoalBadgeHtml(h) +
       "</button>" +
+      holidayBtnHtml(h, key) +
       '<button type="button" class="habit-row-chevron" data-habit-open="' + h.id + '" aria-label="詳情">' +
       chevronSvg + "</button></article>";
+  }
+
+  function holidayBtnHtml(h, key) {
+    key = key || todayKey();
+    var on = isHabitHoliday(h, key);
+    var dayBit = key === todayKey() ? "今天此習慣放假" : "此日此習慣放假";
+    return '<button type="button" class="habit-holiday-btn' + (on ? " on" : "") +
+      '" data-toggle-habit-holiday="' + escAttr(h.id) + '" data-day-key="' + escAttr(key) + '"' +
+      ' aria-pressed="' + (on ? "true" : "false") + '"' +
+      ' aria-label="' + (on ? "取消放假" : "設為放假") + '" title="' +
+      (on ? "取消放假" : dayBit) + '">' +
+      (on ? "取消" : "放假") + "</button>";
   }
 
   function todayUnifiedTimelineHtml() {
@@ -2105,11 +2136,11 @@
       return !h.archived && isHabitHoliday(h, key) && habitScheduleDueOn(h, key);
     });
     if (!todayHabits.length) {
-      if (isFullDayHoliday(key)) {
-        return '<div class="empty compact"><p>今天全日放假，習慣已暫停，連續紀錄保留。</p></div>';
-      }
       if (excused.length) {
-        return '<div class="empty compact"><p>今日應做的習慣都放假了，連續紀錄保留。</p></div>' +
+        var emptyMsg = isFullDayHoliday(key)
+          ? "今天全日放假，習慣已暫停，連續紀錄保留。"
+          : "今日應做的習慣都放假了，連續紀錄保留。";
+        return '<div class="empty compact"><p>' + emptyMsg + "</p></div>" +
           excusedHolidayListHtml(excused);
       }
       return '<div class="empty compact"><p>今天沒有需要完成的習慣</p>' +
@@ -2134,13 +2165,15 @@
   }
 
   function excusedHolidayListHtml(excused) {
+    var key = todayKey();
     var html = '<div class="excused-habits"><div class="habit-group-label">今日放假</div>';
     excused.forEach(function (h) {
       html += '<div class="excused-habit-row">' +
         '<span class="holiday-habit-swatch" style="background:' + escAttr(h.color || colors()[0]) +
         '" aria-hidden="true"></span>' +
-        '<span>' + esc(h.name || "未命名") + '</span>' +
-        '<span class="tag tag-accent-2">放假</span></div>';
+        '<span class="excused-habit-name">' + esc(h.name || "未命名") + "</span>" +
+        holidayBtnHtml(h, key) +
+        "</div>";
     });
     html += "</div>";
     return html;
@@ -2509,35 +2542,44 @@
     var key = todayKey();
     var todayHabits = state.habits.filter(function (h) { return !h.archived && habitDueOn(h, key); });
     var active = state.habits.filter(function (h) { return !h.archived; });
-    var panel = ui.habitsPanel || "today";
+    var panel = ui.habitsPanel === "board" ? "board" : "today";
     var html = todayStripHtml(todayHabits);
     html += weekSummaryHtml();
     html += '<div class="seg habits-seg">' +
       '<button type="button" data-habits-panel="today" class="' + (panel === "today" ? "on" : "") +
       '">今天</button>' +
-      '<button type="button" data-habits-panel="journal" class="' + (panel === "journal" ? "on" : "") +
-      '">日記</button>' +
       '<button type="button" data-habits-panel="board" class="' + (panel === "board" ? "on" : "") +
       '">儀表板</button></div>';
-    if (panel === "journal") {
-      html += dayJournalHtml(key, "habits");
-      var journalBanner = holidayBannerText(key);
-      if (journalBanner) html += '<div class="holiday-banner">' + esc(journalBanner) + "</div>";
-    } else if (!active.length) {
+    if (!active.length) {
       html += dayJournalGateHtml(key);
       html += emptyHabitsHtml();
     } else if (panel === "board") {
       html += habitBoardHtml(active);
       html += activeGoalsStripHtml();
     } else {
-      // Today: compact diary entry only — holiday picker lives on「日記」.
-      // Status already shows in today-strip + gate tag; skip extra banner.
       html += dayJournalGateHtml(key);
       html += todayUnifiedTimelineHtml();
       html += todayCheckinHtml(todayHabits);
       html += activeGoalsStripHtml();
     }
     document.getElementById("view-habits").innerHTML = html;
+  }
+
+  function renderDiary() {
+    var key = ui.diaryDate || todayKey();
+    var banner = holidayBannerText(key);
+    var html = '<div class="diary-page">';
+    if (key === todayKey()) {
+      html += '<p class="tiny muted diary-page-hint">日記專頁。放假請在習慣列的「放假」按鈕設定。</p>';
+    } else {
+      html += '<p class="tiny muted diary-page-hint">正在編輯 ' + esc(diaryDateChipLabel(key)) +
+        "。放假可在下方設定。</p>";
+    }
+    if (banner) html += '<div class="holiday-banner">' + esc(banner) + "</div>";
+    html += dayJournalHtml(key, "diary");
+    if (key !== todayKey()) html += diaryHolidayListHtml(key);
+    html += "</div>";
+    document.getElementById("view-diary").innerHTML = html;
   }
 
   function typeIcon(t) {
@@ -2912,6 +2954,9 @@
       (ui.calMode === "month" ? "on" : "") + '">月</button><button type="button" data-cal-mode="week" class="' +
       (ui.calMode === "week" ? "on" : "") + '">週</button><button type="button" data-cal-mode="timetable" class="' +
       (ui.calMode === "timetable" ? "on" : "") + '">時間表</button></div>';
+    if (ui.calMode !== "timetable") {
+      html += '<p class="tiny muted cal-page-hint">日曆專頁：查看達成、行程與習慣。日記請按當日「日記」。</p>';
+    }
 
     if (ui.calMode === "timetable") {
       html += renderTimetablePanel();
@@ -2983,13 +3028,14 @@
     html += '<div class="day-panel-head"><strong>' + selLabel + '</strong>' +
       '<span class="muted">星期' + DOW[parseKey(selected).getDay()] + '</span>' +
       (holidayToday ? '<span class="tag tag-accent-2">' + holidayTag + "</span>" : "") +
+      '<button type="button" class="btn sm soft" data-open-diary="' + escAttr(selected) +
+      '">日記</button>' +
       '<button type="button" class="btn sm soft" data-action="add-event">+ 行程</button></div>';
     html += '<div class="day-panel-stats">' +
       '<div class="stat-cell"><div class="label">達成率</div><div class="value">' +
       (rateIsRest ? "放假" : (selRate === null ? "—" : (selRate + "%"))) + '</div></div>' +
       '<div class="stat-cell"><div class="label">投入時數</div><div class="value">' + fmtMin(selMins) + "</div></div>" +
       "</div>";
-    html += dayJournalHtml(selected, "calendar");
     var selEvents = eventsForDate(selected);
     if (selEvents.length) {
       html += '<div class="section-title" style="padding-top:4px">當日行程</div><div class="cal-event-list">';
@@ -3905,9 +3951,16 @@
       { id: "sunshine", name: "Organic 暖沙", previewClass: "preview-sunshine" },
       { id: "sea", name: "Organic 海霧", previewClass: "preview-sea" },
       { id: "fire", name: "Organic 赤陶", previewClass: "preview-fire" },
+      { id: "ocean", name: "海岸晴空", previewClass: "preview-ocean" },
+      { id: "nightcity", name: "夜景城市", previewClass: "preview-nightcity" },
+      { id: "forest", name: "林間晨光", previewClass: "preview-forest" },
+      { id: "mountain", name: "山嵐薄霧", previewClass: "preview-mountain" },
+      { id: "aurora", name: "極光夜空", previewClass: "preview-aurora" },
+      { id: "dusk", name: "黃昏海岸", previewClass: "preview-dusk" },
       { id: "photo", name: "自訂相片", previewClass: "preview-photo", photo: state.settings.photoDataUrl }
     ];
     var html = '<div class="settings-group"><div class="settings-group-title">主題</div>';
+    html += '<p class="muted tiny" style="margin:0 16px 8px">風景主題會在背景顯示場景；亦可上傳自己的相片。</p>';
     html += '<div style="padding:12px 16px"><div class="theme-grid">';
     themes.forEach(function (th) {
       var previewStyle = th.photo ? ' style="background-image:linear-gradient(180deg,rgba(255,255,255,0.4),rgba(0,0,0,0.3)),url(' + th.photo + ');background-size:cover"' : "";
@@ -4082,24 +4135,29 @@
     document.querySelectorAll(".view").forEach(function (v) {
       v.classList.toggle("active", v.getAttribute("data-view") === name);
     });
+    // Diary is a child page of habits — keep 習慣 tab lit.
+    var navName = name === "diary" ? "habits" : name;
     document.querySelectorAll("#nav button").forEach(function (b) {
-      b.classList.toggle("active", b.getAttribute("data-nav") === name);
+      b.classList.toggle("active", b.getAttribute("data-nav") === navName);
     });
     render();
   }
 
   function render() {
+    // Capture unsaved diary fields before any re-render (incl. auto-sync).
+    flushDayJournalDrafts();
     applyTheme();
     renderAppBar();
     renderTopChips();
     if (ui.view === "habits") renderHabits();
+    else if (ui.view === "diary") renderDiary();
     else if (ui.view === "calendar") renderCalendar();
     else if (ui.view === "countdown") renderCountdown();
     else if (ui.view === "focus") renderFocus();
     else if (ui.view === "settings") renderSettings();
     var fab = document.getElementById("globalFab");
     if (fab) {
-      fab.hidden = ui.view === "calendar" && ui.calMode === "timetable";
+      fab.hidden = ui.view === "calendar" && ui.calMode === "timetable" || ui.view === "diary";
     }
     if (state.settings.notifyEnabled) scheduleHabitNotifications();
   }
@@ -4113,6 +4171,13 @@
   // Modal is outside #app — same handler must cover both, or detail「編輯／刪除」會失效。
   function handleUiClick(e) {
     var t = e.target;
+
+    // App-bar / in-page nav (e.g. 日記 → 返回習慣)
+    var inPageNav = t.closest("#app [data-nav], #modal [data-nav]");
+    if (inPageNav && !inPageNav.closest("#nav")) {
+      setView(inPageNav.getAttribute("data-nav"));
+      return;
+    }
 
     var navSettings = t.closest("[data-settings]");
     if (navSettings) {
@@ -4128,8 +4193,18 @@
     if (habitsPanel) {
       flushDayJournalDrafts();
       saveState();
-      ui.habitsPanel = habitsPanel.getAttribute("data-habits-panel");
+      var nextPanel = habitsPanel.getAttribute("data-habits-panel");
+      ui.habitsPanel = nextPanel === "board" ? "board" : "today";
       renderHabits();
+      return;
+    }
+
+    var openDiary = t.closest("[data-open-diary]");
+    if (openDiary) {
+      flushDayJournalDrafts();
+      saveState();
+      ui.diaryDate = openDiary.getAttribute("data-open-diary") || todayKey();
+      setView("diary");
       return;
     }
 
