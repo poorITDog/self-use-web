@@ -311,14 +311,17 @@
     if (syncStatus === "syncing") return "同步中";
     if (syncStatus === "failed") return "失敗";
     if (syncStatus === "synced") return "已同步";
-    return "未連接";
+    if (syncStatus === "needsAuth") return "需重新登入";
+    return "已連接";
   }
 
   function renderSyncChip() {
     var el = document.getElementById("syncChip");
     if (!el) return;
     el.className = "chip sync-chip sync-" + syncStatus;
-    el.setAttribute("title", "雲端同步狀態");
+    el.setAttribute("title", syncStatus === "needsAuth"
+      ? "登入已過期，點一下重新同步"
+      : "雲端同步狀態");
     el.setAttribute("aria-label", "雲端同步狀態：" + syncStatusLabel());
     el.innerHTML = "雲端 <strong>" + syncStatusLabel() + "</strong>";
   }
@@ -372,9 +375,13 @@
     });
   }
 
-  function getAccessToken(prompt) {
+  function getAccessToken(prompt, opts) {
+    opts = opts || {};
+    var interactive = opts.interactive !== false;
     var existing = getStoredToken();
     if (existing) return Promise.resolve(existing);
+    // Background/auto sync must never pop Google login — token expired until user taps sync.
+    if (!interactive) return Promise.resolve(null);
     return new Promise(function (resolve) {
       if (!googleTokenClient) initGoogleAuth();
       if (!googleTokenClient) {
@@ -473,9 +480,11 @@
       }
       return value;
     };
-    var p = getAccessToken("").then(function (token) {
+    // Manual sync may prompt; boot/interval sync stays silent if token expired.
+    var tokenOpts = { interactive: !!opts.force };
+    var p = getAccessToken(opts.force ? "" : "", tokenOpts).then(function (token) {
       if (!token) {
-        setSyncStatus("disconnected");
+        setSyncStatus(opts.force ? "failed" : "needsAuth");
         return runQueued();
       }
       return driveFindFile(token).then(function (file) {
@@ -576,7 +585,7 @@
     initGoogleAuth();
     if (!googleTokenClient) return toast("Google 登入載入中，請稍後再試");
     setSyncStatus("syncing");
-    getAccessToken("consent").then(function (token) {
+    getAccessToken("consent", { interactive: true }).then(function (token) {
       if (!token) {
         setSyncStatus("failed");
         toast("連接失敗");
@@ -1506,9 +1515,11 @@
     }
     html += '</div><div class="app-bar-actions">' + appBarActionHtml(view);
     if (view === "habits") {
-      html += '<span class="chip sync-chip sync-' + syncStatus +
-        '" id="syncChip" title="雲端同步狀態" aria-label="雲端同步狀態：' +
-        escAttr(syncStatusLabel()) + '">雲端 <strong>' + syncStatusLabel() + "</strong></span>";
+      html += '<button type="button" class="chip sync-chip sync-' + syncStatus +
+        '" id="syncChip" data-sync="drive-pull" title="' +
+        (syncStatus === "needsAuth" ? "登入已過期，點一下重新同步" : "點一下立即同步") +
+        '" aria-label="雲端同步狀態：' + escAttr(syncStatusLabel()) +
+        '">雲端 <strong>' + syncStatusLabel() + "</strong></button>";
     }
     html += "</div>";
     var bar = document.getElementById("appBar");
@@ -3700,7 +3711,7 @@
       '<span class="chip sync-chip sync-' + syncStatus + '">' + syncStatusLabel() + "</span></div>";
     html += '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
       '<p class="muted tiny" style="margin:0">Git 式同步：先拉取合併，再上傳（' + DRIVE_FILE +
-      "）。空本機不會覆寫雲端。</p></div>";
+      "）。空本機不會覆寫雲端。自動同步只會在登入仍然有效時背景運行；過期後不會彈出 Google 視窗，請按「立即同步」重新登入。</p></div>";
     html += '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
       '<label class="settings-row-label">OAuth Client ID</label>' +
       '<input id="googleClientId" value="' + escAttr(state.settings.googleClientId || "") +
