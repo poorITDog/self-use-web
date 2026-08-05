@@ -645,17 +645,67 @@ const calShowsHoliday = await page.$eval(".day-panel", (el) =>
 );
 await assert(calShowsHoliday, "calendar day panel shows holiday state tag");
 
-// Scenic themes available
+// Calendar → diary must open the *selected* (possibly non-today) date
+const selectedCalDay = await page.evaluate(() => {
+  const today = new Date();
+  const tKey = today.getFullYear() + "-" +
+    String(today.getMonth() + 1).padStart(2, "0") + "-" +
+    String(today.getDate()).padStart(2, "0");
+  const other = Array.from(document.querySelectorAll(".cal-day[data-day]"))
+    .find((el) => el.getAttribute("data-day") && el.getAttribute("data-day") !== tKey);
+  if (!other) return null;
+  other.click();
+  return other.getAttribute("data-day");
+});
+await assert(!!selectedCalDay, "found a non-today calendar day to select");
+await page.waitForFunction((key) => {
+  const btn = document.querySelector(".day-panel [data-open-diary]");
+  return btn && btn.getAttribute("data-open-diary") === key;
+}, {}, selectedCalDay);
+await page.click(".day-panel [data-open-diary]");
+await page.waitForFunction(() => {
+  const v = document.getElementById("view-diary");
+  return v && v.classList.contains("active");
+});
+const diaryOpenedFor = await page.$eval(
+  "#view-diary .day-journal",
+  (el) => el.getAttribute("data-day-journal")
+);
+await assert(
+  diaryOpenedFor === selectedCalDay,
+  "calendar diary opens journal for selected day (" + selectedCalDay + ")"
+);
+const diaryTitleLabel = await page.$eval("#view-diary .day-journal-head .section-title", (el) =>
+  el.textContent.trim()
+);
+await assert(diaryTitleLabel === "當日日記", "non-today diary uses 當日日記 title");
+
+// Scenic themes available (+ theme-scene layer)
 await page.click('[data-nav="settings"]');
 await page.evaluate(() => document.querySelector('[data-settings="theme"]').click());
 await page.waitForSelector('[data-theme-pick="ocean"]');
 await page.waitForSelector('[data-theme-pick="nightcity"]');
+await page.waitForSelector('[data-theme-pick="forest"]');
+await page.waitForSelector('[data-theme-pick="aurora"]');
 await page.evaluate(() => document.querySelector('[data-theme-pick="ocean"]').click());
-const oceanTheme = await page.evaluate(() => document.body.getAttribute("data-theme"));
-await assert(oceanTheme === "ocean", "scenic ocean theme applies");
+const oceanTheme = await page.evaluate(() => ({
+  body: document.body.getAttribute("data-theme"),
+  scene: document.getElementById("themeScene") &&
+    document.getElementById("themeScene").getAttribute("data-scene")
+}));
+await assert(oceanTheme.body === "ocean" && oceanTheme.scene === "ocean",
+  "scenic ocean theme applies to body + themeScene");
 await page.evaluate(() => document.querySelector('[data-theme-pick="nightcity"]').click());
-const nightTheme = await page.evaluate(() => document.body.getAttribute("data-theme"));
-await assert(nightTheme === "nightcity", "scenic nightcity theme applies");
+const nightTheme = await page.evaluate(() => ({
+  body: document.body.getAttribute("data-theme"),
+  scene: document.getElementById("themeScene") &&
+    document.getElementById("themeScene").getAttribute("data-scene")
+}));
+await assert(nightTheme.body === "nightcity" && nightTheme.scene === "nightcity",
+  "scenic nightcity theme applies to body + themeScene");
+await page.evaluate(() => document.querySelector('[data-theme-pick="dusk"]').click());
+const duskTheme = await page.evaluate(() => document.body.getAttribute("data-theme"));
+await assert(duskTheme === "dusk", "scenic dusk theme applies");
 
 // Past completion must ignore habits created after that day (run last; reseeds storage)
 const pastRateStable = await page.evaluate(() => {
