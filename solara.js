@@ -39,6 +39,8 @@
   var autoSyncTimer = null;
   var googleTokenClient = null;
   var tokenPromiseResolve = null;
+  // User dismissed Google login this session — don't auto-popup again until manual sync.
+  var authPromptSkipped = false;
   var notifyTimers = [];
   var notifyIntervalId = null;
   var audioCtx = null;
@@ -442,17 +444,20 @@
   }
 
   // Automatic git-like sync when connected + autoSync on.
-  function autoDriveSync() {
+  // opts.allowPrompt: boot / return-to-app may re-login once; interval stays silent.
+  function autoDriveSync(opts) {
+    opts = opts || {};
     if (!state.settings.googleConnected || state.settings.autoSync === false) {
       return Promise.resolve();
     }
-    return driveSync({ push: true });
+    return driveSync({ push: true, allowPrompt: !!opts.allowPrompt });
   }
 
   function startAutoSyncLoop() {
     clearInterval(autoSyncTimer);
     if (!state.settings.googleConnected || state.settings.autoSync === false) return;
     autoSyncTimer = setInterval(function () {
+      // Interval never pops login — only boot/return auto-logon may prompt.
       if (document.visibilityState === "visible") autoDriveSync();
     }, AUTO_SYNC_MS);
   }
@@ -480,13 +485,17 @@
       }
       return value;
     };
-    // Manual sync may prompt; boot/interval sync stays silent if token expired.
-    var tokenOpts = { interactive: !!opts.force };
+    // Manual force always prompts. Boot/return may prompt once for auto-logon.
+    // Interval / edit debounce stay silent so Google UI does not spam.
+    var wantInteractive = !!(opts.force || (opts.allowPrompt && !authPromptSkipped));
+    var tokenOpts = { interactive: wantInteractive };
     var p = getAccessToken(opts.force ? "" : "", tokenOpts).then(function (token) {
       if (!token) {
+        if (wantInteractive && !opts.force) authPromptSkipped = true;
         setSyncStatus(opts.force ? "failed" : "needsAuth");
         return runQueued();
       }
+      authPromptSkipped = false;
       return driveFindFile(token).then(function (file) {
         var loadRemote = !file
           ? Promise.resolve({ file: null, remote: null, remoteTs: 0 })
@@ -585,6 +594,7 @@
     initGoogleAuth();
     if (!googleTokenClient) return toast("Google 登入載入中，請稍後再試");
     setSyncStatus("syncing");
+    authPromptSkipped = false;
     getAccessToken("consent", { interactive: true }).then(function (token) {
       if (!token) {
         setSyncStatus("failed");
@@ -3891,7 +3901,7 @@
       '<span class="chip sync-chip sync-' + syncStatus + '">' + syncStatusLabel() + "</span></div>";
     html += '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
       '<p class="muted tiny" style="margin:0">Git 式同步：先拉取合併，再上傳（' + DRIVE_FILE +
-      "）。空本機不會覆寫雲端。自動同步只會在登入仍然有效時背景運行；過期後不會彈出 Google 視窗，請按「立即同步」重新登入。</p></div>";
+      "）。空本機不會覆寫雲端。開啟 App 或返回時會自動登入並同步；背景定時同步不會反覆彈出 Google 視窗。若你關閉登入視窗，可按「立即同步」再登。</p></div>";
     html += '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
       '<label class="settings-row-label">OAuth Client ID</label>' +
       '<input id="googleClientId" value="' + escAttr(state.settings.googleClientId || "") +
@@ -4515,8 +4525,9 @@
       state.settings.autoSync = e.target.checked;
       saveStateLocal();
       if (state.settings.autoSync) {
+        authPromptSkipped = false;
         startAutoSyncLoop();
-        autoDriveSync();
+        autoDriveSync({ allowPrompt: true });
         toast("已開啟自動同步");
       } else {
         clearInterval(autoSyncTimer);
@@ -4554,14 +4565,16 @@
     }
   });
 
-  // Auto fetch+merge when returning to the app (no manual button needed).
+  // Auto fetch+merge when returning to the app (re-login if token expired).
   document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState === "visible") autoDriveSync();
+    if (document.visibilityState === "visible") {
+      autoDriveSync({ allowPrompt: !getStoredToken() });
+    }
   });
 
-  // Auto fetch+merge when network comes back.
+  // Auto fetch+merge when network comes back (re-login if needed).
   window.addEventListener("online", function () {
-    autoDriveSync();
+    autoDriveSync({ allowPrompt: !getStoredToken() });
   });
 
   function bootSync() {
@@ -4572,7 +4585,8 @@
           setSyncStatus("synced");
         } else {
           setSyncStatus("syncing");
-          autoDriveSync();
+          // Auto-logon on open: may show Google once if the access token expired.
+          autoDriveSync({ allowPrompt: true });
           startAutoSyncLoop();
         }
       } else {
