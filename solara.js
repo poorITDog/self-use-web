@@ -1165,7 +1165,7 @@
       '<button type="button" class="btn sm' + (holidayOn ? "" : " soft") +
       '" data-toggle-holiday="' + escAttr(key) + '" aria-pressed="' + (holidayOn ? "true" : "false") + '">' +
       (holidayOn ? "已標記放假日" : "標記為放假日") + "</button>" +
-      '<span class="tiny muted">放假日不計未完成，連續打卡會保留</span></div>';
+      '<span class="tiny muted">放假日不計未完成，連續紀錄保留</span></div>';
     if (holidayOn) {
       html += '<div class="field"><label for="holidayReason-' + escAttr(uidSuffix) +
         '">放假原因</label><input id="holidayReason-' + escAttr(uidSuffix) +
@@ -1908,7 +1908,7 @@
   function todayCheckinHtml(todayHabits) {
     if (!todayHabits.length) {
       if (isHoliday(todayKey())) {
-        return '<div class="empty compact"><p>今天是放假日，習慣已暫停，連續紀錄會保留。</p></div>';
+        return '<div class="empty compact"><p>今天是放假日，習慣已暫停，連續紀錄保留。</p></div>';
       }
       return '<div class="empty compact"><p>今天沒有需要完成的習慣</p>' +
         '<button class="btn sm" data-action="add-habit">+ 新增習慣</button></div>';
@@ -2299,7 +2299,7 @@
     // Daily diary / holiday before timeline so mood is captured with the day.
     html += dayJournalHtml(key, "habits");
     if (isHoliday(key)) {
-      html += '<div class="holiday-banner">今天是放假日——習慣已暫停，連續打卡會保留。</div>';
+      html += '<div class="holiday-banner">今天是放假日——習慣已暫停，連續紀錄保留。</div>';
     }
     html += todayUnifiedTimelineHtml();
     html += '<div class="seg habits-seg"><button type="button" data-habits-panel="today" class="' +
@@ -4140,7 +4140,7 @@
         holidayReason: nextHoliday ? ((cur && cur.holidayReason) || "") : ""
       });
       saveState();
-      toast(nextHoliday ? "已標記放假日，連續打卡會保留" : "已取消放假日");
+      toast(nextHoliday ? "已標記放假日，連續紀錄保留" : "已取消放假日");
       render();
       return;
     }
