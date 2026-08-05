@@ -23,6 +23,7 @@ import {
   goalTypeLabel,
   normalizeDayEntry,
   isDayHoliday,
+  isHabitHoliday,
 } from "../solara-core.mjs";
 
 function test(name, fn) {
@@ -205,7 +206,7 @@ run("normalizeState fills dayEntries", () => {
 });
 
 run("habitDueOn respects holiday option", () => {
-  const habit = { frequency: [0, 1, 2, 3, 4, 5, 6] };
+  const habit = { id: "h1", frequency: [0, 1, 2, 3, 4, 5, 6] };
   assert.equal(habitDueOn(habit, "2026-08-04"), true);
   assert.equal(habitDueOn(habit, "2026-08-04", { holiday: true }), false);
   assert.equal(
@@ -216,12 +217,50 @@ run("habitDueOn respects holiday option", () => {
   );
 });
 
+run("habitDueOn respects per-habit holiday ids", () => {
+  const gym = { id: "gym", frequency: [0, 1, 2, 3, 4, 5, 6] };
+  const read = { id: "read", frequency: [0, 1, 2, 3, 4, 5, 6] };
+  const entries = [
+    {
+      date: "2026-08-04",
+      holiday: true,
+      holidayHabitIds: ["gym"],
+    },
+  ];
+  assert.equal(habitDueOn(gym, "2026-08-04", { dayEntries: entries }), false);
+  assert.equal(habitDueOn(read, "2026-08-04", { dayEntries: entries }), true);
+  assert.equal(isHabitHoliday(entries, "2026-08-04", "gym"), true);
+  assert.equal(isHabitHoliday(entries, "2026-08-04", "read"), false);
+  assert.equal(isDayHoliday(entries, "2026-08-04"), true);
+});
+
+run("legacy full-day holiday still excuses every habit", () => {
+  const gym = { id: "gym", frequency: [0, 1, 2, 3, 4, 5, 6] };
+  const entries = [{ date: "2026-08-04", holiday: true, holidayHabitIds: [] }];
+  assert.equal(habitDueOn(gym, "2026-08-04", { dayEntries: entries }), false);
+  assert.equal(isHabitHoliday(entries, "2026-08-04", "gym"), true);
+});
+
 run("isDayHoliday reads dayEntries", () => {
   assert.equal(isDayHoliday([], "2026-08-04"), false);
   assert.equal(
     isDayHoliday([{ date: "2026-08-04", holiday: true }], "2026-08-04"),
     true
   );
+});
+
+run("normalizeDayEntry keeps holidayHabitIds", () => {
+  const e = normalizeDayEntry({
+    date: "2026-08-04",
+    mood: 9,
+    holiday: 1,
+    holidayHabitIds: ["gym", "", "read"],
+    comment: "颱風",
+  });
+  assert.equal(e.mood, 5);
+  assert.equal(e.holiday, true);
+  assert.deepEqual(e.holidayHabitIds, ["gym", "read"]);
+  assert.equal(e.comment, "颱風");
 });
 
 run("mergeSyncState unions dayEntries by date", () => {
@@ -232,7 +271,15 @@ run("mergeSyncState unions dayEntries by date", () => {
   const remote = defaultState();
   remote.dayEntries = [
     { id: "b", date: "2026-08-03", mood: 5, comment: "remote", updatedAt: 5 },
-    { id: "c", date: "2026-08-04", mood: 4, comment: "typhoon", holiday: true, updatedAt: 1 },
+    {
+      id: "c",
+      date: "2026-08-04",
+      mood: 4,
+      comment: "typhoon",
+      holiday: true,
+      holidayHabitIds: ["gym"],
+      updatedAt: 1,
+    },
   ];
   const result = mergeSyncState(local, remote, 10);
   assert.equal(result.state.dayEntries.length, 2);
@@ -241,12 +288,14 @@ run("mergeSyncState unions dayEntries by date", () => {
   assert.equal(d3.mood, 5);
   const d4 = result.state.dayEntries.find((d) => d.date === "2026-08-04");
   assert.equal(d4.holiday, true);
+  assert.deepEqual(d4.holidayHabitIds, ["gym"]);
 });
 
 run("normalizeDayEntry clamps mood and flags holiday", () => {
   const e = normalizeDayEntry({ date: "2026-08-04", mood: 9, holiday: 1, comment: "颱風" });
   assert.equal(e.mood, 5);
   assert.equal(e.holiday, true);
+  assert.deepEqual(e.holidayHabitIds, []);
   assert.equal(e.comment, "颱風");
 });
 

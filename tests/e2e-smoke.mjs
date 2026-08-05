@@ -447,33 +447,45 @@ await assert(!!syncChip, "sync status chip visible");
 
 await assert(errors.filter((e) => !e.includes("favicon")).length === 0, "no page errors: " + JSON.stringify(errors));
 
-// Diary + holiday: mood, comment, holiday preserves due-skip
+// Diary + per-habit holiday: mood, comment, selective excuse
 await page.click('[data-nav="habits"]');
 await page.waitForSelector(".day-journal");
 await page.click('[data-mood="4"]');
 const moodOn = await page.$eval('.mood-btn[data-mood="4"]', (el) => el.classList.contains("on"));
 await assert(moodOn, "mood 4 selected");
-await page.click("[data-toggle-holiday]");
+
+// Partial holiday: excuse only the first habit checkbox
+await page.waitForSelector("[data-toggle-habit-holiday]");
+const firstHabitHolidayId = await page.$eval(
+  "[data-toggle-habit-holiday]",
+  (el) => el.getAttribute("data-toggle-habit-holiday")
+);
+await page.click("[data-toggle-habit-holiday]");
 await page.waitForSelector(".holiday-banner");
 const holidayBanner = await page.$(".holiday-banner");
 await assert(!!holidayBanner, "holiday banner shows on habits today");
 const bannerText = await page.$eval(".holiday-banner", (el) => el.textContent);
-await assert(bannerText.includes("放假日") && bannerText.includes("連續"), "holiday banner explains streak protect");
+await assert(
+  bannerText.includes("放假") && bannerText.includes("連續") && bannerText.includes("其餘"),
+  "partial holiday banner explains remaining check-ins"
+);
 await page.waitForSelector('input[id^="holidayReason-"]');
 const reasonSel = await page.$('input[id^="holidayReason-"]');
 await assert(!!reasonSel, "holiday reason field visible");
 await page.type('textarea[id^="dayComment-"]', "颱風停工，今天沒去健身房");
 await page.type('input[id^="holidayReason-"]', "颱風");
 await page.click("[data-save-day-journal]");
-await page.waitForFunction(() => {
+await page.waitForFunction((hid) => {
   const raw = JSON.parse(localStorage.getItem("solara-v1") || "{}");
   const today = new Date();
   const key = today.getFullYear() + "-" +
     String(today.getMonth() + 1).padStart(2, "0") + "-" +
     String(today.getDate()).padStart(2, "0");
   const e = (raw.dayEntries || []).find((d) => d.date === key);
-  return e && e.holiday && e.mood === 4 && (e.comment || "").includes("健身房");
-});
+  return e && e.holiday && e.mood === 4 &&
+    (e.holidayHabitIds || []).includes(hid) &&
+    (e.comment || "").includes("健身房");
+}, {}, firstHabitHolidayId);
 const journalSaved = await page.evaluate(() => {
   const raw = JSON.parse(localStorage.getItem("solara-v1") || "{}");
   const today = new Date();
@@ -484,31 +496,48 @@ const journalSaved = await page.evaluate(() => {
 });
 await assert(!!journalSaved && journalSaved.holiday && journalSaved.mood === 4,
   "day journal persisted with mood + holiday");
+await assert(
+  Array.isArray(journalSaved.holidayHabitIds) && journalSaved.holidayHabitIds.includes(firstHabitHolidayId),
+  "holidayHabitIds stores selected habit"
+);
 await assert((journalSaved.holidayReason || "").includes("颱風") ||
   (journalSaved.comment || "").includes("颱風"), "holiday reason or comment saved");
 
-// Mood click must not wipe unsaved comment (draft capture)
-await page.click("[data-toggle-holiday]"); // turn holiday off then on again for clean draft test
+// Remaining habits still checkable while one is on holiday
+const remainingChecks = await page.$$(".today-checkin .check-lg");
+await assert(remainingChecks.length >= 1, "non-holiday habits remain on today list");
+
+// Full-day via select-all
+await page.click("[data-holiday-select-all]");
+await page.waitForFunction(() => {
+  const b = document.querySelector(".holiday-banner");
+  return b && b.textContent.includes("全日放假");
+});
+const fullBanner = await page.$eval(".holiday-banner", (el) => el.textContent);
+await assert(fullBanner.includes("全日放假"), "select-all shows full-day holiday banner");
+
+// Clear holiday
+await page.click("[data-holiday-clear-all]");
 await page.waitForFunction(() => !document.querySelector(".holiday-banner"));
+
+// Mood click must not wipe unsaved comment (draft capture)
+await page.click("[data-toggle-habit-holiday]");
+await page.waitForSelector(".holiday-banner");
 await page.type('textarea[id^="dayComment-"]', "草稿測試");
 await page.click('[data-mood="2"]');
 const draftKept = await page.$eval('textarea[id^="dayComment-"]', (el) => el.value.includes("草稿測試"));
 await assert(draftKept, "mood change keeps unsaved journal draft");
 
-// Calendar day panel also shows journal
+// Calendar day panel also shows journal + partial holiday
 await page.click('[data-nav="calendar"]');
 await page.waitForSelector(".day-panel .day-journal");
-const calHoliday = await page.$eval(".day-panel", (el) => el.textContent.includes("放假"));
-await assert(calHoliday || true, "calendar day panel reachable with journal");
-// Re-enable holiday for calendar badge check
-await page.click('[data-nav="habits"]');
-await page.waitForSelector("[data-toggle-holiday]");
-const holidayPressed = await page.$eval("[data-toggle-holiday]", (el) => el.getAttribute("aria-pressed"));
-if (holidayPressed !== "true") await page.click("[data-toggle-holiday]");
-await page.click('[data-nav="calendar"]');
-await page.waitForSelector(".day-panel");
-const calShowsHoliday = await page.$eval(".day-panel", (el) => el.textContent.includes("放假"));
+const calShowsHoliday = await page.$eval(".day-panel", (el) =>
+  el.textContent.includes("放假") || el.textContent.includes("部分放假")
+);
 await assert(calShowsHoliday, "calendar day panel shows holiday state");
+await page.waitForSelector(".day-panel [data-toggle-habit-holiday]");
+const calPicker = await page.$(".day-panel .holiday-habit-list");
+await assert(!!calPicker, "calendar journal has per-habit holiday picker");
 
 // Past completion must ignore habits created after that day (run last; reseeds storage)
 const pastRateStable = await page.evaluate(() => {
