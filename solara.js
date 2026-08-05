@@ -1238,8 +1238,8 @@
   }
 
   function captureDayJournalDraft(key) {
-    var root = document.querySelector('.view.active .day-journal[data-day-journal="' + key + '"]') ||
-      document.querySelector('.day-journal[data-day-journal="' + key + '"]');
+    // Only the active view — a hidden calendar journal must not overwrite habits drafts.
+    var root = document.querySelector('.view.active .day-journal[data-day-journal="' + key + '"]');
     if (!root) return;
     var commentEl = root.querySelector("textarea[data-day-comment]");
     var reasonEl = root.querySelector("input[data-holiday-reason]");
@@ -1247,6 +1247,12 @@
     if (commentEl) patch.comment = commentEl.value.trim();
     if (reasonEl) patch.holidayReason = reasonEl.value.trim();
     if (Object.keys(patch).length) upsertDayEntry(key, patch);
+  }
+
+  // Persist in-progress journal fields before a re-render that would wipe the DOM.
+  function flushDayJournalDrafts() {
+    captureDayJournalDraft(todayKey());
+    if (ui.calSelected) captureDayJournalDraft(ui.calSelected);
   }
 
   // Day journal + per-habit holiday picker (日記 panel + calendar day panel).
@@ -4071,6 +4077,8 @@
   }
 
   function setView(name) {
+    flushDayJournalDrafts();
+    saveState();
     ui.view = name;
     document.querySelectorAll(".view").forEach(function (v) {
       v.classList.toggle("active", v.getAttribute("data-view") === name);
@@ -4119,6 +4127,8 @@
 
     var habitsPanel = t.closest("[data-habits-panel]");
     if (habitsPanel) {
+      flushDayJournalDrafts();
+      saveState();
       ui.habitsPanel = habitsPanel.getAttribute("data-habits-panel");
       renderHabits();
       return;
