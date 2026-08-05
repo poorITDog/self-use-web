@@ -357,6 +357,11 @@ export function shouldPushAfterMerge(result, hasRemoteFile) {
 /** Normalize one day journal/holiday entry. */
 export function normalizeDayEntry(raw) {
   const d = raw || {};
+  const ids = Array.isArray(d.holidayHabitIds)
+    ? d.holidayHabitIds.map(String).filter(Boolean)
+    : [];
+  // holiday true with empty ids = legacy full-day holiday
+  const holiday = ids.length > 0 ? true : !!d.holiday;
   return Object.assign(
     {
       id: "",
@@ -364,6 +369,7 @@ export function normalizeDayEntry(raw) {
       mood: 0,
       comment: "",
       holiday: false,
+      holidayHabitIds: [],
       holidayReason: "",
       updatedAt: 0,
     },
@@ -371,7 +377,8 @@ export function normalizeDayEntry(raw) {
     {
       mood: Math.max(0, Math.min(5, Number(d.mood) || 0)),
       comment: String(d.comment || ""),
-      holiday: !!d.holiday,
+      holiday,
+      holidayHabitIds: ids,
       holidayReason: String(d.holidayReason || ""),
       date: String(d.date || ""),
     }
@@ -380,12 +387,26 @@ export function normalizeDayEntry(raw) {
 
 export function isDayHoliday(dayEntries, key) {
   const e = (dayEntries || []).find((d) => d && d.date === key);
-  return !!(e && e.holiday);
+  if (!e) return false;
+  if (e.holidayHabitIds && e.holidayHabitIds.length) return true;
+  return !!e.holiday;
+}
+
+/** True if this habit is excused on key (per-habit or legacy full-day). */
+export function isHabitHoliday(dayEntries, key, habitId) {
+  const e = (dayEntries || []).find((d) => d && d.date === key);
+  if (!e || !habitId) return false;
+  if (e.holidayHabitIds && e.holidayHabitIds.length) {
+    return e.holidayHabitIds.map(String).includes(String(habitId));
+  }
+  return !!e.holiday;
 }
 
 export function habitDueOn(habit, key, opts) {
   if (opts && opts.holiday) return false;
-  if (opts && opts.dayEntries && isDayHoliday(opts.dayEntries, key)) return false;
+  if (opts && opts.dayEntries && habit && isHabitHoliday(opts.dayEntries, key, habit.id)) {
+    return false;
+  }
   const d = parseKey(key).getDay();
   const freq = (habit.frequency || [0, 1, 2, 3, 4, 5, 6]).map(Number);
   if (!freq.includes(d)) return false;
@@ -403,6 +424,32 @@ export function isHabitDone(habit, checkin) {
     return Number(checkin.minutes || checkin.value || 0) >= Number(habit.target || 1);
   }
   return !!checkin.value;
+}
+
+// Current streak ending at fromMs. Excused days skip without break;
+// completed days that were later excused still count.
+export function streakForHabit(habit, checkins, dayEntries, fromMs) {
+  let n = 0;
+  const d = new Date(fromMs != null ? fromMs : Date.now());
+  const opts = { dayEntries: dayEntries || [] };
+  for (let i = 0; i < 400; i++) {
+    const key = dateKey(d);
+    const due = habitDueOn(habit, key, opts);
+    const cin = (checkins || []).find((c) => c.habitId === habit.id && c.date === key);
+    const done = isHabitDone(habit, cin);
+    if (!due) {
+      if (isHabitHoliday(opts.dayEntries, key, habit.id) && done) n++;
+      d.setDate(d.getDate() - 1);
+      continue;
+    }
+    if (done) {
+      n++;
+      d.setDate(d.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return n;
 }
 
 /** Next occurrence timestamp for recurring countdowns. */
