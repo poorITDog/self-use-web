@@ -21,6 +21,8 @@ import {
   isGoalFinished,
   goalUnitLabel,
   goalTypeLabel,
+  normalizeDayEntry,
+  isDayHoliday,
 } from "../solara-core.mjs";
 
 function test(name, fn) {
@@ -196,6 +198,58 @@ run("habitDueOn ignores updatedAt so edits do not rewrite the past", () => {
   };
   assert.equal(habitDueOn(habit, "2026-08-03"), true);
 });
+
+run("normalizeState fills dayEntries", () => {
+  const s = normalizeState({});
+  assert.deepEqual(s.dayEntries, []);
+});
+
+run("habitDueOn respects holiday option", () => {
+  const habit = { frequency: [0, 1, 2, 3, 4, 5, 6] };
+  assert.equal(habitDueOn(habit, "2026-08-04"), true);
+  assert.equal(habitDueOn(habit, "2026-08-04", { holiday: true }), false);
+  assert.equal(
+    habitDueOn(habit, "2026-08-04", {
+      dayEntries: [{ date: "2026-08-04", holiday: true }],
+    }),
+    false
+  );
+});
+
+run("isDayHoliday reads dayEntries", () => {
+  assert.equal(isDayHoliday([], "2026-08-04"), false);
+  assert.equal(
+    isDayHoliday([{ date: "2026-08-04", holiday: true }], "2026-08-04"),
+    true
+  );
+});
+
+run("mergeSyncState unions dayEntries by date", () => {
+  const local = defaultState();
+  local.dayEntries = [
+    { id: "a", date: "2026-08-03", mood: 3, comment: "local", updatedAt: 2 },
+  ];
+  const remote = defaultState();
+  remote.dayEntries = [
+    { id: "b", date: "2026-08-03", mood: 5, comment: "remote", updatedAt: 5 },
+    { id: "c", date: "2026-08-04", mood: 4, comment: "typhoon", holiday: true, updatedAt: 1 },
+  ];
+  const result = mergeSyncState(local, remote, 10);
+  assert.equal(result.state.dayEntries.length, 2);
+  const d3 = result.state.dayEntries.find((d) => d.date === "2026-08-03");
+  assert.equal(d3.comment, "remote");
+  assert.equal(d3.mood, 5);
+  const d4 = result.state.dayEntries.find((d) => d.date === "2026-08-04");
+  assert.equal(d4.holiday, true);
+});
+
+run("normalizeDayEntry clamps mood and flags holiday", () => {
+  const e = normalizeDayEntry({ date: "2026-08-04", mood: 9, holiday: 1, comment: "颱風" });
+  assert.equal(e.mood, 5);
+  assert.equal(e.holiday, true);
+  assert.equal(e.comment, "颱風");
+});
+
 
 run("isHabitDone yesno/count/duration", () => {
   assert.equal(isHabitDone({ type: "yesno", target: 1 }, { value: 1 }), true);

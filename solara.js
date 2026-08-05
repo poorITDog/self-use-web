@@ -194,6 +194,7 @@
       focusSessions: [],
       goals: [],
       events: [],
+      dayEntries: [],
       tombstones: {}
     };
   }
@@ -225,9 +226,10 @@
         repeat: c.repeat || (kind === "birthday" ? "yearly" : "none")
       });
     });
-    ["habits", "checkins", "blocks", "countdowns", "focusSessions", "goals", "events"].forEach(function (k) {
+    ["habits", "checkins", "blocks", "countdowns", "focusSessions", "goals", "events", "dayEntries"].forEach(function (k) {
       if (!Array.isArray(out[k])) out[k] = [];
     });
+    out.dayEntries = out.dayEntries.map(function (d) { return normalizeDayEntry(d); });
     out.habits = out.habits.map(function (h) {
       var next = h && h.group === "朝早" ? Object.assign({}, h, { group: "早上" }) : (h || {});
       if (next.timeEnd === undefined) next.timeEnd = "";
@@ -612,7 +614,8 @@
     return (n.habits.length || 0) + (n.checkins.length || 0) +
       (n.events.length || 0) + (n.countdowns.length || 0) +
       (n.goals.length || 0) + (n.blocks.length || 0) +
-      (n.focusSessions.length || 0) + ((n.transactions && n.transactions.length) || 0);
+      (n.focusSessions.length || 0) + ((n.dayEntries && n.dayEntries.length) || 0) +
+      ((n.transactions && n.transactions.length) || 0);
   }
 
   function mergeTombstones(a, b) {
@@ -628,7 +631,9 @@
     return (list || []).filter(function (item) {
       if (!item) return false;
       var key = item.id;
-      var alt = item.habitId && item.date ? item.habitId + "|" + item.date : "";
+      var alt = "";
+      if (item.habitId && item.date) alt = item.habitId + "|" + item.date;
+      else if (item.date && !item.habitId) alt = "day|" + item.date;
       var delAt = Math.max(Number(stones[key]) || 0, Number(stones[alt]) || 0);
       if (!delAt) return true;
       return (Number(item.updatedAt) || 0) > delAt;
@@ -715,6 +720,12 @@
     );
     merged.events = applyTombstones(
       mergeEntityLists(localNorm.events, remoteNorm.events, function (x) { return x.id; }),
+      merged.tombstones
+    );
+    merged.dayEntries = applyTombstones(
+      mergeEntityLists(localNorm.dayEntries || [], remoteNorm.dayEntries || [], function (x) {
+        return x.date || x.id;
+      }),
       merged.tombstones
     );
     if (localNorm.transactions || remoteNorm.transactions) {
@@ -958,7 +969,64 @@
     img.src = dataUrl;
   }
 
+  function normalizeDayEntry(raw) {
+    var d = raw || {};
+    return Object.assign({
+      id: "",
+      date: "",
+      mood: 0,
+      comment: "",
+      holiday: false,
+      holidayReason: "",
+      updatedAt: 0
+    }, d, {
+      mood: Math.max(0, Math.min(5, Number(d.mood) || 0)),
+      comment: String(d.comment || ""),
+      holiday: !!d.holiday,
+      holidayReason: String(d.holidayReason || ""),
+      date: String(d.date || "")
+    });
+  }
+
+  function getDayEntry(key) {
+    return (state.dayEntries || []).find(function (d) { return d.date === key; }) || null;
+  }
+
+  function isHoliday(key) {
+    var e = getDayEntry(key);
+    return !!(e && e.holiday);
+  }
+
+  function upsertDayEntry(key, patch) {
+    var existing = getDayEntry(key);
+    var now = Date.now();
+    if (existing) {
+      Object.assign(existing, patch);
+      existing.date = key;
+      touch(existing);
+      return existing;
+    }
+    var created = touch(normalizeDayEntry(Object.assign({
+      id: uid(),
+      date: key,
+      createdAt: now
+    }, patch)));
+    state.dayEntries.push(created);
+    return created;
+  }
+
+  function moodLabel(n) {
+    var map = { 1: "很低落", 2: "不太好", 3: "平常", 4: "不錯", 5: "很好" };
+    return map[n] || "";
+  }
+
+  function moodEmoji(n) {
+    var map = { 1: "😔", 2: "😕", 3: "😐", 4: "🙂", 5: "😄" };
+    return map[n] || "·";
+  }
+
   function habitDueOn(habit, key) {
+    if (isHoliday(key)) return false;
     var d = parseKey(key).getDay();
     var freq = (habit.frequency || [0, 1, 2, 3, 4, 5, 6]).map(Number);
     if (freq.indexOf(d) < 0) return false;
@@ -987,6 +1055,8 @@
     for (var i = 0; i < 400; i++) {
       var key = dateKey(d);
       if (!habitDueOn(habit, key)) {
+        // Holiday after check-in: still count completed days toward streak.
+        if (isHoliday(key) && isHabitDone(habit, key)) n++;
         d.setDate(d.getDate() - 1);
         continue;
       }
@@ -1041,10 +1111,71 @@
   }
 
   function completionRate(key) {
+    if (isHoliday(key)) return null;
     var due = state.habits.filter(function (h) { return !h.archived && habitDueOn(h, key); });
     if (!due.length) return 0;
     var done = due.filter(function (h) { return isHabitDone(h, key); }).length;
     return Math.round((done / due.length) * 100);
+  }
+
+  function captureDayJournalDraft(key) {
+    var root = document.querySelector('.view.active .day-journal[data-day-journal="' + key + '"]') ||
+      document.querySelector('.day-journal[data-day-journal="' + key + '"]');
+    if (!root) return;
+    var commentEl = root.querySelector("textarea[data-day-comment]");
+    var reasonEl = root.querySelector("input[data-holiday-reason]");
+    var patch = {};
+    if (commentEl) patch.comment = commentEl.value.trim();
+    if (reasonEl) patch.holidayReason = reasonEl.value.trim();
+    if (Object.keys(patch).length) upsertDayEntry(key, patch);
+  }
+
+  // Day journal + holiday card (calendar day panel + habits today)
+  function dayJournalHtml(key, surface) {
+    surface = surface || "main";
+    var entry = getDayEntry(key) || normalizeDayEntry({ date: key });
+    var mood = Number(entry.mood) || 0;
+    var holidayOn = !!entry.holiday;
+    var isToday = key === todayKey();
+    var title = isToday ? "今日日記" : "當日日記";
+    var moodAria = isToday ? "今日心情" : "當日心情";
+    var uidSuffix = surface + "-" + key;
+    var html = '<div class="day-journal" data-day-journal="' + escAttr(key) +
+      '" data-journal-surface="' + escAttr(surface) + '">';
+    html += '<div class="day-journal-head"><span class="section-title">' + title + "</span>";
+    if (holidayOn) {
+      html += '<span class="tag tag-accent-2">放假 · 連續紀錄保留</span>';
+    }
+    html += "</div>";
+    html += '<p class="tiny muted day-journal-hint">記錄心情與說明，例如為什麼今天沒做運動。</p>';
+    html += '<div class="mood-row" role="group" aria-label="' + moodAria + '">';
+    [1, 2, 3, 4, 5].forEach(function (n) {
+      html += '<button type="button" class="mood-btn' + (mood === n ? " on" : "") +
+        '" data-mood="' + n + '" data-day-key="' + escAttr(key) + '"' +
+        ' aria-label="' + moodLabel(n) + '" aria-pressed="' + (mood === n ? "true" : "false") + '">' +
+        '<span class="mood-emoji" aria-hidden="true">' + moodEmoji(n) + "</span>" +
+        '<span class="mood-caption">' + moodLabel(n) + "</span></button>";
+    });
+    html += "</div>";
+    html += '<div class="field day-journal-comment"><label for="dayComment-' + escAttr(uidSuffix) +
+      '">說明</label><textarea id="dayComment-' + escAttr(uidSuffix) +
+      '" data-day-comment rows="3" placeholder="例如：颱風停工；今天太累沒去健身房；完成後感覺很好…">' +
+      esc(entry.comment || "") + "</textarea></div>";
+    html += '<div class="holiday-row">' +
+      '<button type="button" class="btn sm' + (holidayOn ? "" : " soft") +
+      '" data-toggle-holiday="' + escAttr(key) + '" aria-pressed="' + (holidayOn ? "true" : "false") + '">' +
+      (holidayOn ? "已標記放假日" : "標記為放假日") + "</button>" +
+      '<span class="tiny muted">放假日不計未完成，連續紀錄保留</span></div>';
+    if (holidayOn) {
+      html += '<div class="field"><label for="holidayReason-' + escAttr(uidSuffix) +
+        '">放假原因</label><input id="holidayReason-' + escAttr(uidSuffix) +
+        '" data-holiday-reason type="text" value="' + escAttr(entry.holidayReason || "") +
+        '" placeholder="例如：颱風／旅行／病假" /></div>';
+    }
+    html += '<div class="row-actions"><button type="button" class="btn" data-save-day-journal="' +
+      escAttr(key) + '">儲存日記</button></div>';
+    html += "</div>";
+    return html;
   }
 
   function typeLabel(t) {
@@ -1418,16 +1549,25 @@
 
   function todayStripHtml(todayHabits) {
     var key = todayKey();
+    var holiday = isHoliday(key);
     var doneCount = todayHabits.filter(function (h) { return isHabitDone(h, key); }).length;
     var total = todayHabits.length;
     var rate = total ? Math.round((doneCount / total) * 100) : 0;
     var html = '<div class="today-strip">';
     html += '<div class="today-strip-head">';
-    html += '<div class="today-progress-text">已完成 <strong>' + doneCount + "/" + total +
-      '</strong><span class="stat-sep" aria-hidden="true">·</span>投入 <strong>' +
-      fmtMin(minutesOnDate(key)) + "</strong></div>";
-    html += progressRingHtml(rate, 48) + "</div>";
-    html += '<div class="progress-bar-slim"><i style="width:' + rate + '%"></i></div>';
+    if (holiday) {
+      html += '<div class="today-progress-text">今天放假 <strong>連續紀錄保留</strong>' +
+        '<span class="stat-sep" aria-hidden="true">·</span>投入 <strong>' +
+        fmtMin(minutesOnDate(key)) + "</strong></div>";
+      html += '<div class="holiday-chip-ring" aria-label="放假日">假</div></div>';
+      html += '<div class="tiny muted" style="margin-top:8px">放假日不會計入未完成。</div>';
+    } else {
+      html += '<div class="today-progress-text">已完成 <strong>' + doneCount + "/" + total +
+        '</strong><span class="stat-sep" aria-hidden="true">·</span>投入 <strong>' +
+        fmtMin(minutesOnDate(key)) + "</strong></div>";
+      html += progressRingHtml(rate, 48) + "</div>";
+      html += '<div class="progress-bar-slim"><i style="width:' + rate + '%"></i></div>';
+    }
     var agenda = eventsForDate(key);
     if (agenda.length) {
       html += '<div class="today-agenda">';
@@ -1767,6 +1907,9 @@
 
   function todayCheckinHtml(todayHabits) {
     if (!todayHabits.length) {
+      if (isHoliday(todayKey())) {
+        return '<div class="empty compact"><p>今天是放假日，習慣已暫停，連續紀錄保留。</p></div>';
+      }
       return '<div class="empty compact"><p>今天沒有需要完成的習慣</p>' +
         '<button class="btn sm" data-action="add-habit">+ 新增習慣</button></div>';
     }
@@ -2153,7 +2296,11 @@
     var panel = ui.habitsPanel || "today";
     var html = todayStripHtml(todayHabits);
     html += weekSummaryHtml();
-    // Daily tasks / habits first; goals come after so the first page opens on today's work.
+    // Daily diary / holiday before timeline so mood is captured with the day.
+    html += dayJournalHtml(key, "habits");
+    if (isHoliday(key)) {
+      html += '<div class="holiday-banner">今天是放假日——習慣已暫停，連續紀錄保留。</div>';
+    }
     html += todayUnifiedTimelineHtml();
     html += '<div class="seg habits-seg"><button type="button" data-habits-panel="today" class="' +
       (panel === "today" ? "on" : "") + '">今天</button><button type="button" data-habits-panel="board" class="' +
@@ -2565,11 +2712,13 @@
       for (var day = 1; day <= daysInMonth; day++) {
         var key = dateKey(new Date(y, m, day));
         var rate = completionRate(key);
+        var dayHoliday = isHoliday(key);
         var cls = "cal-day";
         if (key === todayKey()) cls += " today";
         if (key === selected) cls += " selected";
-        if (rate > 0) cls += " has-heat";
-        var heatStyle = rate > 0 ? ' style="--heat:' + Math.max(0.12, rate / 100) + '"' : "";
+        if (dayHoliday) cls += " holiday";
+        else if (rate > 0) cls += " has-heat";
+        var heatStyle = !dayHoliday && rate > 0 ? ' style="--heat:' + Math.max(0.12, rate / 100) + '"' : "";
         var dayEvts = eventsForDate(key);
         var dotsHtml = "";
         if (dayEvts.length) {
@@ -2581,7 +2730,8 @@
         }
         html += '<button type="button" class="' + cls + '" data-day="' + key + '"' + heatStyle + ">" +
           '<span class="cal-day-num">' + day + "</span>" +
-          (rate > 0 ? '<span class="cal-day-pct">' + rate + "%</span>" : "") +
+          (dayHoliday ? '<span class="cal-day-pct">假</span>' :
+            (rate > 0 ? '<span class="cal-day-pct">' + rate + "%</span>" : "")) +
           dotsHtml +
           "</button>";
       }
@@ -2591,14 +2741,18 @@
     var selRate = completionRate(selected);
     var selMins = minutesOnDate(selected);
     var selLabel = selected === todayKey() ? "今天" : selected.slice(5).replace("-", "月") + "日";
+    var holidayToday = isHoliday(selected);
     html += '<div class="day-panel">';
     html += '<div class="day-panel-head"><strong>' + selLabel + '</strong>' +
       '<span class="muted">星期' + DOW[parseKey(selected).getDay()] + '</span>' +
+      (holidayToday ? '<span class="tag tag-accent-2">放假</span>' : "") +
       '<button type="button" class="btn sm soft" data-action="add-event">+ 行程</button></div>';
     html += '<div class="day-panel-stats">' +
-      '<div class="stat-cell"><div class="label">達成率</div><div class="value">' + selRate + '%</div></div>' +
+      '<div class="stat-cell"><div class="label">達成率</div><div class="value">' +
+      (holidayToday ? "放假" : (selRate + "%")) + '</div></div>' +
       '<div class="stat-cell"><div class="label">投入時數</div><div class="value">' + fmtMin(selMins) + "</div></div>" +
       "</div>";
+    html += dayJournalHtml(selected, "calendar");
     var selEvents = eventsForDate(selected);
     if (selEvents.length) {
       html += '<div class="section-title" style="padding-top:4px">當日行程</div><div class="cal-event-list">';
@@ -3546,7 +3700,7 @@
       '<span class="chip sync-chip sync-' + syncStatus + '">' + syncStatusLabel() + "</span></div>";
     html += '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
       '<p class="muted tiny" style="margin:0">Git 式同步：先拉取合併，再上傳（' + DRIVE_FILE +
-      "）。空本機唔會覆寫雲端。</p></div>";
+      "）。空本機不會覆寫雲端。</p></div>";
     html += '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
       '<label class="settings-row-label">OAuth Client ID</label>' +
       '<input id="googleClientId" value="' + escAttr(state.settings.googleClientId || "") +
@@ -3961,6 +4115,53 @@
     if (dayBtn) {
       ui.calSelected = dayBtn.getAttribute("data-day");
       renderCalendar();
+      return;
+    }
+
+    var moodBtn = t.closest("[data-mood]");
+    if (moodBtn) {
+      var moodKey = moodBtn.getAttribute("data-day-key") || todayKey();
+      var moodVal = Number(moodBtn.getAttribute("data-mood")) || 0;
+      captureDayJournalDraft(moodKey);
+      upsertDayEntry(moodKey, { mood: moodVal });
+      saveState();
+      render();
+      return;
+    }
+
+    var holidayBtn = t.closest("[data-toggle-holiday]");
+    if (holidayBtn) {
+      var hKey = holidayBtn.getAttribute("data-toggle-holiday");
+      captureDayJournalDraft(hKey);
+      var cur = getDayEntry(hKey);
+      var nextHoliday = !(cur && cur.holiday);
+      upsertDayEntry(hKey, {
+        holiday: nextHoliday,
+        holidayReason: nextHoliday ? ((cur && cur.holidayReason) || "") : ""
+      });
+      saveState();
+      toast(nextHoliday ? "已標記放假日，連續紀錄保留" : "已取消放假日");
+      render();
+      return;
+    }
+
+    var saveJournal = t.closest("[data-save-day-journal]");
+    if (saveJournal) {
+      var jKey = saveJournal.getAttribute("data-save-day-journal");
+      var root = saveJournal.closest(".day-journal") ||
+        document.querySelector('.view.active .day-journal[data-day-journal="' + jKey + '"]');
+      var commentEl = root ? root.querySelector("textarea[data-day-comment]") : null;
+      var reasonEl = root ? root.querySelector("input[data-holiday-reason]") : null;
+      var existing = getDayEntry(jKey) || {};
+      upsertDayEntry(jKey, {
+        comment: commentEl ? commentEl.value.trim() : (existing.comment || ""),
+        holidayReason: reasonEl ? reasonEl.value.trim() : (existing.holidayReason || ""),
+        mood: Number(existing.mood) || 0,
+        holiday: !!existing.holiday
+      });
+      saveState();
+      toast("日記已儲存");
+      render();
       return;
     }
 

@@ -57,6 +57,7 @@ export function defaultState() {
     focusSessions: [],
     goals: [],
     events: [],
+    dayEntries: [],
     transactions: [],
     // id → deletedAt — keeps hard deletes from resurrecting on union merge
     tombstones: {},
@@ -78,10 +79,12 @@ export function normalizeState(data) {
     "focusSessions",
     "goals",
     "events",
+    "dayEntries",
     "transactions",
   ]) {
     if (!Array.isArray(out[k])) out[k] = [];
   }
+  out.dayEntries = out.dayEntries.map((d) => normalizeDayEntry(d));
   out.events = out.events.map((ev) =>
     Object.assign({ repeat: "none", until: "", note: "", allDay: false }, ev || {}, {
       repeat: (ev && ev.repeat) || "none",
@@ -212,7 +215,8 @@ export function syncContentWeight(s) {
   return (n.habits.length || 0) + (n.checkins.length || 0) +
     (n.events.length || 0) + (n.countdowns.length || 0) +
     (n.goals.length || 0) + (n.blocks.length || 0) +
-    (n.focusSessions.length || 0) + ((n.transactions && n.transactions.length) || 0);
+    (n.focusSessions.length || 0) + ((n.dayEntries && n.dayEntries.length) || 0) +
+    ((n.transactions && n.transactions.length) || 0);
 }
 
 export function mergeTombstones(a, b) {
@@ -228,7 +232,9 @@ export function applyTombstones(list, tombstones) {
   return (list || []).filter((item) => {
     if (!item) return false;
     const key = item.id;
-    const alt = item.habitId && item.date ? `${item.habitId}|${item.date}` : "";
+    let alt = "";
+    if (item.habitId && item.date) alt = `${item.habitId}|${item.date}`;
+    else if (item.date && !item.habitId) alt = `day|${item.date}`;
     const delAt = Math.max(Number(stones[key]) || 0, Number(stones[alt]) || 0);
     if (!delAt) return true;
     return (Number(item.updatedAt) || 0) > delAt;
@@ -324,6 +330,10 @@ export function mergeSyncState(local, remote, remoteUpdatedAt) {
     mergeEntityLists(localNorm.events, remoteNorm.events, (x) => x.id),
     merged.tombstones
   );
+  merged.dayEntries = applyTombstones(
+    mergeEntityLists(localNorm.dayEntries || [], remoteNorm.dayEntries || [], (x) => x.date || x.id),
+    merged.tombstones
+  );
   merged.transactions = applyTombstones(
     mergeEntityLists(localNorm.transactions || [], remoteNorm.transactions || [], (x) => x.id),
     merged.tombstones
@@ -344,7 +354,38 @@ export function shouldPushAfterMerge(result, hasRemoteFile) {
   return result.action === "push" || result.action === "merge" || result.winner === "local";
 }
 
-export function habitDueOn(habit, key) {
+/** Normalize one day journal/holiday entry. */
+export function normalizeDayEntry(raw) {
+  const d = raw || {};
+  return Object.assign(
+    {
+      id: "",
+      date: "",
+      mood: 0,
+      comment: "",
+      holiday: false,
+      holidayReason: "",
+      updatedAt: 0,
+    },
+    d,
+    {
+      mood: Math.max(0, Math.min(5, Number(d.mood) || 0)),
+      comment: String(d.comment || ""),
+      holiday: !!d.holiday,
+      holidayReason: String(d.holidayReason || ""),
+      date: String(d.date || ""),
+    }
+  );
+}
+
+export function isDayHoliday(dayEntries, key) {
+  const e = (dayEntries || []).find((d) => d && d.date === key);
+  return !!(e && e.holiday);
+}
+
+export function habitDueOn(habit, key, opts) {
+  if (opts && opts.holiday) return false;
+  if (opts && opts.dayEntries && isDayHoliday(opts.dayEntries, key)) return false;
   const d = parseKey(key).getDay();
   const freq = (habit.frequency || [0, 1, 2, 3, 4, 5, 6]).map(Number);
   if (!freq.includes(d)) return false;
