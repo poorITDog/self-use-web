@@ -522,8 +522,17 @@ await page.click('[data-habits-panel="today"]');
 await page.waitForSelector(".today-checkin");
 const remainingChecks = await page.$$(".today-checkin .check-lg");
 await assert(remainingChecks.length >= 1, "non-holiday habits remain on today list");
-await assert(!!(await page.$(".holiday-banner")), "today shows holiday status banner without picker");
+const todayGate = await page.$(".day-journal-gate");
+await assert(!!todayGate, "today shows diary gate after partial holiday");
+const todayGateHoliday = await page.$eval(".day-journal-gate", (el) =>
+  el.textContent.includes("放假")
+);
+await assert(todayGateHoliday, "today gate shows holiday status without picker");
 await assert(!await page.$("#view-habits .holiday-habit-list"), "today still has no holiday picker");
+await assert(
+  !await page.$("#view-habits .holiday-banner"),
+  "today has no duplicate holiday banner (strip + gate cover status)"
+);
 
 // Journal again: full-day via select-all
 await page.click('[data-habits-panel="journal"]');

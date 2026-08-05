@@ -2531,9 +2531,8 @@
       html += activeGoalsStripHtml();
     } else {
       // Today: compact diary entry only — holiday picker lives on「日記」.
+      // Status already shows in today-strip + gate tag; skip extra banner.
       html += dayJournalGateHtml(key);
-      var banner = holidayBannerText(key);
-      if (banner) html += '<div class="holiday-banner">' + esc(banner) + "</div>";
       html += todayUnifiedTimelineHtml();
       html += todayCheckinHtml(todayHabits);
       html += activeGoalsStripHtml();
