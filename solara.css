@@ -2907,11 +2907,12 @@ button.linkish {
 }
 
 /* Sync */
-.sync-chip { font-weight: 600; }
+.sync-chip { font-weight: 600; cursor: pointer; }
 .sync-chip.sync-synced { color: var(--good); }
 .sync-chip.sync-syncing { color: var(--accent); }
 .sync-chip.sync-failed { color: var(--warn); }
 .sync-chip.sync-disconnected { color: var(--text-mute); }
+.sync-chip.sync-needsAuth { color: var(--warn); }
 
 .chip {
   padding: 6px 12px;
