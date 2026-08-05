@@ -3568,6 +3568,18 @@ button.habit-box-day:active {
   font-weight: 800;
 }
 
+.cal-day.partial-holiday {
+  border-color: var(--color-accent-2-400);
+}
+
+.cal-day-hol-mark {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--color-accent-2-700);
+}
+
 .day-panel-head .tag {
   margin-left: auto;
   margin-right: var(--space-2);

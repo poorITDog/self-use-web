@@ -1115,6 +1115,7 @@
     return !!c.value;
   }
 
+  // Keep in sync with streakForHabit in solara-core.mjs.
   function streakFor(habit) {
     var n = 0;
     var d = new Date();
@@ -2858,13 +2859,15 @@
       for (var day = 1; day <= daysInMonth; day++) {
         var key = dateKey(new Date(y, m, day));
         var rate = completionRate(key);
-        var dayHoliday = isHoliday(key);
+        var fullDayHoliday = isFullDayHoliday(key);
+        var partialHoliday = isHoliday(key) && !fullDayHoliday;
         var cls = "cal-day";
         if (key === todayKey()) cls += " today";
         if (key === selected) cls += " selected";
-        if (dayHoliday) cls += " holiday";
-        else if (rate > 0) cls += " has-heat";
-        var heatStyle = !dayHoliday && rate > 0 ? ' style="--heat:' + Math.max(0.12, rate / 100) + '"' : "";
+        if (fullDayHoliday) cls += " holiday";
+        else if (partialHoliday) cls += " partial-holiday";
+        if (!fullDayHoliday && rate > 0) cls += " has-heat";
+        var heatStyle = !fullDayHoliday && rate > 0 ? ' style="--heat:' + Math.max(0.12, rate / 100) + '"' : "";
         var dayEvts = eventsForDate(key);
         var dotsHtml = "";
         if (dayEvts.length) {
@@ -2874,10 +2877,18 @@
           });
           dotsHtml += "</span>";
         }
+        var pctHtml = "";
+        if (fullDayHoliday) {
+          pctHtml = '<span class="cal-day-pct">假</span>';
+        } else if (rate > 0) {
+          pctHtml = '<span class="cal-day-pct">' + rate + "%</span>";
+          if (partialHoliday) pctHtml += '<span class="cal-day-hol-mark" aria-label="部分放假">假</span>';
+        } else if (partialHoliday) {
+          pctHtml = '<span class="cal-day-hol-mark" aria-label="部分放假">假</span>';
+        }
         html += '<button type="button" class="' + cls + '" data-day="' + key + '"' + heatStyle + ">" +
           '<span class="cal-day-num">' + day + "</span>" +
-          (dayHoliday ? '<span class="cal-day-pct">假</span>' :
-            (rate > 0 ? '<span class="cal-day-pct">' + rate + "%</span>" : "")) +
+          pctHtml +
           dotsHtml +
           "</button>";
       }

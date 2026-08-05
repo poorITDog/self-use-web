@@ -426,6 +426,32 @@ export function isHabitDone(habit, checkin) {
   return !!checkin.value;
 }
 
+// Current streak ending at fromMs. Excused days skip without break;
+// completed days that were later excused still count.
+export function streakForHabit(habit, checkins, dayEntries, fromMs) {
+  let n = 0;
+  const d = new Date(fromMs != null ? fromMs : Date.now());
+  const opts = { dayEntries: dayEntries || [] };
+  for (let i = 0; i < 400; i++) {
+    const key = dateKey(d);
+    const due = habitDueOn(habit, key, opts);
+    const cin = (checkins || []).find((c) => c.habitId === habit.id && c.date === key);
+    const done = isHabitDone(habit, cin);
+    if (!due) {
+      if (isHabitHoliday(opts.dayEntries, key, habit.id) && done) n++;
+      d.setDate(d.getDate() - 1);
+      continue;
+    }
+    if (done) {
+      n++;
+      d.setDate(d.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return n;
+}
+
 /** Next occurrence timestamp for recurring countdowns. */
 export function countdownNextAt(item, nowMs) {
   const c = item || {};

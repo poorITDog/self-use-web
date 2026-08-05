@@ -24,6 +24,7 @@ import {
   normalizeDayEntry,
   isDayHoliday,
   isHabitHoliday,
+  streakForHabit,
 } from "../solara-core.mjs";
 
 function test(name, fn) {
@@ -239,6 +240,64 @@ run("legacy full-day holiday still excuses every habit", () => {
   const entries = [{ date: "2026-08-04", holiday: true, holidayHabitIds: [] }];
   assert.equal(habitDueOn(gym, "2026-08-04", { dayEntries: entries }), false);
   assert.equal(isHabitHoliday(entries, "2026-08-04", "gym"), true);
+});
+
+run("streakForHabit skips excused days without breaking", () => {
+  // Anchor "now" to 2026-08-05 so the walk is deterministic.
+  const now = new Date(2026, 7, 5, 12, 0, 0).getTime();
+  const habit = {
+    id: "gym",
+    type: "yesno",
+    target: 1,
+    frequency: [0, 1, 2, 3, 4, 5, 6],
+    createdAt: new Date(2026, 7, 1).getTime(),
+  };
+  const checkins = [
+    { habitId: "gym", date: "2026-08-05", value: 1 },
+    { habitId: "gym", date: "2026-08-04", value: 1 },
+    // 2026-08-03 excused — no checkin required
+    { habitId: "gym", date: "2026-08-02", value: 1 },
+  ];
+  const dayEntries = [
+    { date: "2026-08-03", holiday: true, holidayHabitIds: ["gym"] },
+  ];
+  assert.equal(streakForHabit(habit, checkins, dayEntries, now), 3);
+});
+
+run("streakForHabit counts done day that was later excused", () => {
+  const now = new Date(2026, 7, 5, 12, 0, 0).getTime();
+  const habit = {
+    id: "gym",
+    type: "yesno",
+    target: 1,
+    frequency: [0, 1, 2, 3, 4, 5, 6],
+    createdAt: new Date(2026, 7, 1).getTime(),
+  };
+  const checkins = [
+    { habitId: "gym", date: "2026-08-05", value: 1 },
+    { habitId: "gym", date: "2026-08-04", value: 1 },
+  ];
+  const dayEntries = [
+    { date: "2026-08-04", holiday: true, holidayHabitIds: ["gym"] },
+  ];
+  assert.equal(streakForHabit(habit, checkins, dayEntries, now), 2);
+});
+
+run("streakForHabit only excuses listed habit", () => {
+  const now = new Date(2026, 7, 5, 12, 0, 0).getTime();
+  const read = {
+    id: "read",
+    type: "yesno",
+    target: 1,
+    frequency: [0, 1, 2, 3, 4, 5, 6],
+    createdAt: new Date(2026, 7, 1).getTime(),
+  };
+  // Gym excused on 08-04; read was due and missed → streak breaks.
+  const checkins = [{ habitId: "read", date: "2026-08-05", value: 1 }];
+  const dayEntries = [
+    { date: "2026-08-04", holiday: true, holidayHabitIds: ["gym"] },
+  ];
+  assert.equal(streakForHabit(read, checkins, dayEntries, now), 1);
 });
 
 run("isDayHoliday reads dayEntries", () => {
