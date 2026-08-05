@@ -1197,12 +1197,14 @@
   }
 
   function holidayBannerText(key) {
-    var ids = holidayHabitIdList(key);
-    if (!ids.length) return "";
     if (isFullDayHoliday(key)) {
       return "今天全日放假——習慣已暫停，連續紀錄保留。";
     }
-    return "今日有 " + ids.length + " 個習慣放假，其餘仍可打卡。連續紀錄保留。";
+    var excusedDue = state.habits.filter(function (h) {
+      return !h.archived && isHabitHoliday(h, key) && habitScheduleDueOn(h, key);
+    });
+    if (!excusedDue.length) return "";
+    return "今日有 " + excusedDue.length + " 個習慣放假，其餘仍可打卡。連續紀錄保留。";
   }
 
   function captureDayJournalDraft(key) {
@@ -1256,21 +1258,22 @@
     html += '<div class="holiday-picker">';
     html += '<div class="holiday-row">' +
       '<span class="holiday-picker-label">哪些習慣放假？</span>' +
-      '<span class="tiny muted">未勾選的仍可打卡；放假唔計未完成</span></div>';
+      '<span class="tiny muted">未勾選的仍可打卡；放假不計未完成</span></div>';
     if (!activeHabits.length) {
       html += '<p class="tiny muted">新增習慣後，可指定個別放假。</p>';
     } else {
       html += '<div class="holiday-habit-list" role="group" aria-label="放假習慣">';
       activeHabits.forEach(function (h) {
         var on = holidayIds.indexOf(h.id) >= 0;
-        html += '<label class="holiday-habit-item' + (on ? " on" : "") +
+        html += '<button type="button" class="holiday-habit-item' + (on ? " on" : "") +
           '" data-toggle-habit-holiday="' + escAttr(h.id) +
-          '" data-day-key="' + escAttr(key) + '">' +
-          '<input type="checkbox"' + (on ? " checked" : "") +
-          ' tabindex="-1" aria-hidden="true" />' +
+          '" data-day-key="' + escAttr(key) + '"' +
+          ' aria-pressed="' + (on ? "true" : "false") + '"' +
+          ' aria-label="' + escAttr((h.name || "未命名") + (on ? "，已放假" : "，未放假")) + '">' +
+          '<span class="holiday-habit-check" aria-hidden="true">' + (on ? "✓" : "") + "</span>" +
           '<span class="holiday-habit-swatch" style="background:' + escAttr(h.color || colors()[0]) +
           '" aria-hidden="true"></span>' +
-          '<span class="holiday-habit-name">' + esc(h.name || "未命名") + "</span></label>";
+          '<span class="holiday-habit-name">' + esc(h.name || "未命名") + "</span></button>";
       });
       html += "</div>";
       html += '<div class="holiday-row holiday-bulk">' +
@@ -1664,8 +1667,11 @@
   function todayStripHtml(todayHabits) {
     var key = todayKey();
     var fullHoliday = isFullDayHoliday(key);
-    var partialHoliday = isHoliday(key) && !fullHoliday;
-    var holidayCount = holidayHabitIdList(key).length;
+    var excusedDue = state.habits.filter(function (h) {
+      return !h.archived && isHabitHoliday(h, key) && habitScheduleDueOn(h, key);
+    });
+    var partialHoliday = !fullHoliday && excusedDue.length > 0;
+    var holidayCount = excusedDue.length;
     var doneCount = todayHabits.filter(function (h) { return isHabitDone(h, key); }).length;
     var total = todayHabits.length;
     var rate = total ? Math.round((doneCount / total) * 100) : 0;
@@ -4336,6 +4342,7 @@
       var caKey = clearAllHol.getAttribute("data-holiday-clear-all");
       captureDayJournalDraft(caKey);
       setHolidayHabitIds(caKey, []);
+      upsertDayEntry(caKey, { holidayReason: "" });
       saveState();
       toast("已清除放假");
       render();
