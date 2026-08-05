@@ -1055,6 +1055,8 @@
     for (var i = 0; i < 400; i++) {
       var key = dateKey(d);
       if (!habitDueOn(habit, key)) {
+        // Holiday after check-in: still count completed days toward streak.
+        if (isHoliday(key) && isHabitDone(habit, key)) n++;
         d.setDate(d.getDate() - 1);
         continue;
       }
@@ -1116,19 +1118,37 @@
     return Math.round((done / due.length) * 100);
   }
 
+  function captureDayJournalDraft(key) {
+    var root = document.querySelector('.view.active .day-journal[data-day-journal="' + key + '"]') ||
+      document.querySelector('.day-journal[data-day-journal="' + key + '"]');
+    if (!root) return;
+    var commentEl = root.querySelector("textarea[data-day-comment]");
+    var reasonEl = root.querySelector("input[data-holiday-reason]");
+    var patch = {};
+    if (commentEl) patch.comment = commentEl.value.trim();
+    if (reasonEl) patch.holidayReason = reasonEl.value.trim();
+    if (Object.keys(patch).length) upsertDayEntry(key, patch);
+  }
+
   // Day journal + holiday card (calendar day panel + habits today)
-  function dayJournalHtml(key) {
+  function dayJournalHtml(key, surface) {
+    surface = surface || "main";
     var entry = getDayEntry(key) || normalizeDayEntry({ date: key });
     var mood = Number(entry.mood) || 0;
     var holidayOn = !!entry.holiday;
-    var html = '<div class="day-journal" data-day-journal="' + escAttr(key) + '">';
-    html += '<div class="day-journal-head"><span class="section-title">今日日記</span>';
+    var isToday = key === todayKey();
+    var title = isToday ? "今日日記" : "當日日記";
+    var moodAria = isToday ? "今日心情" : "當日心情";
+    var uidSuffix = surface + "-" + key;
+    var html = '<div class="day-journal" data-day-journal="' + escAttr(key) +
+      '" data-journal-surface="' + escAttr(surface) + '">';
+    html += '<div class="day-journal-head"><span class="section-title">' + title + "</span>";
     if (holidayOn) {
       html += '<span class="tag tag-accent-2">放假 · 連擊保留</span>';
     }
     html += "</div>";
-    html += '<p class="tiny muted day-journal-hint">寫下心情、感覺，或今天沒做某件事的原因。</p>';
-    html += '<div class="mood-row" role="listbox" aria-label="今日心情">';
+    html += '<p class="tiny muted day-journal-hint">記錄心情與說明，例如為什麼今天沒做運動。</p>';
+    html += '<div class="mood-row" role="group" aria-label="' + moodAria + '">';
     [1, 2, 3, 4, 5].forEach(function (n) {
       html += '<button type="button" class="mood-btn' + (mood === n ? " on" : "") +
         '" data-mood="' + n + '" data-day-key="' + escAttr(key) + '"' +
@@ -1137,19 +1157,19 @@
         '<span class="mood-caption">' + moodLabel(n) + "</span></button>";
     });
     html += "</div>";
-    html += '<div class="field day-journal-comment"><label for="dayComment-' + escAttr(key) +
-      '">今日說明</label><textarea id="dayComment-' + escAttr(key) +
-      '" rows="3" placeholder="例如：颱風停工；今天太累沒去 gym；完成後感覺很好…">' +
+    html += '<div class="field day-journal-comment"><label for="dayComment-' + escAttr(uidSuffix) +
+      '">說明</label><textarea id="dayComment-' + escAttr(uidSuffix) +
+      '" data-day-comment rows="3" placeholder="例如：颱風停工；今天太累沒去健身房；完成後感覺很好…">' +
       esc(entry.comment || "") + "</textarea></div>";
     html += '<div class="holiday-row">' +
       '<button type="button" class="btn sm' + (holidayOn ? "" : " soft") +
       '" data-toggle-holiday="' + escAttr(key) + '" aria-pressed="' + (holidayOn ? "true" : "false") + '">' +
-      (holidayOn ? "已標記放假" : "標記為放假日") + "</button>" +
-      '<span class="tiny muted">放假日唔會計 miss，連續打卡會保留</span></div>';
+      (holidayOn ? "已標記放假日" : "標記為放假日") + "</button>" +
+      '<span class="tiny muted">放假日不計未完成，連續打卡會保留</span></div>';
     if (holidayOn) {
-      html += '<div class="field"><label for="holidayReason-' + escAttr(key) +
-        '">放假原因</label><input id="holidayReason-' + escAttr(key) +
-        '" type="text" value="' + escAttr(entry.holidayReason || "") +
+      html += '<div class="field"><label for="holidayReason-' + escAttr(uidSuffix) +
+        '">放假原因</label><input id="holidayReason-' + escAttr(uidSuffix) +
+        '" data-holiday-reason type="text" value="' + escAttr(entry.holidayReason || "") +
         '" placeholder="例如：颱風／旅行／病假" /></div>';
     }
     html += '<div class="row-actions"><button type="button" class="btn" data-save-day-journal="' +
@@ -1539,8 +1559,8 @@
       html += '<div class="today-progress-text">今天放假 <strong>連擊保留</strong>' +
         '<span class="stat-sep" aria-hidden="true">·</span>投入 <strong>' +
         fmtMin(minutesOnDate(key)) + "</strong></div>";
-      html += progressRingHtml(100, 48) + "</div>";
-      html += '<div class="progress-bar-slim"><i style="width:100%"></i></div>';
+      html += '<div class="holiday-chip-ring" aria-label="放假日">假</div></div>';
+      html += '<div class="progress-bar-slim holiday"><i style="width:100%"></i></div>';
     } else {
       html += '<div class="today-progress-text">已完成 <strong>' + doneCount + "/" + total +
         '</strong><span class="stat-sep" aria-hidden="true">·</span>投入 <strong>' +
@@ -1887,6 +1907,9 @@
 
   function todayCheckinHtml(todayHabits) {
     if (!todayHabits.length) {
+      if (isHoliday(todayKey())) {
+        return '<div class="empty compact"><p>今天是放假日，習慣已暫停，連續紀錄會保留。</p></div>';
+      }
       return '<div class="empty compact"><p>今天沒有需要完成的習慣</p>' +
         '<button class="btn sm" data-action="add-habit">+ 新增習慣</button></div>';
     }
@@ -2274,9 +2297,9 @@
     var html = todayStripHtml(todayHabits);
     html += weekSummaryHtml();
     // Daily diary / holiday before timeline so mood is captured with the day.
-    html += dayJournalHtml(key);
+    html += dayJournalHtml(key, "habits");
     if (isHoliday(key)) {
-      html += '<div class="holiday-banner">今天已標記放假——習慣連擊會保留，唔使打卡。</div>';
+      html += '<div class="holiday-banner">今天是放假日——習慣已暫停，連續打卡會保留。</div>';
     }
     html += todayUnifiedTimelineHtml();
     html += '<div class="seg habits-seg"><button type="button" data-habits-panel="today" class="' +
@@ -2729,7 +2752,7 @@
       (holidayToday ? "放假" : (selRate + "%")) + '</div></div>' +
       '<div class="stat-cell"><div class="label">投入時數</div><div class="value">' + fmtMin(selMins) + "</div></div>" +
       "</div>";
-    html += dayJournalHtml(selected);
+    html += dayJournalHtml(selected, "calendar");
     var selEvents = eventsForDate(selected);
     if (selEvents.length) {
       html += '<div class="section-title" style="padding-top:4px">當日行程</div><div class="cal-event-list">';
@@ -4099,6 +4122,7 @@
     if (moodBtn) {
       var moodKey = moodBtn.getAttribute("data-day-key") || todayKey();
       var moodVal = Number(moodBtn.getAttribute("data-mood")) || 0;
+      captureDayJournalDraft(moodKey);
       upsertDayEntry(moodKey, { mood: moodVal });
       saveState();
       render();
@@ -4108,6 +4132,7 @@
     var holidayBtn = t.closest("[data-toggle-holiday]");
     if (holidayBtn) {
       var hKey = holidayBtn.getAttribute("data-toggle-holiday");
+      captureDayJournalDraft(hKey);
       var cur = getDayEntry(hKey);
       var nextHoliday = !(cur && cur.holiday);
       upsertDayEntry(hKey, {
@@ -4115,7 +4140,7 @@
         holidayReason: nextHoliday ? ((cur && cur.holidayReason) || "") : ""
       });
       saveState();
-      toast(nextHoliday ? "已標記放假，連擊會保留" : "已取消放假");
+      toast(nextHoliday ? "已標記放假日，連續打卡會保留" : "已取消放假日");
       render();
       return;
     }
@@ -4123,11 +4148,13 @@
     var saveJournal = t.closest("[data-save-day-journal]");
     if (saveJournal) {
       var jKey = saveJournal.getAttribute("data-save-day-journal");
-      var commentEl = document.getElementById("dayComment-" + jKey);
-      var reasonEl = document.getElementById("holidayReason-" + jKey);
+      var root = saveJournal.closest(".day-journal") ||
+        document.querySelector('.view.active .day-journal[data-day-journal="' + jKey + '"]');
+      var commentEl = root ? root.querySelector("textarea[data-day-comment]") : null;
+      var reasonEl = root ? root.querySelector("input[data-holiday-reason]") : null;
       var existing = getDayEntry(jKey) || {};
       upsertDayEntry(jKey, {
-        comment: commentEl ? commentEl.value.trim() : "",
+        comment: commentEl ? commentEl.value.trim() : (existing.comment || ""),
         holidayReason: reasonEl ? reasonEl.value.trim() : (existing.holidayReason || ""),
         mood: Number(existing.mood) || 0,
         holiday: !!existing.holiday
