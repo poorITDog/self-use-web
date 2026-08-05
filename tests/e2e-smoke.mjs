@@ -522,8 +522,17 @@ await page.click('[data-habits-panel="today"]');
 await page.waitForSelector(".today-checkin");
 const remainingChecks = await page.$$(".today-checkin .check-lg");
 await assert(remainingChecks.length >= 1, "non-holiday habits remain on today list");
-await assert(!!(await page.$(".holiday-banner")), "today shows holiday status banner without picker");
+const todayGate = await page.$(".day-journal-gate");
+await assert(!!todayGate, "today shows diary gate after partial holiday");
+const todayGateHoliday = await page.$eval(".day-journal-gate", (el) =>
+  el.textContent.includes("放假")
+);
+await assert(todayGateHoliday, "today gate shows holiday status without picker");
 await assert(!await page.$("#view-habits .holiday-habit-list"), "today still has no holiday picker");
+await assert(
+  !await page.$("#view-habits .holiday-banner"),
+  "today has no duplicate holiday banner (strip + gate cover status)"
+);
 
 // Journal again: full-day via select-all
 await page.click('[data-habits-panel="journal"]');
@@ -547,6 +556,30 @@ await page.type('textarea[id^="dayComment-"]', "草稿測試");
 await page.click('[data-mood="2"]');
 const draftKept = await page.$eval('textarea[id^="dayComment-"]', (el) => el.value.includes("草稿測試"));
 await assert(draftKept, "mood change keeps unsaved journal draft");
+
+// Draft must also survive switching away from 日記 without pressing 儲存
+await page.evaluate(() => {
+  const el = document.querySelector("#view-habits textarea[data-day-comment]");
+  if (el) el.value = String(el.value || "") + "分頁草稿";
+  document.querySelector('#view-habits [data-habits-panel="today"]').click();
+});
+await page.waitForSelector("#view-habits .day-journal-gate");
+await page.waitForFunction(() => {
+  const raw = JSON.parse(localStorage.getItem("solara-v1") || "{}");
+  const today = new Date();
+  const key = today.getFullYear() + "-" +
+    String(today.getMonth() + 1).padStart(2, "0") + "-" +
+    String(today.getDate()).padStart(2, "0");
+  const e = (raw.dayEntries || []).find((d) => d.date === key);
+  return e && String(e.comment || "").includes("分頁草稿");
+});
+await page.click('#view-habits [data-habits-panel="journal"]');
+await page.waitForSelector("#view-habits textarea[data-day-comment]");
+const draftAcrossPanel = await page.$eval(
+  "#view-habits textarea[data-day-comment]",
+  (el) => el.value.includes("分頁草稿")
+);
+await assert(draftAcrossPanel, "journal draft kept across habits panel switch");
 
 // Calendar day panel also shows journal + partial holiday
 await page.click('[data-nav="calendar"]');
