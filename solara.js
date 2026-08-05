@@ -1239,7 +1239,7 @@
     if (Object.keys(patch).length) upsertDayEntry(key, patch);
   }
 
-  // Day journal + per-habit holiday picker (calendar day panel + habits today)
+  // Day journal + per-habit holiday picker (日記 panel + calendar day panel).
   function dayJournalHtml(key, surface) {
     surface = surface || "main";
     var entry = getDayEntry(key) || normalizeDayEntry({ date: key });
@@ -1261,7 +1261,7 @@
         " · 連續保留</span>";
     }
     html += "</div>";
-    html += '<p class="tiny muted day-journal-hint">記錄心情與說明。可只為部分習慣放假（例如只放健身房）。</p>';
+    html += '<p class="tiny muted day-journal-hint">記錄心情與說明。下方可只為部分習慣放假（例如只放健身房）。</p>';
     html += '<div class="mood-row" role="group" aria-label="' + moodAria + '">';
     [1, 2, 3, 4, 5].forEach(function (n) {
       html += '<button type="button" class="mood-btn' + (mood === n ? " on" : "") +
@@ -1312,6 +1312,29 @@
     html += '<div class="row-actions"><button type="button" class="btn" data-save-day-journal="' +
       escAttr(key) + '">儲存日記</button></div>';
     html += "</div>";
+    return html;
+  }
+
+  // Compact entry on habits「今天」— full picker lives on「日記」panel.
+  function dayJournalGateHtml(key) {
+    var entry = getDayEntry(key) || normalizeDayEntry({ date: key });
+    var mood = Number(entry.mood) || 0;
+    var holidayIds = holidayHabitIdList(key);
+    var holidayOn = holidayIds.length > 0;
+    var fullDay = isFullDayHoliday(key);
+    var html = '<button type="button" class="day-journal-gate" data-habits-panel="journal"' +
+      ' aria-label="打開今日日記與放假設定">';
+    html += '<div class="day-journal-gate-head"><span class="section-title">今日日記</span>';
+    if (holidayOn) {
+      html += '<span class="tag tag-accent-2">' +
+        (fullDay ? "全日放假" : ("部分放假 " + holidayIds.length)) + "</span>";
+    } else if (mood) {
+      html += '<span class="tag tag-accent">' + moodEmoji(mood) + " " + moodLabel(mood) + "</span>";
+    }
+    html += "</div>";
+    html += '<p class="tiny muted">記錄心情、說明，並設定個別習慣放假</p>';
+    html += '<span class="day-journal-gate-cta">打開日記 →</span>';
+    html += "</button>";
     return html;
   }
 
@@ -2473,24 +2496,32 @@
     var panel = ui.habitsPanel || "today";
     var html = todayStripHtml(todayHabits);
     html += weekSummaryHtml();
-    // Daily diary / holiday before timeline so mood is captured with the day.
-    html += dayJournalHtml(key, "habits");
-    var banner = holidayBannerText(key);
-    if (banner) {
-      html += '<div class="holiday-banner">' + esc(banner) + "</div>";
-    }
-    html += todayUnifiedTimelineHtml();
-    html += '<div class="seg habits-seg"><button type="button" data-habits-panel="today" class="' +
-      (panel === "today" ? "on" : "") + '">今天</button><button type="button" data-habits-panel="board" class="' +
-      (panel === "board" ? "on" : "") + '">儀表板</button></div>';
-    if (!active.length) {
+    html += '<div class="seg habits-seg">' +
+      '<button type="button" data-habits-panel="today" class="' + (panel === "today" ? "on" : "") +
+      '">今天</button>' +
+      '<button type="button" data-habits-panel="journal" class="' + (panel === "journal" ? "on" : "") +
+      '">日記</button>' +
+      '<button type="button" data-habits-panel="board" class="' + (panel === "board" ? "on" : "") +
+      '">儀表板</button></div>';
+    if (panel === "journal") {
+      html += dayJournalHtml(key, "habits");
+      var journalBanner = holidayBannerText(key);
+      if (journalBanner) html += '<div class="holiday-banner">' + esc(journalBanner) + "</div>";
+    } else if (!active.length) {
+      html += dayJournalGateHtml(key);
       html += emptyHabitsHtml();
     } else if (panel === "board") {
       html += habitBoardHtml(active);
+      html += activeGoalsStripHtml();
     } else {
+      // Today: compact diary entry only — holiday picker lives on「日記」.
+      html += dayJournalGateHtml(key);
+      var banner = holidayBannerText(key);
+      if (banner) html += '<div class="holiday-banner">' + esc(banner) + "</div>";
+      html += todayUnifiedTimelineHtml();
       html += todayCheckinHtml(todayHabits);
+      html += activeGoalsStripHtml();
     }
-    html += activeGoalsStripHtml();
     document.getElementById("view-habits").innerHTML = html;
   }
 

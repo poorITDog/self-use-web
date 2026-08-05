@@ -169,10 +169,14 @@ await page.evaluate(() => {
   document.getElementById("hSave").click();
 });
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
+await page.click('[data-habits-panel="today"]');
+await page.waitForSelector(".today-timeline");
 const rangeText = await page.$eval("#view-habits", (el) => el.textContent);
 await assert(rangeText.includes("06:30") && rangeText.includes("08:30"), "habit time range 06:30–08:30 saved and shown");
 
 // pull habit detail sheet down to return to main habits page
+await page.click('[data-habits-panel="board"]');
+await page.waitForSelector("[data-habit-box-open]");
 await page.click('[data-habit-box-open]');
 await page.waitForSelector(".habit-detail .sheet-handle");
 await page.waitForSelector("#hdBack");
@@ -447,15 +451,25 @@ await assert(!!syncChip, "sync status chip visible");
 
 await assert(errors.filter((e) => !e.includes("favicon")).length === 0, "no page errors: " + JSON.stringify(errors));
 
-// Diary + per-habit holiday: mood, comment, selective excuse
+// Diary + per-habit holiday live on「日記」panel (not habits today main)
 await page.click('[data-nav="habits"]');
-await page.waitForSelector(".day-journal");
-await page.click('[data-mood="4"]');
-const moodOn = await page.$eval('.mood-btn[data-mood="4"]', (el) => el.classList.contains("on"));
+await page.waitForSelector('[data-habits-panel="journal"]');
+const gate = await page.$(".day-journal-gate");
+await assert(!!gate, "today shows diary gate, not full holiday picker");
+await assert(!await page.$("#view-habits .holiday-habit-list"), "holiday picker hidden on today main");
+await page.click('[data-habits-panel="journal"]');
+await page.waitForSelector('[data-habits-panel="journal"].on');
+await page.waitForSelector(".day-journal .mood-btn[data-mood='4']");
+await page.waitForSelector("[data-toggle-habit-holiday]");
+await page.evaluate(() => document.querySelector('.day-journal .mood-btn[data-mood="4"]').click());
+await page.waitForFunction(() => {
+  const btn = document.querySelector('.day-journal .mood-btn[data-mood="4"]');
+  return btn && btn.classList.contains("on");
+});
+const moodOn = await page.$eval('.day-journal .mood-btn[data-mood="4"]', (el) => el.classList.contains("on"));
 await assert(moodOn, "mood 4 selected");
 
-// Partial holiday: excuse only the first habit checkbox
-await page.waitForSelector("[data-toggle-habit-holiday]");
+// Partial holiday: excuse only the first habit
 const firstHabitHolidayId = await page.$eval(
   "[data-toggle-habit-holiday]",
   (el) => el.getAttribute("data-toggle-habit-holiday")
@@ -463,7 +477,7 @@ const firstHabitHolidayId = await page.$eval(
 await page.click("[data-toggle-habit-holiday]");
 await page.waitForSelector(".holiday-banner");
 const holidayBanner = await page.$(".holiday-banner");
-await assert(!!holidayBanner, "holiday banner shows on habits today");
+await assert(!!holidayBanner, "holiday banner shows on journal panel");
 const bannerText = await page.$eval(".holiday-banner", (el) => el.textContent);
 await assert(
   bannerText.includes("放假") && bannerText.includes("連續") && bannerText.includes("其餘"),
@@ -503,11 +517,17 @@ await assert(
 await assert((journalSaved.holidayReason || "").includes("颱風") ||
   (journalSaved.comment || "").includes("颱風"), "holiday reason or comment saved");
 
-// Remaining habits still checkable while one is on holiday
+// Back to today: remaining habits still checkable; no picker on main
+await page.click('[data-habits-panel="today"]');
+await page.waitForSelector(".today-checkin");
 const remainingChecks = await page.$$(".today-checkin .check-lg");
 await assert(remainingChecks.length >= 1, "non-holiday habits remain on today list");
+await assert(!!(await page.$(".holiday-banner")), "today shows holiday status banner without picker");
+await assert(!await page.$("#view-habits .holiday-habit-list"), "today still has no holiday picker");
 
-// Full-day via select-all
+// Journal again: full-day via select-all
+await page.click('[data-habits-panel="journal"]');
+await page.waitForSelector("[data-holiday-select-all]");
 await page.click("[data-holiday-select-all]");
 await page.waitForFunction(() => {
   const b = document.querySelector(".holiday-banner");
