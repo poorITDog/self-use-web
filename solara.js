@@ -1752,10 +1752,11 @@
     var circ = 2 * Math.PI * r;
     var pct = total ? doneCount / total : 0;
     var offset = circ * (1 - pct);
+    // Track uses ink-tinted stroke so the circle reads at 0% (empty accent arc).
     return '<div class="app-bar-ring" aria-label="今天完成 ' + doneCount + "/" + total + '">' +
       '<svg width="46" height="46" viewBox="0 0 46 46" aria-hidden="true">' +
-      '<circle cx="23" cy="23" r="19" fill="none" stroke="var(--color-neutral-300)" stroke-width="5"></circle>' +
-      '<circle cx="23" cy="23" r="19" fill="none" stroke="var(--color-accent)" stroke-width="5" stroke-linecap="round" ' +
+      '<circle class="ring-track" cx="23" cy="23" r="19" fill="none" stroke="color-mix(in srgb, var(--color-text) 32%, var(--color-neutral-300))" stroke-width="5"></circle>' +
+      '<circle class="ring-fill" cx="23" cy="23" r="19" fill="none" stroke="var(--color-accent)" stroke-width="5" stroke-linecap="round" ' +
       'stroke-dasharray="' + circ.toFixed(2) + '" stroke-dashoffset="' + offset.toFixed(2) +
       '" transform="rotate(-90 23 23)"></circle></svg>' +
       '<span class="app-bar-ring-label">' + doneCount + "/" + total + "</span></div>";
