@@ -21,6 +21,7 @@
     habitDetailId: "",
     habitDetailMonth: startOfMonth(new Date()),
     habitsPanel: "today",
+    timelineOpen: false,
     diaryDate: dateKey(new Date()),
     countdownUnit: "days",
     focus: {
@@ -2136,8 +2137,9 @@
     });
     items.sort(function (a, b) { return a.sort - b.sort; });
     if (!items.length) return "";
-    // Collapsed by default so first viewport stays DC-like; feature kept, not dropped.
-    var html = '<details class="today-timeline-wrap"><summary class="today-timeline-summary">今日時間軸' +
+    // Remember open state across re-renders (打卡/放假 must not collapse the rail).
+    var html = '<details class="today-timeline-wrap"' + (ui.timelineOpen ? " open" : "") +
+      '><summary class="today-timeline-summary">今日時間軸' +
       '<span class="today-timeline-count">' + items.length + "</span></summary>" +
       '<div class="today-timeline">';
     items.forEach(function (it) {
@@ -4693,6 +4695,14 @@
 
   document.getElementById("app").addEventListener("click", handleUiClick);
   document.getElementById("modal").addEventListener("click", handleUiClick);
+
+  // Keep 今日時間軸 open across check-in / 放假 re-renders.
+  document.getElementById("app").addEventListener("toggle", function (e) {
+    var t = e.target;
+    if (t && t.classList && t.classList.contains("today-timeline-wrap")) {
+      ui.timelineOpen = !!t.open;
+    }
+  }, true);
 
   document.getElementById("app").addEventListener("change", function (e) {
     if (e.target.matches("[data-cal-opt]")) {
