@@ -2131,12 +2131,14 @@
     var html = '<div class="today-timeline"><div class="section-title">今日時間軸</div>';
     items.forEach(function (it) {
       if (it.habitId) {
+        var hab = state.habits.find(function (x) { return x.id === it.habitId; });
         html += '<div class="today-timeline-item' + (it.done ? " done" : "") + '">' +
           '<span class="today-timeline-time">' + esc(it.time) + "</span>" +
           '<span class="today-timeline-dot" style="background:' + it.color + '"></span>' +
-          '<button type="button" class="today-timeline-body" data-toggle="' + it.habitId + '">' +
+          '<button type="button" class="today-timeline-body" data-habit-open="' + it.habitId + '">' +
           "<strong>" + esc(it.title) + "</strong>" +
           '<span class="muted tiny">' + esc(it.kind) + "</span></button>" +
+          (hab ? holidayBtnHtml(hab, key) : "") +
           '<button type="button" class="btn sm timeline-check-btn' + (it.done ? " soft" : "") +
           '" data-toggle="' + it.habitId + '" aria-label="' +
           (it.done ? "取消完成 " : "打卡 ") + escAttr(it.title) + '">' +

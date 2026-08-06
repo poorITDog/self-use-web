@@ -758,6 +758,14 @@ button {
   flex-shrink: 0;
 }
 
+.app-bar-ring svg {
+  display: block;
+}
+
+.app-bar-ring circle:last-child {
+  filter: drop-shadow(0 0 0.5px var(--color-accent));
+}
+
 .app-bar-ring-label {
   position: absolute;
   inset: 0;
@@ -767,6 +775,7 @@ button {
   font-size: 11px;
   font-weight: 800;
   color: var(--color-accent-700);
+  pointer-events: none;
 }
 
 .solara-mark {
@@ -880,7 +889,8 @@ main {
   to { opacity: 1; transform: translate(-50%, 0); }
 }
 
-/* ── Bottom nav (DC edge bar) ── */
+/* ── Bottom nav (DC edge bar) — high specificity vs any legacy pill rules ── */
+#nav.nav,
 .nav {
   position: fixed;
   left: 0;
@@ -888,6 +898,7 @@ main {
   transform: none;
   bottom: 0;
   width: 100%;
+  max-width: none;
   height: auto;
   min-height: var(--nav-h);
   padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
@@ -2798,9 +2809,26 @@ button.linkish {
   text-align: left;
 }
 
-.week-summary-foot {
-  margin-top: 10px;
-  text-align: center;
+.today-timeline-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.today-timeline-item .habit-holiday-btn {
+  min-width: 40px;
+  min-height: 36px;
+  border-radius: var(--radius-pill);
+  flex-shrink: 0;
+}
+
+.today-timeline {
+  border-radius: 20px;
+  background: var(--color-neutral-100);
+  box-shadow: var(--shadow-sm);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border: none;
 }
 
 .today-strip-slim {
