@@ -2764,42 +2764,78 @@ button.linkish {
 
 .focus-panel {
   margin: 0;
-  padding: var(--space-5);
-  border-radius: 24px;
-  background: var(--color-neutral-100);
+  padding: 6px 0 0;
+  border-radius: 0;
+  background: transparent;
   border: none;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   text-align: center;
   width: 100%;
 }
 
-.focus-panel h2 {
-  margin: 0 0 var(--space-4);
-  font-family: var(--display);
-  font-size: 1.35rem;
-  font-weight: 400;
+.focus-presets {
+  width: 100%;
+  margin: 0 0 26px;
 }
 
 .focus-ring {
-  width: min(260px, 72vw);
-  aspect-ratio: 1;
-  margin: 0 auto 12px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background:
-    radial-gradient(circle at 50% 50%, var(--color-neutral-100) 58%, transparent 59%),
-    conic-gradient(var(--color-accent) var(--p, 0%), var(--color-neutral-200) 0);
-  box-shadow: var(--shadow-sm);
+  position: relative;
+  width: 260px;
+  height: 260px;
+  margin: 0 auto 8px;
+  border-radius: 0;
+  display: block;
+  background: none;
+  box-shadow: none;
+}
+
+.focus-ring svg {
+  display: block;
+  width: 260px;
+  height: 260px;
+}
+
+.focus-ring-fill {
+  transition: stroke-dashoffset 0.25s linear;
+}
+
+.focus-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  pointer-events: none;
 }
 
 .focus-ring .time {
   font-family: var(--display);
-  font-size: 3.5rem;
+  font-size: 56px;
   font-weight: 400;
   letter-spacing: -0.02em;
   line-height: 1;
   color: var(--color-text);
+}
+
+.focus-ring-sub {
+  font-size: 13px;
+  color: var(--color-neutral-600);
+  font-weight: 700;
+}
+
+.focus-habit-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-accent-100);
+  color: var(--color-accent-700);
+  padding: 8px 15px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 auto 24px;
 }
 
 .focus-actions {
@@ -2834,13 +2870,20 @@ button.linkish {
   border: none;
 }
 
+.focus-actions .btn.ghost {
+  width: 56px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
 .focus-stats {
   margin-top: 16px;
   padding: 16px 18px;
   border-radius: 20px;
   background: var(--color-neutral-100);
   box-shadow: var(--shadow-sm);
-  font-size: 0.92rem;
+  font-size: 14px;
   font-weight: 700;
   color: var(--color-neutral-700);
   display: flex;
@@ -2848,6 +2891,19 @@ button.linkish {
   justify-content: space-between;
   width: 100%;
   box-sizing: border-box;
+}
+
+.focus-stats-value {
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--color-accent);
+}
+
+.focus-stats-sub {
+  margin-top: 8px;
+  text-align: left;
+  width: 100%;
 }
 
 .focus-history {
