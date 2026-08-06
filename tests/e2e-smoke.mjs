@@ -61,13 +61,13 @@ await page.waitForSelector('[data-habits-panel="today"].on');
 const todayDefault = await page.$eval('[data-habits-panel="today"]', (el) => el.classList.contains("on"));
 await assert(todayDefault, "habits today panel is default");
 
-// today summary renders
-await page.waitForSelector(".today-strip");
-const todayStrip = await page.$(".today-strip");
-await assert(!!todayStrip, "today summary strip renders");
+// week summary card renders (header ring is the progress meter; strip is optional)
 await page.waitForSelector(".week-summary");
 const weekSummary = await page.$(".week-summary");
 await assert(!!weekSummary, "week summary renders on habits");
+const weekTitle = await page.$eval(".week-summary-title", (el) => el.textContent.trim());
+await assert(weekTitle === "本週", "week card title is 本週");
+await assert(!await page.$(".today-strip .progress-ring"), "no duplicate progress ring in today strip");
 
 // habits segment: 今天 | 儀表板
 await page.waitForSelector('[data-habits-panel="board"]');
@@ -210,7 +210,7 @@ await page.waitForSelector("#settingsBody .archived-habits");
 const archiveBody = await page.$eval("#settingsBody", (el) => el.textContent);
 await assert(archiveBody.includes("封存") || archiveBody.includes("尚無"), "settings archive tab renders");
 await page.click('[data-nav="habits"]');
-await page.waitForSelector(".today-strip");
+await page.waitForSelector(".week-summary");
 const habitsHasArchiveBlock = await page.$("#view-habits .archived-habits");
 await assert(!habitsHasArchiveBlock, "habits main view no longer shows archive block");
 
@@ -243,6 +243,7 @@ await page.evaluate(() => { document.getElementById("logVal").value = "30"; });
 await page.evaluate(() => document.getElementById("logSave").click());
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
 
+await page.waitForSelector(".today-strip");
 const minsText = await page.$eval(".today-strip", (el) => el.textContent);
 await assert(minsText.includes("30") || minsText.includes("時"), "duration minutes reflected in today summary");
 
@@ -478,7 +479,10 @@ const firstHabitHolidayId = await page.$eval(
   ".habit-checkin-row [data-toggle-habit-holiday]",
   (el) => el.getAttribute("data-toggle-habit-holiday")
 );
-await page.click(".habit-checkin-row [data-toggle-habit-holiday]");
+await page.evaluate(() => {
+  const btn = document.querySelector(".habit-checkin-row [data-toggle-habit-holiday]");
+  if (btn) btn.click();
+});
 await page.waitForSelector(".excused-habits, .day-journal-gate .tag-accent-2");
 
 // Open dedicated diary page via gate
@@ -566,12 +570,21 @@ await assert(
 
 // Mark remaining habits holiday via row buttons → full-day banner on diary
 for (let guard = 0; guard < 20; guard++) {
-  const hasOpen = await page.$(".habit-checkin-row [data-toggle-habit-holiday]");
-  if (!hasOpen) break;
-  await page.click(".habit-checkin-row [data-toggle-habit-holiday]");
-  await page.waitForFunction(() => true, { timeout: 50 }).catch(() => {});
+  const clicked = await page.evaluate(() => {
+    const btn = document.querySelector(".habit-checkin-row [data-toggle-habit-holiday]");
+    if (!btn) return false;
+    btn.click();
+    return true;
+  });
+  if (!clicked) break;
+  await new Promise((r) => setTimeout(r, 80));
 }
-await page.click(".day-journal-gate");
+await page.waitForSelector(".day-journal-gate");
+await page.evaluate(() => document.querySelector(".day-journal-gate").click());
+await page.waitForFunction(() => {
+  const v = document.getElementById("view-diary");
+  return v && v.classList.contains("active");
+});
 await page.waitForFunction(() => {
   const b = document.querySelector("#view-diary .holiday-banner");
   return b && b.textContent.includes("全日放假");
