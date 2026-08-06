@@ -2081,9 +2081,10 @@
       "</span>" +
       linkedGoalBadgeHtml(h) +
       "</span></button>" +
+      '<span class="row-actions">' +
       holidayBtnHtml(h, key) +
       checkBtnHtml(h, key, "check check-row") +
-      "</article>";
+      "</span></article>";
   }
 
   function holidayBtnHtml(h, key) {
@@ -2133,17 +2134,17 @@
     items.forEach(function (it) {
       if (it.habitId) {
         var hab = state.habits.find(function (x) { return x.id === it.habitId; });
+        // Circular check matches DC habit rows; fixed .row-actions keeps 放假/打卡 columns aligned.
         html += '<div class="today-timeline-item' + (it.done ? " done" : "") + '">' +
           '<span class="today-timeline-time">' + esc(it.time) + "</span>" +
           '<span class="today-timeline-dot" style="background:' + it.color + '"></span>' +
           '<button type="button" class="today-timeline-body" data-habit-open="' + it.habitId + '">' +
           "<strong>" + esc(it.title) + "</strong>" +
           '<span class="muted tiny">' + esc(it.kind) + "</span></button>" +
-          (hab ? holidayBtnHtml(hab, key) : "") +
-          '<button type="button" class="btn sm timeline-check-btn' + (it.done ? " soft" : "") +
-          '" data-toggle="' + it.habitId + '" aria-label="' +
-          (it.done ? "取消完成 " : "打卡 ") + escAttr(it.title) + '">' +
-          (it.done ? "已完成" : "打卡") + "</button></div>";
+          '<span class="row-actions">' +
+          (hab ? holidayBtnHtml(hab, key) : '<span class="row-actions-spacer" aria-hidden="true"></span>') +
+          checkBtnHtml(hab || { id: it.habitId, color: it.color }, key, "check check-row") +
+          "</span></div>";
       } else {
         html += '<button type="button" class="today-timeline-item" data-edit-event="' + it.eventId + '">' +
           '<span class="today-timeline-time">' + esc(it.time) + "</span>" +
@@ -2602,8 +2603,9 @@
       html += activeGoalsStripHtml();
     } else {
       html += dayJournalGateHtml(key);
-      html += todayUnifiedTimelineHtml();
+      // Soft habit cards first (DC Organic primary); timeline keeps schedule below.
       html += todayCheckinHtml(todayHabits);
+      html += todayUnifiedTimelineHtml();
       html += activeGoalsStripHtml();
     }
     document.getElementById("view-habits").innerHTML = html;
