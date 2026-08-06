@@ -21,6 +21,7 @@
     habitDetailId: "",
     habitDetailMonth: startOfMonth(new Date()),
     habitsPanel: "today",
+    timelineOpen: false,
     diaryDate: dateKey(new Date()),
     countdownUnit: "days",
     focus: {
@@ -2040,11 +2041,19 @@
       "</article>";
   }
 
-  function linkedGoalBadgeHtml(habit) {
+  function linkedGoalBadgeHtml(habit, compact) {
     var gs = state.goals.filter(function (g) {
       return g.habitId === habit.id && isGoalOpen(g);
     });
     if (!gs.length) return "";
+    if (compact) {
+      // Check-in rows: one quiet chip — no nested progress card (avoids sticky clutter).
+      var g0 = gs[0];
+      var pct0 = Math.min(100, Math.round((Number(g0.current) / Math.max(1, Number(g0.target))) * 100));
+      return '<span class="habit-goal-chip" style="--hcolor:' + escAttr(goalAccentColor(g0, habit)) + '">' +
+        '<span class="goal-habit-dot" aria-hidden="true"></span>' +
+        esc(g0.title) + " · " + pct0 + "%</span>";
+    }
     var html = '<div class="habit-goal-badges">';
     gs.slice(0, 2).forEach(function (g) {
       var pct = Math.min(100, Math.round((Number(g.current) / Math.max(1, Number(g.target))) * 100));
@@ -2076,8 +2085,8 @@
       '<span class="habit-row-name">' + esc(h.name) + "</span>" +
       '<span class="habit-row-meta">' + todayStatusText(h, key) +
       (streak ? '<span class="habit-row-streak">🔥 ' + streak + "</span>" : "") +
+      linkedGoalBadgeHtml(h, true) +
       "</span>" +
-      linkedGoalBadgeHtml(h) +
       "</span></button>" +
       '<span class="habit-row-actions">' +
       holidayBtnHtml(h, key) +
@@ -2128,8 +2137,9 @@
     });
     items.sort(function (a, b) { return a.sort - b.sort; });
     if (!items.length) return "";
-    // Collapsed by default so first viewport stays DC-like; feature kept, not dropped.
-    var html = '<details class="today-timeline-wrap"><summary class="today-timeline-summary">今日時間軸' +
+    // Remember open state across re-renders (打卡/放假 must not collapse the rail).
+    var html = '<details class="today-timeline-wrap"' + (ui.timelineOpen ? " open" : "") +
+      '><summary class="today-timeline-summary">今日時間軸' +
       '<span class="today-timeline-count">' + items.length + "</span></summary>" +
       '<div class="today-timeline">';
     items.forEach(function (it) {
@@ -2541,6 +2551,16 @@
     return html;
   }
 
+  // One-line jump only — full goal cards stay on 儀表板 / 設定.
+  function goalsTodayTeaserHtml() {
+    var n = state.goals.filter(isGoalOpen).length;
+    if (!n) return "";
+    return '<button type="button" class="goals-teaser" data-habits-panel="board" aria-label="在儀表板查看進行中目標">' +
+      '<span class="goals-teaser-label">進行中目標</span>' +
+      '<span class="goals-teaser-count">' + n + "</span>" +
+      '<span class="goals-teaser-cta">儀表板 →</span></button>';
+  }
+
   function weekSummaryHtml() {
     var start = new Date();
     start.setDate(start.getDate() - start.getDay());
@@ -2603,11 +2623,11 @@
       html += habitBoardHtml(active);
       html += activeGoalsStripHtml();
     } else {
-      // Soft habit cards first (DC Organic primary); slim diary gate + collapsed timeline below.
+      // Soft habit cards first (DC Organic primary); goals live on 儀表板 to avoid crowding.
       html += todayCheckinHtml(todayHabits);
+      html += goalsTodayTeaserHtml();
       html += dayJournalGateHtml(key);
       html += todayUnifiedTimelineHtml();
-      html += activeGoalsStripHtml();
     }
     document.getElementById("view-habits").innerHTML = html;
   }
@@ -4675,6 +4695,14 @@
 
   document.getElementById("app").addEventListener("click", handleUiClick);
   document.getElementById("modal").addEventListener("click", handleUiClick);
+
+  // Keep 今日時間軸 open across check-in / 放假 re-renders.
+  document.getElementById("app").addEventListener("toggle", function (e) {
+    var t = e.target;
+    if (t && t.classList && t.classList.contains("today-timeline-wrap")) {
+      ui.timelineOpen = !!t.open;
+    }
+  }, true);
 
   document.getElementById("app").addEventListener("change", function (e) {
     if (e.target.matches("[data-cal-opt]")) {

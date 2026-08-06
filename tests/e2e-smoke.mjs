@@ -329,22 +329,26 @@ await assert(goalSwatches >= 16, "goal editor offers many color choices");
 await page.evaluate(() => document.getElementById("gCancel").click());
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
 
-// habits page: daily tasks/habits before goals strip
+// habits today stays calm; full goals strip lives on 儀表板
 await page.click('[data-nav="habits"]');
+await page.waitForSelector('[data-habits-panel="today"].on, [data-habits-panel="today"]');
+const noGoalsOnToday = await page.evaluate(() => {
+  const root = document.getElementById("view-habits");
+  return !root.querySelector(".goals-strip");
+});
+await assert(noGoalsOnToday, "habits today has no full goals strip (avoids crowding)");
+await page.click('[data-habits-panel="board"]');
 await page.waitForSelector(".goals-strip");
 const habitsBeforeGoals = await page.evaluate(() => {
   const root = document.getElementById("view-habits");
   const goals = root.querySelector(".goals-strip");
-  const timeline = root.querySelector(".today-timeline");
-  const habits = root.querySelector(".habit-checkin-row, .habit-card, .habits-seg");
+  const habits = root.querySelector(".habit-box, .habits-board, .habits-seg");
   if (!goals || !habits) return false;
-  // goals is after habits/timeline (DOCUMENT_POSITION_FOLLOWING = 4)
-  const afterHabits = (habits.compareDocumentPosition(goals) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
-  const afterTimeline = !timeline ||
-    (timeline.compareDocumentPosition(goals) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
-  return afterHabits && afterTimeline;
+  return (habits.compareDocumentPosition(goals) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 });
-await assert(habitsBeforeGoals, "habits page shows daily habits/tasks before goals");
+await assert(habitsBeforeGoals, "habits board shows goals after habit dashboard");
+await page.click('[data-habits-panel="today"]');
+await page.waitForSelector(".habit-checkin-row, .habit-card, .empty");
 
 // habit detail linked goals: manage button + colored block
 await page.waitForSelector("[data-habit-open]");
