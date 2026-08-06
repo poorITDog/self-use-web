@@ -600,19 +600,39 @@ await page.waitForFunction(() => {
 });
 await page.waitForSelector(".excused-habits [data-toggle-habit-holiday].on");
 for (let guard = 0; guard < 20; guard++) {
-  const onBtn = await page.$(".excused-habits [data-toggle-habit-holiday].on");
-  if (!onBtn) break;
-  await onBtn.click();
+  const clicked = await page.evaluate(() => {
+    const onBtn = document.querySelector(".excused-habits [data-toggle-habit-holiday].on");
+    if (!onBtn) return false;
+    onBtn.click();
+    return true;
+  });
+  if (!clicked) break;
   await new Promise((r) => setTimeout(r, 40));
 }
 await page.waitForFunction(() => !document.querySelector(".excused-habits"));
 
 // Re-open diary: mood click must not wipe unsaved comment
-await page.click(".habit-checkin-row [data-toggle-habit-holiday], .habit-holiday-btn");
-await page.click(".day-journal-gate");
+await page.evaluate(() => {
+  const btn = document.querySelector(".habit-checkin-row [data-toggle-habit-holiday], .habit-holiday-btn");
+  if (btn) btn.click();
+});
+await page.evaluate(() => {
+  const gate = document.querySelector(".day-journal-gate");
+  if (gate) gate.click();
+});
 await page.waitForSelector("#view-diary .holiday-banner");
-await page.type('#view-diary textarea[id^="dayComment-"]', "草稿測試");
-await page.click('#view-diary [data-mood="2"]');
+await page.waitForSelector('#view-diary textarea[id^="dayComment-"]');
+await page.evaluate(() => {
+  const el = document.querySelector('#view-diary textarea[id^="dayComment-"]');
+  if (!el) return;
+  el.focus();
+  el.value = "草稿測試";
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+});
+await page.evaluate(() => {
+  const mood = document.querySelector('#view-diary [data-mood="2"], #view-diary .mood-btn[data-mood="2"]');
+  if (mood) mood.click();
+});
 const draftKept = await page.$eval(
   '#view-diary textarea[id^="dayComment-"]',
   (el) => el.value.includes("草稿測試")

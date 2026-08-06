@@ -1350,17 +1350,15 @@
     var holidayIds = holidayHabitIdList(key);
     var holidayOn = holidayIds.length > 0;
     var fullDay = isFullDayHoliday(key);
-    var html = '<button type="button" class="day-journal-gate" data-open-diary="' + escAttr(key) + '"' +
-      ' aria-label="打開今日日記">';
-    html += '<div class="day-journal-gate-head"><span class="section-title">今日日記</span>';
+    var html = '<button type="button" class="day-journal-gate day-journal-gate-slim" data-open-diary="' +
+      escAttr(key) + '" aria-label="打開今日日記">';
+    html += '<span class="day-journal-gate-title">今日日記</span>';
     if (holidayOn) {
       html += '<span class="tag tag-accent-2">' +
         (fullDay ? "全日放假" : ("部分放假 " + holidayIds.length)) + "</span>";
     } else if (mood) {
       html += '<span class="tag tag-accent">' + moodEmoji(mood) + " " + moodLabel(mood) + "</span>";
     }
-    html += "</div>";
-    html += '<p class="tiny muted">記錄心情與說明</p>';
     html += '<span class="day-journal-gate-cta">打開日記 →</span>';
     html += "</button>";
     return html;
@@ -2081,9 +2079,10 @@
       "</span>" +
       linkedGoalBadgeHtml(h) +
       "</span></button>" +
+      '<span class="habit-row-actions">' +
       holidayBtnHtml(h, key) +
       checkBtnHtml(h, key, "check check-row") +
-      "</article>";
+      "</span></article>";
   }
 
   function holidayBtnHtml(h, key) {
@@ -2129,21 +2128,24 @@
     });
     items.sort(function (a, b) { return a.sort - b.sort; });
     if (!items.length) return "";
-    var html = '<div class="today-timeline"><div class="section-title">今日時間軸</div>';
+    // Collapsed by default so first viewport stays DC-like; feature kept, not dropped.
+    var html = '<details class="today-timeline-wrap"><summary class="today-timeline-summary">今日時間軸' +
+      '<span class="today-timeline-count">' + items.length + "</span></summary>" +
+      '<div class="today-timeline">';
     items.forEach(function (it) {
       if (it.habitId) {
         var hab = state.habits.find(function (x) { return x.id === it.habitId; });
+        // Circular check matches DC habit rows; fixed rail keeps 放假/打卡 columns aligned.
         html += '<div class="today-timeline-item' + (it.done ? " done" : "") + '">' +
           '<span class="today-timeline-time">' + esc(it.time) + "</span>" +
           '<span class="today-timeline-dot" style="background:' + it.color + '"></span>' +
           '<button type="button" class="today-timeline-body" data-habit-open="' + it.habitId + '">' +
           "<strong>" + esc(it.title) + "</strong>" +
           '<span class="muted tiny">' + esc(it.kind) + "</span></button>" +
-          (hab ? holidayBtnHtml(hab, key) : "") +
-          '<button type="button" class="btn sm timeline-check-btn' + (it.done ? " soft" : "") +
-          '" data-toggle="' + it.habitId + '" aria-label="' +
-          (it.done ? "取消完成 " : "打卡 ") + escAttr(it.title) + '">' +
-          (it.done ? "已完成" : "打卡") + "</button></div>";
+          '<span class="habit-row-actions">' +
+          (hab ? holidayBtnHtml(hab, key) : '<span class="habit-row-actions-spacer" aria-hidden="true"></span>') +
+          checkBtnHtml(hab || { id: it.habitId, color: it.color }, key, "check check-row") +
+          "</span></div>";
       } else {
         html += '<button type="button" class="today-timeline-item" data-edit-event="' + it.eventId + '">' +
           '<span class="today-timeline-time">' + esc(it.time) + "</span>" +
@@ -2153,7 +2155,7 @@
           "</span></span></button>";
       }
     });
-    html += "</div>";
+    html += "</div></details>";
     return html;
   }
 
@@ -2601,9 +2603,10 @@
       html += habitBoardHtml(active);
       html += activeGoalsStripHtml();
     } else {
+      // Soft habit cards first (DC Organic primary); slim diary gate + collapsed timeline below.
+      html += todayCheckinHtml(todayHabits);
       html += dayJournalGateHtml(key);
       html += todayUnifiedTimelineHtml();
-      html += todayCheckinHtml(todayHabits);
       html += activeGoalsStripHtml();
     }
     document.getElementById("view-habits").innerHTML = html;
@@ -3511,13 +3514,42 @@
   }
 
   function renderFocusPanelInner() {
-    var p = 100 - Math.round((ui.focus.remainMs / Math.max(1, ui.focus.totalMs)) * 100);
-    var mm = Math.floor(ui.focus.remainMs / 60000);
-    var ss = Math.floor((ui.focus.remainMs % 60000) / 1000);
-    var html = '<h2>' + (ui.focus.mode === "focus" ? "專注番茄鐘" : "休息一下") + "</h2>";
-    html += '<div class="focus-ring" style="--p:' + p + '%"><div style="text-align:center">' +
-      '<div class="time">' + pad(mm) + ":" + pad(ss) + '</div>' +
-      '<div class="tiny">' + (ui.focus.running ? "進行中" : "準備開始") + "</div></div></div>";
+    var total = Math.max(1, ui.focus.totalMs);
+    var remain = Math.max(0, ui.focus.remainMs);
+    var elapsed = 1 - remain / total;
+    var r = 110;
+    var circ = 2 * Math.PI * r;
+    var offset = circ * (1 - elapsed);
+    var mm = Math.floor(remain / 60000);
+    var ss = Math.floor((remain % 60000) / 1000);
+    var modeLabel = ui.focus.mode === "focus" ? "專注 · 番茄鐘" : "休息 · 恢復中";
+    var presets = [25, 15, 5];
+    var curMin = Number(state.settings.focusMin || 25);
+    var html = '<div class="seg focus-presets">';
+    presets.forEach(function (m) {
+      html += '<button type="button" data-focus-preset="' + m + '" class="' +
+        (curMin === m && ui.focus.mode === "focus" && !ui.focus.running ? "on" : "") +
+        '">' + m + " 分</button>";
+    });
+    html += "</div>";
+    // DC Organic: 260 SVG ring, Caprasimo time, thick 14px stroke.
+    html += '<div class="focus-ring" aria-label="' + modeLabel + " " + pad(mm) + ":" + pad(ss) + '">' +
+      '<svg width="260" height="260" viewBox="0 0 260 260" aria-hidden="true">' +
+      '<circle class="focus-ring-track" cx="130" cy="130" r="' + r +
+      '" fill="none" stroke="var(--color-neutral-200)" stroke-width="14"></circle>' +
+      '<circle class="focus-ring-fill" cx="130" cy="130" r="' + r +
+      '" fill="none" stroke="var(--color-accent)" stroke-width="14" stroke-linecap="round" ' +
+      'stroke-dasharray="' + circ.toFixed(2) + '" stroke-dashoffset="' + offset.toFixed(2) +
+      '" transform="rotate(-90 130 130)"></circle></svg>' +
+      '<div class="focus-ring-center">' +
+      '<div class="time">' + pad(mm) + ":" + pad(ss) + "</div>" +
+      '<div class="focus-ring-sub">' + modeLabel + "</div></div></div>";
+    var bound = ui.focus.habitId
+      ? state.habits.find(function (h) { return h.id === ui.focus.habitId; })
+      : null;
+    html += '<div class="focus-habit-pill">' +
+      (bound ? "綁定 · " + esc(bound.name) : (ui.focus.running ? "進行中" : "未綁定習慣")) +
+      "</div>";
     html += '<div class="field"><label>綁定習慣（可選）</label><select id="focusHabit"><option value="">—</option>';
     state.habits.filter(function (h) { return !h.archived && h.type === "duration"; }).forEach(function (h) {
       html += '<option value="' + h.id + '"' + (ui.focus.habitId === h.id ? " selected" : "") + ">" + esc(h.name) + "</option>";
@@ -3533,7 +3565,8 @@
     html += '<div class="focus-actions">' +
       '<button class="btn" data-focus="' + (ui.focus.running ? "pause" : "start") + '">' +
       (ui.focus.running ? "暫停" : "開始") + "</button>" +
-      '<button class="btn ghost" data-focus="reset">重設</button>' +
+      '<button class="btn ghost" data-focus="reset" aria-label="重設">' +
+      '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>' +
       '<button class="btn soft" data-focus="switch">' +
       (ui.focus.mode === "focus" ? "切去休息" : "切去專注") + "</button></div>";
     var todayFocus = state.focusSessions.filter(function (s) { return dateKey(s.startedAt) === todayKey(); });
@@ -3549,7 +3582,9 @@
         weekCount++;
       }
     });
-    html += '<div class="focus-stats">今天 ' + todayFocus.length + " 次 · " + fmtMin(sum) +
+    html += '<div class="focus-stats"><span>今天已完成</span>' +
+      '<strong class="focus-stats-value">' + todayFocus.length + " 節</strong></div>";
+    html += '<div class="focus-stats-sub muted tiny">今日 ' + fmtMin(sum) +
       " · 本週 " + weekCount + " 次 · " + fmtMin(weekSum) + "</div>";
     var recent = state.focusSessions.slice().sort(function (a, b) {
       return Number(b.startedAt) - Number(a.startedAt);
@@ -3625,13 +3660,15 @@
       return;
     }
     if (ui.view === "focus") {
-      var ring = document.querySelector(".focus-ring");
+      var fill = document.querySelector(".focus-ring-fill");
       var time = document.querySelector(".focus-ring .time");
-      if (ring && time) {
-        var prog = 100 - Math.round((ui.focus.remainMs / Math.max(1, ui.focus.totalMs)) * 100);
-        ring.style.setProperty("--p", prog + "%");
-        var mm = Math.floor(ui.focus.remainMs / 60000);
-        var ss = Math.floor((ui.focus.remainMs % 60000) / 1000);
+      if (fill && time) {
+        var total = Math.max(1, ui.focus.totalMs);
+        var remain = Math.max(0, ui.focus.remainMs);
+        var circ = 2 * Math.PI * 110;
+        fill.setAttribute("stroke-dashoffset", (circ * (remain / total)).toFixed(2));
+        var mm = Math.floor(remain / 60000);
+        var ss = Math.floor((remain % 60000) / 1000);
         time.textContent = pad(mm) + ":" + pad(ss);
       }
     }
@@ -4597,6 +4634,22 @@
       applyTheme();
       renderSettingsBody();
       toast("主題已切換");
+      return;
+    }
+
+    var focusPreset = t.closest("[data-focus-preset]");
+    if (focusPreset) {
+      if (ui.focus.running) {
+        toast("計時中，請先暫停再改時長");
+        return;
+      }
+      var mins = Number(focusPreset.getAttribute("data-focus-preset")) || 25;
+      state.settings.focusMin = mins;
+      ui.focus.mode = "focus";
+      ui.focus.totalMs = mins * 60000;
+      ui.focus.remainMs = ui.focus.totalMs;
+      saveState();
+      renderFocus();
       return;
     }
 

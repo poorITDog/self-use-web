@@ -2587,18 +2587,18 @@ button.linkish {
 
 .today-timeline-item {
   display: grid;
-  grid-template-columns: 48px 10px 1fr auto;
-  gap: var(--space-2);
+  grid-template-columns: 56px 8px minmax(0, 1fr) auto;
   align-items: center;
+  gap: 8px;
   width: 100%;
-  padding: var(--space-3) var(--space-3);
+  padding: 10px 4px;
   border: 0;
   border-radius: var(--radius-lg);
   background: transparent;
   color: inherit;
   font: inherit;
   text-align: left;
-  cursor: pointer;
+  box-sizing: border-box;
 }
 
 .today-timeline-item.done {
@@ -2613,6 +2613,46 @@ button.linkish {
   font: inherit;
   text-align: left;
   cursor: pointer;
+  min-width: 0;
+}
+
+/* Fixed action rail: 放假 + circular check stay column-aligned across rows */
+.habit-row-actions {
+  display: grid;
+  grid-template-columns: 44px 42px;
+  gap: 8px;
+  align-items: center;
+  justify-items: center;
+  flex-shrink: 0;
+  align-self: center;
+  margin: 0;
+}
+
+.habit-row-actions-spacer {
+  width: 44px;
+  height: 42px;
+}
+
+.habit-row-actions .habit-holiday-btn {
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  line-height: 1;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.habit-row-actions .check.check-row {
+  width: 42px;
+  height: 42px;
+  margin: 0;
 }
 
 .focus-history {
@@ -2724,42 +2764,78 @@ button.linkish {
 
 .focus-panel {
   margin: 0;
-  padding: var(--space-5);
-  border-radius: 24px;
-  background: var(--color-neutral-100);
+  padding: 6px 0 0;
+  border-radius: 0;
+  background: transparent;
   border: none;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   text-align: center;
   width: 100%;
 }
 
-.focus-panel h2 {
-  margin: 0 0 var(--space-4);
-  font-family: var(--display);
-  font-size: 1.35rem;
-  font-weight: 400;
+.focus-presets {
+  width: 100%;
+  margin: 0 0 26px;
 }
 
 .focus-ring {
-  width: min(260px, 72vw);
-  aspect-ratio: 1;
-  margin: 0 auto 12px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background:
-    radial-gradient(circle at 50% 50%, var(--color-neutral-100) 58%, transparent 59%),
-    conic-gradient(var(--color-accent) var(--p, 0%), var(--color-neutral-200) 0);
-  box-shadow: var(--shadow-sm);
+  position: relative;
+  width: 260px;
+  height: 260px;
+  margin: 0 auto 8px;
+  border-radius: 0;
+  display: block;
+  background: none;
+  box-shadow: none;
+}
+
+.focus-ring svg {
+  display: block;
+  width: 260px;
+  height: 260px;
+}
+
+.focus-ring-fill {
+  transition: stroke-dashoffset 0.25s linear;
+}
+
+.focus-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  pointer-events: none;
 }
 
 .focus-ring .time {
   font-family: var(--display);
-  font-size: 3.5rem;
+  font-size: 56px;
   font-weight: 400;
   letter-spacing: -0.02em;
   line-height: 1;
   color: var(--color-text);
+}
+
+.focus-ring-sub {
+  font-size: 13px;
+  color: var(--color-neutral-600);
+  font-weight: 700;
+}
+
+.focus-habit-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-accent-100);
+  color: var(--color-accent-700);
+  padding: 8px 15px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 auto 24px;
 }
 
 .focus-actions {
@@ -2794,13 +2870,20 @@ button.linkish {
   border: none;
 }
 
+.focus-actions .btn.ghost {
+  width: 56px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
 .focus-stats {
   margin-top: 16px;
   padding: 16px 18px;
   border-radius: 20px;
   background: var(--color-neutral-100);
   box-shadow: var(--shadow-sm);
-  font-size: 0.92rem;
+  font-size: 14px;
   font-weight: 700;
   color: var(--color-neutral-700);
   display: flex;
@@ -2810,6 +2893,19 @@ button.linkish {
   box-sizing: border-box;
 }
 
+.focus-stats-value {
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--color-accent);
+}
+
+.focus-stats-sub {
+  margin-top: 8px;
+  text-align: left;
+  width: 100%;
+}
+
 .focus-history {
   margin-top: 14px;
   width: 100%;
@@ -2817,16 +2913,10 @@ button.linkish {
 }
 
 .today-timeline-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 56px 8px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
-}
-
-.today-timeline-item .habit-holiday-btn {
-  min-width: 40px;
-  min-height: 36px;
-  border-radius: var(--radius-pill);
-  flex-shrink: 0;
 }
 
 .today-timeline {
@@ -3586,6 +3676,7 @@ details.advanced-sync summary {
 /* Beat .habit-card's 3-col grid when both classes are on the row */
 .habit-card.habit-checkin-row {
   display: flex;
+  align-items: center;
   grid-template-columns: none;
   border: none;
   border-radius: 20px;
@@ -4071,6 +4162,81 @@ button.habit-box-day:active {
   font: inherit;
   color: inherit;
   transition: background 0.15s var(--ease), border-color 0.15s;
+}
+
+.day-journal-gate-slim {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 14px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 999px;
+}
+
+.day-journal-gate-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--color-neutral-700);
+}
+
+.day-journal-gate-slim .day-journal-gate-cta {
+  margin-left: auto;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-accent-700);
+}
+
+.today-timeline-wrap {
+  margin: 0 0 14px;
+  border-radius: 20px;
+  background: var(--color-neutral-100);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.today-timeline-summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--color-neutral-700);
+  user-select: none;
+}
+
+.today-timeline-summary::-webkit-details-marker {
+  display: none;
+}
+
+.today-timeline-summary::after {
+  content: "▸";
+  margin-left: auto;
+  color: var(--color-neutral-500);
+  transition: transform 0.15s;
+}
+
+.today-timeline-wrap[open] .today-timeline-summary::after {
+  transform: rotate(90deg);
+}
+
+.today-timeline-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-neutral-500);
+  background: var(--color-neutral-200);
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+}
+
+.today-timeline-wrap .today-timeline {
+  margin: 0;
+  box-shadow: none;
+  border-radius: 0;
+  padding-top: 0;
 }
 
 .day-journal-gate:hover {
@@ -4597,7 +4763,7 @@ button.habit-box-day:active {
 
 .habit-checkin-row .habit-row-body {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 13px;
   flex: 1;
   min-width: 0;
@@ -4608,6 +4774,20 @@ button.habit-box-day:active {
   cursor: pointer;
   color: inherit;
   overflow: hidden;
+}
+
+.habit-checkin-row .habit-row-actions {
+  margin-left: auto;
+}
+
+.habit-checkin-row .habit-goal-badges {
+  margin-top: 6px;
+}
+
+.habit-checkin-row .habit-goal-badge {
+  padding: 8px 10px;
+  border-radius: 14px;
+  box-shadow: none;
 }
 
 .habit-emoji-tile {
@@ -4655,16 +4835,6 @@ button.habit-box-day:active {
   font-size: 11.5px;
   color: var(--color-accent-700);
   font-weight: 800;
-}
-
-.habit-checkin-row .habit-holiday-btn {
-  min-width: 40px;
-  min-height: 36px;
-  max-width: none;
-  padding: 0 10px;
-  border-radius: var(--radius-pill);
-  font-size: 0.72rem;
-  flex-shrink: 0;
 }
 
 .check.check-row {
