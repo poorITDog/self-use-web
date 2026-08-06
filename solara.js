@@ -1350,17 +1350,15 @@
     var holidayIds = holidayHabitIdList(key);
     var holidayOn = holidayIds.length > 0;
     var fullDay = isFullDayHoliday(key);
-    var html = '<button type="button" class="day-journal-gate" data-open-diary="' + escAttr(key) + '"' +
-      ' aria-label="打開今日日記">';
-    html += '<div class="day-journal-gate-head"><span class="section-title">今日日記</span>';
+    var html = '<button type="button" class="day-journal-gate day-journal-gate-slim" data-open-diary="' +
+      escAttr(key) + '" aria-label="打開今日日記">';
+    html += '<span class="day-journal-gate-title">今日日記</span>';
     if (holidayOn) {
       html += '<span class="tag tag-accent-2">' +
         (fullDay ? "全日放假" : ("部分放假 " + holidayIds.length)) + "</span>";
     } else if (mood) {
       html += '<span class="tag tag-accent">' + moodEmoji(mood) + " " + moodLabel(mood) + "</span>";
     }
-    html += "</div>";
-    html += '<p class="tiny muted">記錄心情與說明</p>';
     html += '<span class="day-journal-gate-cta">打開日記 →</span>';
     html += "</button>";
     return html;
@@ -2130,7 +2128,10 @@
     });
     items.sort(function (a, b) { return a.sort - b.sort; });
     if (!items.length) return "";
-    var html = '<div class="today-timeline"><div class="section-title">今日時間軸</div>';
+    // Collapsed by default so first viewport stays DC-like; feature kept, not dropped.
+    var html = '<details class="today-timeline-wrap"><summary class="today-timeline-summary">今日時間軸' +
+      '<span class="today-timeline-count">' + items.length + "</span></summary>" +
+      '<div class="today-timeline">';
     items.forEach(function (it) {
       if (it.habitId) {
         var hab = state.habits.find(function (x) { return x.id === it.habitId; });
@@ -2154,7 +2155,7 @@
           "</span></span></button>";
       }
     });
-    html += "</div>";
+    html += "</div></details>";
     return html;
   }
 
@@ -2602,9 +2603,9 @@
       html += habitBoardHtml(active);
       html += activeGoalsStripHtml();
     } else {
-      html += dayJournalGateHtml(key);
-      // Soft habit cards first (DC Organic primary); timeline keeps schedule below.
+      // Soft habit cards first (DC Organic primary); slim diary gate + collapsed timeline below.
       html += todayCheckinHtml(todayHabits);
+      html += dayJournalGateHtml(key);
       html += todayUnifiedTimelineHtml();
       html += activeGoalsStripHtml();
     }
