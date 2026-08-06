@@ -37,12 +37,12 @@ async function addHabit(name) {
 
 await addHabit("晨跑對齊");
 await addHabit("聽力對齊");
-await page.waitForSelector(".habit-checkin-row .row-actions");
-await page.waitForSelector(".today-timeline-item .row-actions");
+await page.waitForSelector(".habit-checkin-row .habit-row-actions");
+await page.waitForSelector(".today-timeline-item .habit-row-actions");
 
 const checkin = await page.evaluate(() => {
   return [...document.querySelectorAll(".habit-checkin-row")].map((row) => {
-    const actions = row.querySelector(".row-actions");
+    const actions = row.querySelector(".habit-row-actions");
     const hol = actions && actions.querySelector(".habit-holiday-btn");
     const check = actions && actions.querySelector(".check-row, [data-toggle]");
     if (!actions || !hol || !check) return null;
@@ -60,8 +60,8 @@ const checkin = await page.evaluate(() => {
 });
 
 const timeline = await page.evaluate(() => {
-  return [...document.querySelectorAll(".today-timeline-item .row-actions")].map((actions) => {
-    const hol = actions.querySelector(".habit-holiday-btn, .row-actions-spacer");
+  return [...document.querySelectorAll(".today-timeline-item .habit-row-actions")].map((actions) => {
+    const hol = actions.querySelector(".habit-holiday-btn, .habit-row-actions-spacer");
     const check = actions.querySelector(".check-row, [data-toggle]");
     const ar = actions.getBoundingClientRect();
     const hr = hol.getBoundingClientRect();

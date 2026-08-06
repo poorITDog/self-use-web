@@ -2617,7 +2617,7 @@ button.linkish {
 }
 
 /* Fixed action rail: 放假 + circular check stay column-aligned across rows */
-.row-actions {
+.habit-row-actions {
   display: grid;
   grid-template-columns: 44px 42px;
   gap: 8px;
@@ -2625,14 +2625,15 @@ button.linkish {
   justify-items: center;
   flex-shrink: 0;
   align-self: center;
+  margin: 0;
 }
 
-.row-actions-spacer {
+.habit-row-actions-spacer {
   width: 44px;
   height: 42px;
 }
 
-.row-actions .habit-holiday-btn {
+.habit-row-actions .habit-holiday-btn {
   width: 44px;
   min-width: 44px;
   max-width: 44px;
@@ -2648,7 +2649,7 @@ button.linkish {
   box-sizing: border-box;
 }
 
-.row-actions .check.check-row {
+.habit-row-actions .check.check-row {
   width: 42px;
   height: 42px;
   margin: 0;
@@ -4644,7 +4645,7 @@ button.habit-box-day:active {
   overflow: hidden;
 }
 
-.habit-checkin-row .row-actions {
+.habit-checkin-row .habit-row-actions {
   margin-left: auto;
 }
 

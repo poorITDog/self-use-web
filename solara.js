@@ -2081,7 +2081,7 @@
       "</span>" +
       linkedGoalBadgeHtml(h) +
       "</span></button>" +
-      '<span class="row-actions">' +
+      '<span class="habit-row-actions">' +
       holidayBtnHtml(h, key) +
       checkBtnHtml(h, key, "check check-row") +
       "</span></article>";
@@ -2134,15 +2134,15 @@
     items.forEach(function (it) {
       if (it.habitId) {
         var hab = state.habits.find(function (x) { return x.id === it.habitId; });
-        // Circular check matches DC habit rows; fixed .row-actions keeps 放假/打卡 columns aligned.
+        // Circular check matches DC habit rows; fixed rail keeps 放假/打卡 columns aligned.
         html += '<div class="today-timeline-item' + (it.done ? " done" : "") + '">' +
           '<span class="today-timeline-time">' + esc(it.time) + "</span>" +
           '<span class="today-timeline-dot" style="background:' + it.color + '"></span>' +
           '<button type="button" class="today-timeline-body" data-habit-open="' + it.habitId + '">' +
           "<strong>" + esc(it.title) + "</strong>" +
           '<span class="muted tiny">' + esc(it.kind) + "</span></button>" +
-          '<span class="row-actions">' +
-          (hab ? holidayBtnHtml(hab, key) : '<span class="row-actions-spacer" aria-hidden="true"></span>') +
+          '<span class="habit-row-actions">' +
+          (hab ? holidayBtnHtml(hab, key) : '<span class="habit-row-actions-spacer" aria-hidden="true"></span>') +
           checkBtnHtml(hab || { id: it.habitId, color: it.color }, key, "check check-row") +
           "</span></div>";
       } else {
