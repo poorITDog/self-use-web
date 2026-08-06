@@ -1775,36 +1775,29 @@
     });
     var partialHoliday = !fullHoliday && excusedDue.length > 0;
     var holidayCount = excusedDue.length;
-    var doneCount = todayHabits.filter(function (h) { return isHabitDone(h, key); }).length;
-    var total = todayHabits.length;
-    var rate = total ? Math.round((doneCount / total) * 100) : 0;
-    var html = '<div class="today-strip">';
+    var mins = minutesOnDate(key);
+    var agenda = eventsForDate(key);
+    // Header SVG ring is the sole completion meter — strip only carries holiday / agenda / minutes.
+    if (!fullHoliday && !partialHoliday && !agenda.length && !mins) return "";
+    var html = '<div class="today-strip today-strip-slim">';
     html += '<div class="today-strip-head">';
     if (fullHoliday) {
       html += '<div class="today-progress-text">今天全日放假 <strong>連續紀錄保留</strong>' +
-        '<span class="stat-sep" aria-hidden="true">·</span>投入 <strong>' +
-        fmtMin(minutesOnDate(key)) + "</strong></div>";
+        (mins ? '<span class="stat-sep" aria-hidden="true">·</span>投入 <strong>' + fmtMin(mins) + "</strong>" : "") +
+        "</div>";
       html += '<div class="holiday-chip-ring" aria-label="全日放假">假</div></div>';
       html += '<div class="tiny muted" style="margin-top:8px">全日放假不會計入未完成。</div>';
     } else if (partialHoliday) {
       html += '<div class="today-progress-text">' +
-        '<span class="today-stat">已完成 <strong>' + doneCount + "/" + total + "</strong></span>" +
-        '<span class="stat-sep" aria-hidden="true">|</span>' +
         '<span class="today-stat today-stat-holiday">' + holidayCount + " 個放假</span>" +
-        '<span class="stat-sep" aria-hidden="true">|</span>' +
-        '<span class="today-stat">投入 <strong>' + fmtMin(minutesOnDate(key)) + "</strong></span></div>";
-      html += progressRingHtml(rate, 48) + "</div>";
-      html += '<div class="progress-bar-slim"><i style="width:' + rate + '%"></i></div>';
+        (mins ? '<span class="stat-sep" aria-hidden="true">·</span><span class="today-stat">投入 <strong>' +
+          fmtMin(mins) + "</strong></span>" : "") +
+        "</div></div>";
       html += '<div class="tiny muted" style="margin-top:8px">已放假習慣不計未完成，其餘仍可打卡。</div>';
     } else {
       html += '<div class="today-progress-text">' +
-        '<span class="today-stat">已完成 <strong>' + doneCount + "/" + total + "</strong></span>" +
-        '<span class="stat-sep" aria-hidden="true">|</span>' +
-        '<span class="today-stat">投入 <strong>' + fmtMin(minutesOnDate(key)) + "</strong></span></div>";
-      html += progressRingHtml(rate, 48) + "</div>";
-      html += '<div class="progress-bar-slim"><i style="width:' + rate + '%"></i></div>';
+        '<span class="today-stat">投入 <strong>' + fmtMin(mins) + "</strong></span></div></div>";
     }
-    var agenda = eventsForDate(key);
     if (agenda.length) {
       html += '<div class="today-agenda">';
       agenda.slice(0, 3).forEach(function (ev) {
@@ -2580,9 +2573,10 @@
     return '<div class="week-summary week-summary-card">' +
       '<div class="week-summary-head">' +
       '<span class="week-summary-title">本週</span>' +
-      '<span class="week-summary-meta">最佳連續 ' + bestStreak() + " 天 · " + rate + "% · 行程 " + evtCount +
-      "</span></div>" +
-      '<div class="week-dots">' + dots + "</div></div>";
+      '<span class="week-summary-meta">最佳連續 ' + bestStreak() + " 天 🔥</span></div>" +
+      '<div class="week-dots">' + dots + "</div>" +
+      '<div class="week-summary-foot muted tiny">達成 ' + rate + "% · 打卡 " + done + "/" + due +
+      " · 行程 " + evtCount + "</div></div>";
   }
 
   function renderHabits() {
@@ -2590,8 +2584,8 @@
     var todayHabits = state.habits.filter(function (h) { return !h.archived && habitDueOn(h, key); });
     var active = state.habits.filter(function (h) { return !h.archived; });
     var panel = ui.habitsPanel === "board" ? "board" : "today";
-    var html = todayStripHtml(todayHabits);
-    html += weekSummaryHtml();
+    var html = weekSummaryHtml();
+    html += todayStripHtml(todayHabits);
     html += '<div class="seg habits-seg">' +
       '<button type="button" data-habits-panel="today" class="' + (panel === "today" ? "on" : "") +
       '">今天</button>' +

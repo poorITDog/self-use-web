@@ -454,9 +454,13 @@ body {
   background-size: cover, cover, auto;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
-  padding-bottom: calc(var(--nav-h) + 20px + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--nav-h) + 36px + env(safe-area-inset-bottom));
   transition: background 0.4s var(--ease), color 0.3s var(--ease);
   position: relative;
+}
+
+html {
+  scroll-padding-bottom: calc(var(--nav-h) + 28px + env(safe-area-inset-bottom));
 }
 
 /* ── Theme scene decorative layer ── */
@@ -819,7 +823,7 @@ button {
 main {
   flex: 1;
   padding-top: 0;
-  padding-bottom: 16px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
   padding-left: max(var(--page-gutter), env(safe-area-inset-left, 0px));
   padding-right: max(var(--page-gutter), env(safe-area-inset-right, 0px));
 }
@@ -2692,63 +2696,120 @@ button.linkish {
 
 .countdown-card .muted { font-size: 0.78rem; }
 
-/* ── Focus / Pomodoro ── */
+/* ── Focus / Pomodoro (DC Organic) ── */
 .focus-view {
   padding: 0 0 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .focus-panel {
   margin: 0;
   padding: var(--space-5);
-  border-radius: var(--radius-lg);
+  border-radius: 24px;
   background: var(--color-neutral-100);
-  border: 1px solid var(--color-neutral-300);
+  border: none;
   box-shadow: var(--shadow-sm);
   text-align: center;
+  width: 100%;
 }
 
 .focus-panel h2 {
   margin: 0 0 var(--space-4);
   font-family: var(--display);
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   font-weight: 400;
 }
 
 .focus-ring {
-  width: min(240px, 65vw);
+  width: min(260px, 72vw);
   aspect-ratio: 1;
-  margin: 0 auto 20px;
+  margin: 0 auto 12px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at 50% 50%, var(--surface) 58%, transparent 59%),
-    conic-gradient(var(--accent-2) var(--p, 0%), var(--surface-2) 0);
+    radial-gradient(circle at 50% 50%, var(--color-neutral-100) 58%, transparent 59%),
+    conic-gradient(var(--color-accent) var(--p, 0%), var(--color-neutral-200) 0);
   box-shadow: var(--shadow-sm);
 }
 
 .focus-ring .time {
   font-family: var(--display);
-  font-size: 2.8rem;
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  font-size: 3.5rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
   line-height: 1;
+  color: var(--color-text);
 }
 
 .focus-actions {
   display: flex;
-  gap: 8px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-top: 16px;
+  gap: 12px;
+  justify-content: stretch;
+  flex-wrap: nowrap;
+  margin-top: 18px;
+  width: 100%;
 }
 
-.focus-actions .btn { min-width: 100px; }
+.focus-actions .btn[data-focus="start"],
+.focus-actions .btn[data-focus="pause"] {
+  flex: 1;
+  min-width: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: #fff;
+  font-weight: 800;
+  box-shadow: var(--shadow-md);
+  border: none;
+}
+
+.focus-actions .btn.ghost,
+.focus-actions .btn.soft {
+  flex: 0 0 auto;
+  min-width: 56px;
+  border-radius: var(--radius-pill);
+  background: var(--color-neutral-100);
+  color: var(--color-neutral-700);
+  box-shadow: var(--shadow-sm);
+  border: none;
+}
 
 .focus-stats {
   margin-top: 16px;
-  font-size: 0.82rem;
-  color: var(--text-soft);
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: var(--color-neutral-100);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--color-neutral-700);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.focus-history {
+  margin-top: 14px;
+  width: 100%;
+  text-align: left;
+}
+
+.week-summary-foot {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.today-strip-slim {
+  padding: 12px 16px;
+}
+
+.today-strip-slim .progress-ring,
+.today-strip-slim .progress-bar-slim {
+  display: none;
 }
 
 /* ── Settings (iOS-like) ── */
@@ -3473,22 +3534,28 @@ details.advanced-sync summary {
 }
 
 .habit-checkin-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  gap: 8px;
+  display: flex;
   align-items: center;
-  padding: var(--space-4);
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
+  gap: 12px;
+  padding: 13px 14px;
+  background: var(--color-neutral-100);
+  border-bottom: none;
+  border-radius: 20px;
+  box-shadow: var(--shadow-sm);
   width: 100%;
   box-sizing: border-box;
   overflow: visible;
+  margin-bottom: 10px;
 }
 
 /* Beat .habit-card's 3-col grid when both classes are on the row */
 .habit-card.habit-checkin-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  display: flex;
+  grid-template-columns: none;
+  border: none;
+  border-radius: 20px;
+  box-shadow: var(--shadow-sm);
+  background: var(--color-neutral-100);
 }
 
 .habit-checkin-row .habit-row-body {
