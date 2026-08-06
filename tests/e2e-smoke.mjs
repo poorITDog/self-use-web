@@ -50,7 +50,7 @@ async function assert(cond, name) {
   console.log("PASS:", name);
 }
 
-const brand = await page.$eval(".solara-mark", (el) => el.getAttribute("aria-label"));
+const brand = await page.$eval(".app-bar-title", (el) => el.getAttribute("aria-label") || el.textContent.trim());
 await assert(brand === "Solara", "brand mark visible on habits");
 
 // default tab is habits; today panel is default
@@ -108,14 +108,14 @@ const timeline = await page.$(".today-timeline");
 await assert(!!timeline, "today timeline renders with timed habit");
 
 // complete via check on today row
-await page.waitForSelector(".habit-checkin-row .check-lg, .check-lg");
-await page.evaluate(() => document.querySelector(".check-lg").click());
+await page.waitForSelector(".habit-checkin-row .check-row, .habit-checkin-row [data-toggle]");
+await page.evaluate(() => document.querySelector(".habit-checkin-row [data-toggle]").click());
 await page.waitForFunction(() => {
-  const ring = document.querySelector(".progress-ring-inner strong");
-  return ring && ring.textContent.includes("100");
+  const ring = document.querySelector(".app-bar-ring-label, .progress-ring-inner strong");
+  return ring && (ring.textContent.includes("1/") || ring.textContent.includes("100"));
 });
-const rate = await page.$eval(".progress-ring-inner strong", (el) => el.textContent);
-await assert(rate.includes("100"), "completion rate updates to 100% after yes/no checkin");
+const rate = await page.$eval(".app-bar-ring-label, .progress-ring-inner strong", (el) => el.textContent);
+await assert(rate.includes("1/") || rate.includes("100"), "completion updates after yes/no checkin");
 
 // habit dashboard boxes on board
 await page.click('[data-habits-panel="board"]');
@@ -234,7 +234,7 @@ await page.waitForFunction(() => !document.getElementById("modalBackdrop").class
 await page.click('[data-habits-panel="today"]');
 await page.waitForFunction(() => document.querySelectorAll(".habit-checkin-row, .habit-row").length >= 2);
 await page.evaluate(() => {
-  const btn = document.querySelectorAll(".check-lg")[1];
+  const btn = document.querySelectorAll(".habit-checkin-row [data-toggle]")[1];
   btn.scrollIntoView({ block: "center" });
   btn.click();
 });
@@ -468,7 +468,7 @@ await assert(!await page.$("#view-habits .holiday-habit-list"), "no holiday chec
 // Holiday toggle lives beside check/finish on the check-in row
 await page.waitForSelector(".habit-checkin-row .habit-holiday-btn");
 const holidayBesideCheck = await page.$eval(".habit-checkin-row", (row) => {
-  const check = row.querySelector(".check-lg, [data-toggle]");
+  const check = row.querySelector(".check-row, [data-toggle]");
   const hol = row.querySelector(".habit-holiday-btn, [data-toggle-habit-holiday]");
   return !!(check && hol);
 });
@@ -550,7 +550,7 @@ await page.waitForFunction(() => {
   return v && v.classList.contains("active");
 });
 await page.waitForSelector(".today-checkin, .excused-habits");
-const remainingChecks = await page.$$(".today-checkin .check-lg");
+const remainingChecks = await page.$$(".today-checkin .check-row, .today-checkin [data-toggle]");
 await assert(remainingChecks.length >= 1, "non-holiday habits remain on today list");
 const todayGate = await page.$(".day-journal-gate");
 await assert(!!todayGate, "today shows diary gate after partial holiday");

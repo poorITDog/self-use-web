@@ -83,7 +83,7 @@
   --line: color-mix(in srgb, var(--color-text) 10%, transparent);
   --line-strong: color-mix(in srgb, var(--color-text) 16%, transparent);
   --shadow: var(--shadow-md);
-  --nav-h: 56px;
+  --nav-h: 64px;
   --app-bar-h: 52px;
   --font: var(--font-body);
   --display: var(--font-heading);
@@ -702,14 +702,14 @@ button {
   justify-content: space-between;
   gap: 12px;
   min-height: var(--app-bar-h);
-  padding-top: calc(8px + env(safe-area-inset-top, 0px));
-  padding-bottom: 8px;
-  padding-left: max(var(--page-gutter), env(safe-area-inset-left, 0px));
-  padding-right: max(var(--page-gutter), env(safe-area-inset-right, 0px));
-  background: var(--bg-elevated);
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
+  padding-bottom: 10px;
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+  background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--line);
+  border-bottom: none;
 }
 
 .app-bar-start {
@@ -719,13 +719,50 @@ button {
   min-width: 0;
 }
 
+.app-bar-brand {
+  align-items: flex-start;
+}
+
+.app-bar-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
 .app-bar-title {
   margin: 0;
   font-family: var(--display);
-  font-size: 1.4rem;
+  font-size: 1.7rem;
   font-weight: 400;
   letter-spacing: 0;
-  line-height: 1.15;
+  line-height: 1;
+  color: var(--color-text);
+}
+
+.app-bar-sub {
+  font-size: 12.5px;
+  color: var(--color-neutral-600);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.app-bar-ring {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+}
+
+.app-bar-ring-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--color-accent-700);
 }
 
 .solara-mark {
@@ -820,27 +857,45 @@ main {
 
 @keyframes checkBtnPulse {
   0% { transform: scale(1); }
-  45% { transform: scale(1.06); }
+  45% { transform: scale(1.22); }
   100% { transform: scale(1); }
 }
 
-/* ── Bottom nav (floating pill) ── */
+@keyframes solFade {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes solSheet {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes solToast {
+  from { opacity: 0; transform: translate(-50%, 14px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ── Bottom nav (DC edge bar) ── */
 .nav {
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: calc(8px + env(safe-area-inset-bottom));
-  width: min(420px, calc(100% - (2 * var(--page-gutter))));
-  height: var(--nav-h);
-  padding: 4px;
+  left: 0;
+  right: 0;
+  transform: none;
+  bottom: 0;
+  width: 100%;
+  height: auto;
+  min-height: var(--nav-h);
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  background: var(--nav-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-pill);
-  box-shadow: var(--shadow-md);
+  background: color-mix(in srgb, var(--color-neutral-100) 92%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: none;
+  border-top: 1px solid var(--color-neutral-200);
+  border-radius: 0;
+  box-shadow: none;
   z-index: 40;
 }
 
@@ -850,21 +905,23 @@ main {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  color: var(--text-mute);
+  color: var(--color-neutral-500);
   font-size: 0.58rem;
   font-weight: 500;
   padding: 4px 2px;
-  border-radius: 999px;
+  border-radius: 12px;
   transition: color 0.15s, background 0.2s var(--ease);
+  background: transparent;
 }
 
 .nav button.active {
-  color: var(--nav-active-color);
-  background: var(--nav-active-bg);
+  color: var(--color-accent);
+  background: transparent;
 }
 
 .nav button.active .nav-label {
   font-weight: 700;
+  font-size: 10.5px;
 }
 
 .nav button:focus-visible,
@@ -1768,12 +1825,12 @@ button.linkish {
 .seg {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-1);
+  gap: 4px;
   margin: 0 0 var(--space-3);
-  padding: var(--space-1);
+  padding: 4px;
   border-radius: var(--radius-pill);
-  background: var(--color-accent-100);
-  border: 1px solid var(--color-neutral-300);
+  background: var(--color-neutral-200);
+  border: none;
 }
 
 .seg.seg-3 { grid-template-columns: repeat(3, 1fr); }
@@ -1783,16 +1840,16 @@ button.linkish {
   border-radius: var(--radius-pill);
   font-weight: 600;
   font-size: 0.84rem;
-  color: var(--color-text);
-  opacity: 0.68;
+  color: var(--color-neutral-600);
+  opacity: 1;
   transition: background 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s;
 }
 
 .seg button.on {
-  background: var(--color-neutral-100);
-  color: var(--color-accent-700);
+  background: var(--color-accent);
+  color: #fff;
   opacity: 1;
-  font-weight: 700;
+  font-weight: 800;
   box-shadow: var(--shadow-sm);
 }
 
@@ -2261,16 +2318,16 @@ button.linkish {
 
 .fab {
   position: fixed;
-  right: max(var(--page-gutter), env(safe-area-inset-right, 0px));
-  bottom: calc(var(--nav-h) + 16px + env(safe-area-inset-bottom));
+  right: max(18px, env(safe-area-inset-right, 0px));
+  bottom: calc(var(--nav-h) + 22px + env(safe-area-inset-bottom));
   width: 56px;
   height: 56px;
   border-radius: var(--radius-pill);
   background: var(--color-accent);
-  color: var(--color-neutral-100);
+  color: #fff;
   display: grid;
   place-items: center;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
   z-index: 35;
   transition: transform 0.15s, background 0.15s;
 }
@@ -4233,4 +4290,451 @@ button.habit-box-day:active {
 @media (max-width: 380px) {
   .mood-caption { font-size: 0.72rem; }
   .mood-btn { min-height: 58px; padding: 6px 2px; }
+}
+
+/* ══════════════════════════════════════════════
+   DreamCanvas Organic transfer layer
+   Keeps all features; restyles chrome to DC mock.
+   ══════════════════════════════════════════════ */
+
+.view.active {
+  animation: solFade 0.3s ease;
+}
+
+.sync-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-accent-100);
+  color: var(--color-accent-700);
+  padding: 6px 11px;
+  border-radius: var(--radius-pill);
+  font-size: 11.5px;
+  font-weight: 700;
+  border: none;
+  box-shadow: none;
+}
+
+.sync-chip strong { font-weight: 700; }
+
+.sync-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-accent-2);
+  flex-shrink: 0;
+}
+
+.sync-chip.sync-failed .sync-dot,
+.sync-chip.sync-needsAuth .sync-dot {
+  background: var(--warn, #c45c3e);
+}
+
+.sync-chip.sync-syncing .sync-dot {
+  background: var(--color-accent);
+}
+
+.habits-seg {
+  background: var(--color-neutral-200);
+  border: none;
+  padding: 4px;
+  gap: 4px;
+}
+
+.habits-seg button {
+  color: var(--color-neutral-600);
+  opacity: 1;
+}
+
+.habits-seg button.on {
+  background: var(--color-accent);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+  border-bottom: 0;
+  margin-bottom: 0;
+}
+
+/* Week dots card (DC) */
+.week-summary-card {
+  display: block;
+  margin: 0 0 14px;
+  padding: 16px 16px 14px;
+  border-radius: 24px;
+  background: var(--color-neutral-100);
+  box-shadow: var(--shadow-sm);
+  border: none;
+}
+
+.week-summary-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 13px;
+}
+
+.week-summary-title {
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--color-text);
+}
+
+.week-summary-meta {
+  font-size: 12px;
+  color: var(--color-neutral-600);
+  font-weight: 700;
+  text-align: right;
+}
+
+.week-dots {
+  display: flex;
+  gap: 7px;
+}
+
+.week-dot-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.week-dot-cell {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--color-neutral-200);
+  color: var(--color-neutral-600);
+}
+
+.week-dot-cell.partial {
+  background: color-mix(in srgb, var(--color-accent) calc(var(--heat, 0.4) * 70%), var(--color-neutral-200));
+  color: var(--color-accent-700);
+}
+
+.week-dot-cell.full {
+  background: color-mix(in srgb, var(--color-accent) 55%, var(--color-neutral-100));
+  color: var(--color-accent-700);
+  box-shadow: var(--shadow-sm);
+}
+
+.week-dot-cell.today {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.week-dot-label {
+  font-size: 11px;
+  color: var(--color-neutral-600);
+  font-weight: 600;
+}
+
+/* Today habit cards — independent soft cards */
+.today-checkin {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  border-radius: 0;
+}
+
+.today-checkin .habit-group-section {
+  border-bottom: 0;
+  margin-bottom: 20px;
+  background: transparent;
+}
+
+.today-checkin .habit-group-label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 4px 11px;
+  padding: 0;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--color-neutral-700);
+}
+
+.habit-group-count {
+  font-size: 12px;
+  color: var(--color-neutral-500);
+  font-weight: 700;
+  background: var(--color-neutral-200);
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+}
+
+.habit-card.habit-checkin-row,
+.habit-checkin-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  grid-template-columns: none;
+  background: var(--color-neutral-100);
+  border-radius: 20px;
+  padding: 13px 14px;
+  box-shadow: var(--shadow-sm);
+  border: none;
+  border-bottom: none;
+  margin-bottom: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.habit-checkin-row .habit-row-body {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  overflow: hidden;
+}
+
+.habit-emoji-tile {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 23px;
+  line-height: 1;
+}
+
+.habit-row-copy {
+  min-width: 0;
+  display: block;
+  flex: 1;
+}
+
+.habit-checkin-row .habit-row-name {
+  display: block;
+  font-weight: 700;
+  font-size: 15.5px;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.habit-checkin-row .habit-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 3px;
+  margin-bottom: 0;
+  font-size: 12.5px;
+  color: var(--color-neutral-600);
+  font-weight: 600;
+  flex-wrap: wrap;
+}
+
+.habit-row-streak {
+  font-size: 11.5px;
+  color: var(--color-accent-700);
+  font-weight: 800;
+}
+
+.habit-checkin-row .habit-holiday-btn {
+  min-width: 40px;
+  min-height: 36px;
+  max-width: none;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  flex-shrink: 0;
+}
+
+.check.check-row {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 2px solid var(--color-neutral-300);
+  background: transparent;
+  color: var(--color-neutral-400);
+  box-shadow: none;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.check.check-row.on {
+  background: var(--hcolor, var(--color-accent));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+  animation: checkBtnPulse 0.35s var(--ease);
+}
+
+.check.check-row svg {
+  display: block;
+}
+
+.habit-checkin-row .habit-goal-badges {
+  margin-top: 6px;
+}
+
+.habit-checkin-row .habit-row-chevron {
+  display: none;
+}
+
+/* Soft cards: diary gate, today strip, calendar, countdown */
+.day-journal-gate {
+  border-radius: 20px;
+  box-shadow: var(--shadow-sm);
+  border: none;
+  background: var(--color-neutral-100);
+}
+
+.today-strip {
+  border-radius: 24px;
+  box-shadow: var(--shadow-sm);
+  border: none;
+  background: var(--color-neutral-100);
+}
+
+.cal-grid-wrap {
+  background: var(--color-neutral-100);
+  border-radius: 24px;
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+  border: none;
+}
+
+.cal-day {
+  border-radius: 11px;
+}
+
+.cal-toolbar .btn.icon-only,
+.cal-toolbar button.btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-neutral-100);
+  box-shadow: var(--shadow-sm);
+  border: none;
+}
+
+.day-panel {
+  border-radius: 24px;
+  box-shadow: var(--shadow-sm);
+  border: none;
+  background: var(--color-neutral-100);
+}
+
+.countdown-card,
+.cd-card {
+  border-radius: 22px;
+  box-shadow: var(--shadow-sm);
+  border: none;
+  background: var(--color-neutral-100);
+  overflow: hidden;
+}
+
+.habit-box {
+  border-radius: 24px;
+  box-shadow: var(--shadow-sm);
+  border: none;
+}
+
+.habit-box-grid-wrap {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 520px) {
+  .habit-box-grid-wrap {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+}
+
+.settings-group {
+  border-radius: 22px;
+  box-shadow: var(--shadow-sm);
+  border: none;
+  overflow: hidden;
+}
+
+.modal {
+  border-radius: 28px 28px 0 0;
+  background: var(--color-bg);
+  animation: solSheet 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.modal-backdrop.open {
+  background: rgba(32, 30, 29, 0.4);
+}
+
+.sheet-handle {
+  width: 38px;
+  height: 5px;
+  border-radius: var(--radius-pill);
+  background: var(--color-neutral-300);
+}
+
+.toast {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  bottom: calc(var(--nav-h) + 36px + env(safe-area-inset-bottom));
+  border-radius: var(--radius-pill);
+  padding: 11px 20px;
+  font-size: 13.5px;
+  font-weight: 700;
+  box-shadow: var(--shadow-lg);
+  animation: solToast 0.25s ease;
+  white-space: nowrap;
+  max-width: calc(100% - 40px);
+}
+
+.excused-habits {
+  border-radius: 20px;
+  background: var(--color-neutral-100);
+  box-shadow: var(--shadow-sm);
+  border: none;
+  padding: 8px 0;
+  margin-top: 8px;
+}
+
+.diary-page .day-journal,
+.diary-holiday-list {
+  border-radius: 20px;
+  box-shadow: var(--shadow-sm);
+  border: none;
+  background: var(--color-neutral-100);
+}
+
+.holiday-banner {
+  border-radius: 16px;
+  border: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.field input,
+.field textarea,
+.field select {
+  border: none;
+  border-radius: 16px;
+  background: var(--color-neutral-100);
+  box-shadow: var(--shadow-sm);
 }

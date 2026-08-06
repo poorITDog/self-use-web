@@ -332,7 +332,7 @@
       ? "登入已過期，點一下重新同步"
       : "雲端同步狀態");
     el.setAttribute("aria-label", "雲端同步狀態：" + syncStatusLabel());
-    el.innerHTML = "雲端 <strong>" + syncStatusLabel() + "</strong>";
+    el.innerHTML = '<span class="sync-dot" aria-hidden="true"></span>' + syncStatusLabel();
   }
 
   function getStoredToken() {
@@ -1647,7 +1647,7 @@
       chip.className = "chip sync-chip sync-" + syncStatus;
       chip.setAttribute("title", "雲端同步狀態");
       chip.setAttribute("aria-label", "雲端同步狀態：" + syncStatusLabel());
-      chip.innerHTML = "雲端 <strong>" + syncStatusLabel() + "</strong>";
+      chip.innerHTML = '<span class="sync-dot" aria-hidden="true"></span>' + syncStatusLabel();
     }
   }
 
@@ -1687,24 +1687,31 @@
 
   function renderAppBar() {
     var view = ui.view;
-    var title = VIEW_TITLES[view] || "Solara";
-    var html = '<div class="app-bar-start">';
+    var title = view === "habits" ? "Solara" : (VIEW_TITLES[view] || "Solara");
+    var html = '<div class="app-bar-start' + (view === "habits" ? " app-bar-brand" : "") + '">';
     if (view === "habits") {
-      html += '<span class="solara-mark" aria-label="Solara" title="Solara">S</span>';
-    }
-    html += '<h1 class="app-bar-title">' + title + "</h1>";
-    if (view === "habits") {
-      html += '<span class="date-chip">' + dateChipLabel() + "</span>";
-    } else if (view === "diary") {
-      html += '<span class="date-chip">' + esc(diaryDateChipLabel(ui.diaryDate || todayKey())) + "</span>";
+      html += '<div class="app-bar-brand-text">' +
+        '<h1 class="app-bar-title" aria-label="Solara">' + title + "</h1>" +
+        '<div class="app-bar-sub">' + dateChipLabel() + "</div></div>";
+    } else {
+      html += '<h1 class="app-bar-title">' + title + "</h1>";
+      if (view === "diary") {
+        html += '<span class="date-chip">' + esc(diaryDateChipLabel(ui.diaryDate || todayKey())) + "</span>";
+      }
     }
     html += '</div><div class="app-bar-actions">' + appBarActionHtml(view);
     if (view === "habits") {
+      var key = todayKey();
+      var todayHabits = state.habits.filter(function (h) {
+        return !h.archived && habitDueOn(h, key);
+      });
+      var doneCount = todayHabits.filter(function (h) { return isHabitDone(h, key); }).length;
       html += '<button type="button" class="chip sync-chip sync-' + syncStatus +
         '" id="syncChip" data-sync="drive-pull" title="' +
         (syncStatus === "needsAuth" ? "登入已過期，點一下重新同步" : "點一下立即同步") +
         '" aria-label="雲端同步狀態：' + escAttr(syncStatusLabel()) +
-        '">雲端 <strong>' + syncStatusLabel() + "</strong></button>";
+        '"><span class="sync-dot" aria-hidden="true"></span>' + syncStatusLabel() + "</button>";
+      html += appBarProgressRingHtml(doneCount, todayHabits.length);
     }
     html += "</div>";
     var bar = document.getElementById("appBar");
@@ -1731,10 +1738,27 @@
   function checkBtnHtml(h, key, cls) {
     key = key || todayKey();
     var done = isHabitDone(h, key);
+    var mark = done
+      ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>'
+      : "";
     return '<button type="button" class="' + (cls || "check") + (done ? " on" : "") +
       '" style="--hcolor:' + h.color + '" data-toggle="' + h.id +
       (key !== todayKey() ? '" data-toggle-date="' + key : "") +
-      '" aria-label="完成">' + (done ? "✓" : "") + "</button>";
+      '" aria-label="' + (done ? "取消完成" : "完成") + '">' + mark + "</button>";
+  }
+
+  function appBarProgressRingHtml(doneCount, total) {
+    var r = 19;
+    var circ = 2 * Math.PI * r;
+    var pct = total ? doneCount / total : 0;
+    var offset = circ * (1 - pct);
+    return '<div class="app-bar-ring" aria-label="今天完成 ' + doneCount + "/" + total + '">' +
+      '<svg width="46" height="46" viewBox="0 0 46 46" aria-hidden="true">' +
+      '<circle cx="23" cy="23" r="19" fill="none" stroke="var(--color-neutral-300)" stroke-width="5"></circle>' +
+      '<circle cx="23" cy="23" r="19" fill="none" stroke="var(--color-accent)" stroke-width="5" stroke-linecap="round" ' +
+      'stroke-dasharray="' + circ.toFixed(2) + '" stroke-dashoffset="' + offset.toFixed(2) +
+      '" transform="rotate(-90 23 23)"></circle></svg>' +
+      '<span class="app-bar-ring-label">' + doneCount + "/" + total + "</span></div>";
   }
 
   function progressRingHtml(pct, size) {
@@ -2049,16 +2073,23 @@
   function todayCheckinRowHtml(h) {
     var key = todayKey();
     var done = isHabitDone(h, key);
-    return '<article class="habit-card habit-checkin-row' + (done ? " done" : "") + '" style="--hcolor:' + h.color + '">' +
-      checkBtnHtml(h, key, "check check-lg") +
+    var streak = streakFor(h);
+    var emoji = (h && h.emoji) ? h.emoji : "🌱";
+    var tint = "color-mix(in srgb, " + (h.color || "var(--color-accent)") + " 16%, var(--color-neutral-100))";
+    return '<article class="habit-card habit-checkin-row' + (done ? " done" : "") +
+      '" style="--hcolor:' + h.color + '">' +
       '<button type="button" class="habit-row-body" data-habit-open="' + h.id + '">' +
-      '<div class="habit-row-name">' + habitEmoji(h) + esc(h.name) + "</div>" +
-      '<div class="habit-row-meta">' + todayStatusText(h, key) + "</div>" +
+      '<span class="habit-emoji-tile" style="background:' + tint + '" aria-hidden="true">' + emoji + "</span>" +
+      '<span class="habit-row-copy">' +
+      '<span class="habit-row-name">' + esc(h.name) + "</span>" +
+      '<span class="habit-row-meta">' + todayStatusText(h, key) +
+      (streak ? '<span class="habit-row-streak">🔥 ' + streak + "</span>" : "") +
+      "</span>" +
       linkedGoalBadgeHtml(h) +
-      "</button>" +
+      "</span></button>" +
       holidayBtnHtml(h, key) +
-      '<button type="button" class="habit-row-chevron" data-habit-open="' + h.id + '" aria-label="詳情">' +
-      chevronSvg + "</button></article>";
+      checkBtnHtml(h, key, "check check-row") +
+      "</article>";
   }
 
   function holidayBtnHtml(h, key) {
@@ -2155,7 +2186,10 @@
     });
     TIME_GROUPS.forEach(function (g) {
       if (!grouped[g] || !grouped[g].length) return;
-      html += '<div class="habit-group-section"><div class="habit-group-label">' + g + "</div>";
+      var doneInGroup = grouped[g].filter(function (h) { return isHabitDone(h, key); }).length;
+      html += '<div class="habit-group-section">' +
+        '<div class="habit-group-label"><span>' + g + "</span>" +
+        '<span class="habit-group-count">' + doneInGroup + "/" + grouped[g].length + "</span></div>";
       html += grouped[g].map(todayCheckinRowHtml).join("");
       html += "</div>";
     });
@@ -2514,28 +2548,41 @@
     start.setDate(start.getDate() - start.getDay());
     var due = 0;
     var done = 0;
+    var evtCount = 0;
+    var dots = "";
     var d = new Date(start);
+    var today = todayKey();
     for (var i = 0; i < 7; i++) {
       var key = dateKey(d);
+      var dayDue = 0;
+      var dayDone = 0;
       state.habits.filter(function (h) { return !h.archived && habitDueOn(h, key); }).forEach(function (h) {
+        dayDue++;
         due++;
-        if (isHabitDone(h, key)) done++;
+        if (isHabitDone(h, key)) {
+          dayDone++;
+          done++;
+        }
       });
+      evtCount += eventsForDate(key).length;
+      var frac = dayDue ? dayDone / dayDue : 0;
+      var isToday = key === today;
+      var cls = "week-dot-cell";
+      if (isToday) cls += " today";
+      if (frac >= 1 && dayDue) cls += " full";
+      else if (frac > 0) cls += " partial";
+      dots += '<div class="week-dot-col">' +
+        '<div class="' + cls + '" style="--heat:' + Math.max(0.12, frac) + '">' + d.getDate() + "</div>" +
+        '<span class="week-dot-label">' + DOW[d.getDay()] + "</span></div>";
       d.setDate(d.getDate() + 1);
     }
     var rate = due ? Math.round((done / due) * 100) : 0;
-    var evtCount = 0;
-    d = new Date(start);
-    for (i = 0; i < 7; i++) {
-      evtCount += eventsForDate(dateKey(d)).length;
-      d.setDate(d.getDate() + 1);
-    }
-    return '<div class="week-summary">' +
-      '<div class="week-summary-cell"><div class="label">本週達成</div><div class="value">' + rate + "%</div></div>" +
-      '<div class="week-summary-cell"><div class="label">本週打卡</div><div class="value">' + done + "/" + due + "</div></div>" +
-      '<div class="week-summary-cell"><div class="label">最佳連續</div><div class="value">' + bestStreak() + "</div></div>" +
-      '<div class="week-summary-cell"><div class="label">本週行程</div><div class="value">' + evtCount + "</div></div>" +
-      "</div>";
+    return '<div class="week-summary week-summary-card">' +
+      '<div class="week-summary-head">' +
+      '<span class="week-summary-title">本週</span>' +
+      '<span class="week-summary-meta">最佳連續 ' + bestStreak() + " 天 · " + rate + "% · 行程 " + evtCount +
+      "</span></div>" +
+      '<div class="week-dots">' + dots + "</div></div>";
   }
 
   function renderHabits() {
