@@ -224,11 +224,12 @@ function updateTicker(t) {
   if (!t) return;
   lastPrices[t.symbol] = t.last;
   marks[t.symbol] = t.markApprox ? null : t.mark;
-  if (t.markApprox && market.getConn() === 'live') {
-    // Mark missing → degraded for liq purposes (engine already pauses).
+  if (t.markApprox) {
+    markDegraded = true;
     updateConn('degraded');
-  } else if (!t.markApprox && market.getConn() === 'degraded') {
-    updateConn('live');
+  } else if (markDegraded) {
+    markDegraded = false;
+    updateConn(market.getConn() === 'live' ? 'live' : market.getConn());
   }
   const last = t.last;
   const ch = t.change24h;
@@ -239,7 +240,9 @@ function updateTicker(t) {
     · fund ${(Number(t.fundingRate || 0) * 100).toFixed(4)}%`;
   maybeFillLimits(state.account, { last, mark: t.markApprox ? null : t.mark }, fees());
   if (!t.markApprox) onMarkUpdate(state.account, t.symbol, t.mark, fees());
-  const hadClose = (state.account.events || []).some((e) => e.type === 'close');
+  const structural = (state.account.events || []).some(
+    (e) => e.type === 'close' || e.type === 'open',
+  );
   harvestCloses();
   checkFunding(t);
   renderEquity();
@@ -256,8 +259,8 @@ function updateTicker(t) {
       });
     } catch (_) { /* ignore partial candle */ }
   }
-  // Only persist on fills / structural changes — not every tick.
-  if (hadClose) persist();
+  // Persist on open/close from limit fills — not every tick.
+  if (structural) persist();
 }
 
 function checkFunding(t) {
