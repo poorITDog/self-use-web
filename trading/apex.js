@@ -43,8 +43,13 @@ function toast(msg) {
 }
 
 function persist() {
-  const r = saveState(state);
-  if (!r.ok && r.reason === 'quota') toast('儲存空間不足');
+  try {
+    const r = saveState(state);
+    if (!r.ok && r.reason === 'quota') toast('儲存空間不足');
+    else if (!r.ok) console.warn('saveState', r.reason);
+  } catch (e) {
+    console.warn('persist failed', e);
+  }
 }
 
 function fees() {
@@ -218,15 +223,22 @@ function updateTicker(t) {
   if (!t) return;
   lastPrices[t.symbol] = t.last;
   marks[t.symbol] = t.markApprox ? null : t.mark;
+  if (t.markApprox && market.getConn() === 'live') {
+    // Mark missing → degraded for liq purposes (engine already pauses).
+    updateConn('degraded');
+  } else if (!t.markApprox && market.getConn() === 'degraded') {
+    updateConn('live');
+  }
   const last = t.last;
   const ch = t.change24h;
   const cls = ch >= 0 ? 'up' : 'down';
   $('#tickerStrip').innerHTML = `<span class="${cls} flash">${last?.toFixed(2)}</span>
     · mark ${t.markApprox ? '≈' : ''}${Number(t.mark).toFixed(2)}
     · 24h <span class="${cls}">${ch?.toFixed(2)}%</span>
-    · fund ${(t.fundingRate * 100).toFixed(4)}%`;
+    · fund ${(Number(t.fundingRate || 0) * 100).toFixed(4)}%`;
   maybeFillLimits(state.account, { last, mark: t.markApprox ? null : t.mark }, fees());
   if (!t.markApprox) onMarkUpdate(state.account, t.symbol, t.mark, fees());
+  const hadClose = (state.account.events || []).some((e) => e.type === 'close');
   harvestCloses();
   checkFunding(t);
   renderEquity();
@@ -235,24 +247,32 @@ function updateTicker(t) {
   // live candle last
   if (candleSeries && last) {
     try {
+      const intervalSec = { '1': 60, '5': 300, '15': 900, '60': 3600, '240': 14400, D: 86400 };
+      const step = intervalSec[market.getInterval()] || 300;
+      const time = Math.floor(Date.now() / 1000 / step) * step;
       candleSeries.update({
-        time: Math.floor(Date.now() / 1000),
-        open: last, high: last, low: last, close: last,
+        time, open: last, high: last, low: last, close: last,
       });
     } catch (_) { /* ignore partial candle */ }
   }
-  persist();
+  // Only persist on fills / structural changes — not every tick.
+  if (hadClose) persist();
 }
 
 function checkFunding(t) {
-  if (!t?.nextFundingTime || !t.fundingRate) return;
+  if (!t?.nextFundingTime || t.fundingRate == null) return;
   const now = Date.now();
   if (now < t.nextFundingTime) return;
-  if (now - lastFundingCheck < 60_000) return;
+  if (now - lastFundingCheck < 5_000) return;
   lastFundingCheck = now;
-  if (t.markApprox) return;
-  const ev = settleFunding(state.account, t.symbol, t.mark, t.fundingRate, now);
-  if (ev) toast(`資金費 ${ev.paymentUsdt.toFixed(4)} USDT`);
+  if (t.markApprox || t.mark == null) return;
+  const ev = settleFunding(
+    state.account, t.symbol, t.mark, t.fundingRate, now, t.nextFundingTime,
+  );
+  if (ev) {
+    toast(`資金費 ${ev.paymentUsdt.toFixed(4)} USDT`);
+    persist();
+  }
 }
 
 function renderBook(book) {

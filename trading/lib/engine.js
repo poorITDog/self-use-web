@@ -1,7 +1,7 @@
 // Simulated isolated one-way USDT-perp engine (micros ledger).
 
 import {
-  toMicros, fromMicros, floorToLot, clamp,
+  toMicros, fromMicros, floorToLot, roundToTick, clamp,
 } from './money.js';
 import { symbolMeta } from './market.js';
 
@@ -107,12 +107,12 @@ export function placeOrder(account, input, ctx) {
   if (!(leverage >= 1 && leverage <= 50)) return { ok: false, reason: 'leverage' };
 
   const pos = account.positions[symbol];
-  const isClose = reduceOnly || (pos && pos.side !== side);
-  if (reduceOnly && !pos) return { ok: false, reason: 'no_position' };
-  if (reduceOnly && pos && qty > pos.qty + 1e-12) {
-    return { ok: false, reason: 'reduce_qty' };
+  if (reduceOnly) {
+    if (!pos) return { ok: false, reason: 'no_position' };
+    // One-way: reduce-only must be opposite side of the open position.
+    if (pos.side === side) return { ok: false, reason: 'reduce_side' };
+    if (qty > pos.qty + 1e-12) return { ok: false, reason: 'reduce_qty' };
   }
-
   const mark = marks[symbol];
   if (ordType === 'market') {
     const walkSide = side === 'long' ? 'buy' : 'sell';
@@ -120,20 +120,22 @@ export function placeOrder(account, input, ctx) {
     if (!walked.ok) return { ok: false, reason: walked.reason };
     return fillOrder(account, {
       symbol, side, qty, price: walked.avg, leverage,
-      reduceOnly: !!isClose || reduceOnly, tp, sl,
+      reduceOnly: !!reduceOnly, tp, sl,
       feeRate: fees.taker, liquidity: 'taker', mark,
     }, ctx);
   }
 
   // Limit
   if (!(price > 0)) return { ok: false, reason: 'price' };
+  const metaTick = symbolMeta(symbol);
+  const limitPx = roundToTick(price, metaTick.tick);
   const order = {
     id: id('ord'),
     symbol,
     side,
     ordType: 'limit',
     qty,
-    price,
+    price: limitPx,
     leverage,
     reduceOnly: !!reduceOnly,
     tp: tp ?? null,
@@ -142,7 +144,7 @@ export function placeOrder(account, input, ctx) {
     createdAt: Date.now(),
   };
   // Freeze margin check
-  const notional = qty * price;
+  const notional = qty * limitPx;
   const need = toMicros(notional / leverage + notional * fees.maker);
   if (!reduceOnly && availableMicros(account, marks) < need) {
     return { ok: false, reason: 'margin' };
@@ -165,6 +167,7 @@ function fillOrder(account, fill, ctx) {
     const closeQty = Math.min(qty, pos.qty);
     const pnl = upnlMicros({ ...pos, qty: closeQty }, price);
     account.walletMicros += pnl - fee;
+    if (account.walletMicros < 0n) account.walletMicros = 0n;
     const closed = {
       id: id('tr'),
       symbol,
@@ -346,13 +349,17 @@ export function onMarkUpdate(account, symbol, mark, fees) {
   return out;
 }
 
-export function settleFunding(account, symbol, mark, rate, now = Date.now()) {
+export function settleFunding(account, symbol, mark, rate, now = Date.now(), fundingTime = null) {
   const pos = account.positions[symbol];
   if (!pos || mark == null) return null;
+  const key = fundingTime != null ? String(fundingTime) : 't:' + Math.floor(now / 60_000);
+  if (!account.lastFundingSettle) account.lastFundingSettle = {};
+  if (account.lastFundingSettle[symbol] === key) return null;
   const signedQty = pos.side === 'long' ? pos.qty : -pos.qty;
   const paymentUsdt = -signedQty * mark * rate;
   const payment = toMicros(paymentUsdt);
   account.walletMicros += payment;
+  if (account.walletMicros < 0n) account.walletMicros = 0n;
   const ev = {
     type: 'funding',
     symbol,
@@ -360,6 +367,7 @@ export function settleFunding(account, symbol, mark, rate, now = Date.now()) {
     paymentUsdt: fromMicros(payment),
     mark,
     ts: now,
+    fundingTime: fundingTime ?? now,
   };
   account.events.push(ev);
   account.fills.push({
@@ -372,7 +380,7 @@ export function settleFunding(account, symbol, mark, rate, now = Date.now()) {
     ts: now,
     liquidity: 'funding',
   });
-  account.lastFundingSettle[symbol] = now;
+  account.lastFundingSettle[symbol] = key;
   return ev;
 }
 

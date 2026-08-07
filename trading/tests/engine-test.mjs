@@ -83,6 +83,31 @@ r = placeOrder(acc, {
 assert.equal(r.ok, true);
 assert.equal(cancelOrder(acc, r.order.id).ok, true);
 
+// Reduce-only same side rejected
+acc = createAccount(10000);
+placeOrder(acc, {
+  symbol: 'BTCUSDT', side: 'long', ordType: 'market', qty: 0.02, leverage: 5,
+}, { book, marks: { BTCUSDT: 100 }, fees });
+r = placeOrder(acc, {
+  symbol: 'BTCUSDT', side: 'long', ordType: 'market', qty: 0.01, leverage: 5, reduceOnly: true,
+}, { book, marks: { BTCUSDT: 100 }, fees });
+assert.equal(r.ok, false);
+assert.equal(r.reason, 'reduce_side');
+
+// Funding idempotent per fundingTime
+acc = createAccount(10000);
+placeOrder(acc, {
+  symbol: 'BTCUSDT', side: 'long', ordType: 'market', qty: 0.01, leverage: 5,
+}, { book, marks: { BTCUSDT: 100 }, fees });
+const w0 = acc.walletMicros;
+const f1 = settleFunding(acc, 'BTCUSDT', 100, 0.01, Date.now(), 111);
+const w1 = acc.walletMicros;
+const f2 = settleFunding(acc, 'BTCUSDT', 100, 0.01, Date.now(), 111);
+assert.ok(f1);
+assert.equal(f2, null);
+assert.equal(acc.walletMicros, w1);
+assert.ok(w1 < w0);
+
 const snap = accountSnapshot(acc, { BTCUSDT: 100 }, fees);
 assert.ok(snap.equity > 0);
 

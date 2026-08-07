@@ -41,21 +41,42 @@ export function validateState(raw) {
   return { ok: true };
 }
 
+function jsonReplacer(_key, value) {
+  if (typeof value === 'bigint') return { __bigint: value.toString() };
+  return value;
+}
+
+function jsonReviver(_key, value) {
+  if (value && typeof value === 'object' && value.__bigint != null) {
+    return BigInt(value.__bigint);
+  }
+  return value;
+}
+
 export function loadState() {
   try {
     const text = localStorage.getItem(KEY);
     if (!text) return { state: defaultState(), recovered: false };
-    const parsed = JSON.parse(text);
+    const parsed = JSON.parse(text, jsonReviver);
     const v = validateState(parsed);
     if (!v.ok) {
       const bak = localStorage.getItem(BAK);
       if (bak) {
-        const bp = JSON.parse(bak);
+        const bp = JSON.parse(bak, jsonReviver);
         if (validateState(bp).ok) {
           return { state: bp, recovered: true, reason: v.reason };
         }
       }
       return { state: defaultState(), recovered: true, reason: v.reason };
+    }
+    // Revive wallet fields if older saves stored numbers.
+    if (parsed.account) {
+      if (typeof parsed.account.walletMicros === 'number') {
+        parsed.account.walletMicros = BigInt(Math.round(parsed.account.walletMicros));
+      }
+      if (typeof parsed.account.startMicros === 'number') {
+        parsed.account.startMicros = BigInt(Math.round(parsed.account.startMicros));
+      }
     }
     return { state: parsed, recovered: false };
   } catch (e) {
@@ -64,7 +85,12 @@ export function loadState() {
 }
 
 export function saveState(state) {
-  const text = JSON.stringify(state);
+  let text;
+  try {
+    text = JSON.stringify(state, jsonReplacer);
+  } catch (e) {
+    return { ok: false, reason: String(e) };
+  }
   try {
     const prev = localStorage.getItem(KEY);
     if (prev) localStorage.setItem(BAK, prev);
@@ -79,13 +105,13 @@ export function saveState(state) {
 }
 
 export function exportState(state) {
-  return JSON.stringify(state, null, 2);
+  return JSON.stringify(state, jsonReplacer, 2);
 }
 
 export function importState(jsonText) {
   let parsed;
   try {
-    parsed = JSON.parse(jsonText);
+    parsed = JSON.parse(jsonText, jsonReviver);
   } catch (e) {
     return { ok: false, reason: 'json' };
   }

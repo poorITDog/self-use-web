@@ -27,7 +27,7 @@ export function settleChallenge({ challenge, trades, equitySamples, startEquity,
     return { ok: false, reason: 'inactive' };
   }
   if (now < challenge.endsAt && challenge.force !== true) {
-    // allow early settle only if force
+    return { ok: false, reason: 'active' };
   }
   const scoreRes = abilityScore({ trades, equitySamples, startEquity });
   const dims = sixDimensions(trades);
