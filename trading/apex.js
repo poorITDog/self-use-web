@@ -29,6 +29,7 @@ let marks = {}; // mark for liq (null when degraded)
 let lastPrices = {}; // last trade price for UI / margin fallback
 let hourlyCloses = {};
 let lastFundingCheck = 0;
+let markDegraded = false;
 let posTab = 'positions';
 let ordType = 'market';
 let submitSide = 'long';
@@ -552,7 +553,15 @@ function renderRank() {
       ${board.length ? board.map((e, i) =>
     `<div class="lb-row"><span>#${i + 1} ${e.tier}</span><span>${e.score.toFixed(1)} · ${e.returnPct?.toFixed?.(2)}%</span></div>`
   ).join('') : '<p style="color:var(--muted)">尚未有 Challenge 成績</p>'}
+      ${board[0] ? '<button type="button" class="btn ghost" id="btnScoreCard" style="margin-top:8px">匯出最新成績碼</button>' : ''}
     </div>`;
+  $('#btnScoreCard')?.addEventListener('click', () => {
+    const blob = new Blob([exportScoreCard(board[0])], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'apex-scorecard.json';
+    a.click();
+  });
   $('#btnStartCh')?.addEventListener('click', () => {
     if (state.challenge?.status === 'active') return;
     state.account = createAccount(50000);

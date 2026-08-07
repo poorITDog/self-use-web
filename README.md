@@ -89,3 +89,10 @@ node tests/e2e-smoke.mjs   # 需要 Chrome + 本機 8765
 ```
 
 設計計劃見 [`PLAN.md`](PLAN.md)。
+
+---
+
+## Apex Trade Lab（交易練習）
+
+獨立子應用（唔影響 Solara）：[`trading/`](trading/)  
+Pages：`https://pooritdog.github.io/self-use-web/trading/`
