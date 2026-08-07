@@ -394,6 +394,7 @@ export function settleFunding(account, symbol, mark, rate, now = Date.now(), fun
     feeUsdt: fromMicros(payment),
     ts: now,
     liquidity: 'funding',
+    reason: 'funding',
   });
   account.lastFundingSettle[symbol] = key;
   return ev;
