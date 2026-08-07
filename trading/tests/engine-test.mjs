@@ -10,11 +10,13 @@ const book = {
   bids: [[99.5, 10], [99, 10]],
 };
 
-// Liq formula golden values
+// Liq formula golden values (plan §2.1.12)
 const longLiq = liqPrice({ side: 'long', entry: 100, leverage: 10, mmr: 0.005, feeRate: 0.00055 });
 const shortLiq = liqPrice({ side: 'short', entry: 100, leverage: 10, mmr: 0.005, feeRate: 0.00055 });
-assert.ok(longLiq < 100 && longLiq > 85);
-assert.ok(shortLiq > 100 && shortLiq < 115);
+const longExpect = 100 * (1 - 1 / 10 + 0.005 + 0.00055) / (1 - 0.00055);
+const shortExpect = 100 * (1 + 1 / 10 - 0.005 - 0.00055) / (1 + 0.00055);
+assert.ok(Math.abs(longLiq - longExpect) < 1e-9);
+assert.ok(Math.abs(shortLiq - shortExpect) < 1e-9);
 
 let acc = createAccount(10000);
 let r = placeOrder(acc, {
@@ -110,5 +112,15 @@ assert.ok(w1 < w0);
 
 const snap = accountSnapshot(acc, { BTCUSDT: 100 }, fees);
 assert.ok(snap.equity > 0);
+
+// Mark null pauses liquidation
+acc = createAccount(1000);
+placeOrder(acc, {
+  symbol: 'BTCUSDT', side: 'long', ordType: 'market', qty: 0.05, leverage: 20,
+}, { book: { asks: [[100, 1]], bids: [[99, 1]] }, marks: { BTCUSDT: 100 }, fees });
+assert.ok(acc.positions.BTCUSDT);
+const paused = onMarkUpdate(acc, 'BTCUSDT', null, fees);
+assert.equal(paused.length, 0);
+assert.ok(acc.positions.BTCUSDT);
 
 console.log('engine-test OK');

@@ -189,6 +189,7 @@ function fillOrder(account, fill, ctx) {
     account.fills.push({
       id: id('fill'), symbol, side: pos.side === 'long' ? 'sell' : 'buy',
       qty: closeQty, price, feeUsdt: fromMicros(fee), ts: Date.now(), liquidity,
+      reason: fill.reason || 'close',
     });
     pos.qty -= closeQty;
     if (pos.qty <= 1e-12) delete account.positions[symbol];
@@ -200,7 +201,7 @@ function fillOrder(account, fill, ctx) {
         ...fill, qty: leftover, reduceOnly: false, reason: 'flip',
       }, ctx);
     }
-    return { ok: true, trade: closed };
+    return { ok: true, trade: closed, fillPrice: price, feeUsdt: fromMicros(fee) };
   }
 
   // Opening / adding
@@ -236,9 +237,23 @@ function fillOrder(account, fill, ctx) {
   account.fills.push({
     id: id('fill'), symbol, side: side === 'long' ? 'buy' : 'sell',
     qty, price, feeUsdt: fromMicros(fee), ts: Date.now(), liquidity,
+    reason: fill.reason || 'open',
   });
   account.events.push({ type: 'open', symbol, side, qty, price });
-  return { ok: true, position: account.positions[symbol] };
+  return {
+    ok: true,
+    position: account.positions[symbol],
+    fillPrice: price,
+    feeUsdt: fromMicros(fee),
+  };
+}
+
+export function topUp(account, usdt) {
+  const amt = toMicros(usdt);
+  if (amt <= 0n) return { ok: false, reason: 'amount' };
+  account.walletMicros += amt;
+  account.events.push({ type: 'topup', usdt: fromMicros(amt), ts: Date.now() });
+  return { ok: true };
 }
 
 export function cancelOrder(account, orderId) {

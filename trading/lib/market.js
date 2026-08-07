@@ -414,7 +414,6 @@ export function createMarket(options = {}) {
         };
         emit('ticker', ticker);
       } else if (msg.topic?.startsWith('orderbook.')) {
-        // Snapshot/delta simplified: use snapshot only when type=snapshot
         if (msg.type === 'snapshot' && msg.data) {
           book = {
             bids: (msg.data.b || []).map(([p, s]) => [Number(p), Number(s)]),
@@ -422,6 +421,9 @@ export function createMarket(options = {}) {
             ts: Number(msg.ts) || Date.now(),
           };
           emit('book', book);
+        } else {
+          // Delta or unknown — REST rebuild (avoid stale walkBook depth).
+          fetchBook(symbol).then((b) => emit('book', b)).catch(() => {});
         }
       } else if (msg.topic?.startsWith('publicTrade.')) {
         const arr = msg.data || [];

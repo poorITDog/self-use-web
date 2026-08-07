@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0B0F14" />
   <meta name="description" content="Apex Trade Lab — 真實行情零風險永續模擬練習" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="APEX" />
+  <link rel="manifest" href="apex.webmanifest" />
   <title>APEX — Trade Lab</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -62,6 +66,12 @@
               <label class="field">數量
                 <input type="number" id="qty" step="any" min="0" placeholder="0.001" />
               </label>
+              <div class="size-chips" id="sizeChips" aria-label="倉位比例">
+                <button type="button" data-pct="10">10%</button>
+                <button type="button" data-pct="25">25%</button>
+                <button type="button" data-pct="50">50%</button>
+                <button type="button" data-pct="100">100%</button>
+              </div>
               <label class="field limit-only hidden">限價
                 <input type="number" id="limitPrice" step="any" min="0" />
               </label>
@@ -71,6 +81,7 @@
                 <label><input type="checkbox" id="useSl" /> SL</label>
                 <input type="number" id="sl" step="any" class="mini" disabled />
               </div>
+              <label class="row checks"><input type="checkbox" id="reduceOnly" /> Reduce-Only（只減倉）</label>
               <p class="summary" id="preSummary">—</p>
               <div class="side-actions">
                 <button type="submit" class="btn long" data-side="long" id="btnLong">Long 做多</button>

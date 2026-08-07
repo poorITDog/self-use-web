@@ -252,6 +252,32 @@ button { cursor: pointer; }
 }
 .seg button.active { color: var(--text); border-color: var(--accent); }
 .checks { flex-wrap: wrap; }
+.size-chips {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.size-chips button {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  padding: 6px;
+  min-height: 36px;
+}
+.size-chips button:hover { color: var(--text); border-color: var(--accent); }
+.liq-warn td:last-child { color: var(--warning); }
+.liq-crit td:last-child { color: var(--danger); font-weight: 700; }
+.rank-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11px; }
+.rank-table th, .rank-table td {
+  text-align: left;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.equity-svg { max-width: 100%; height: auto; }
+#rankSortSeg { grid-template-columns: repeat(5, 1fr); }
 .summary {
   background: var(--bg);
   border: 1px solid var(--border);
