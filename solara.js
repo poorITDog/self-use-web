@@ -24,7 +24,6 @@
     habitDetailId: "",
     habitDetailMonth: startOfMonth(new Date()),
     habitsPanel: "today",
-    timelineOpen: false,
     diaryDate: dateKey(new Date()),
     countdownUnit: "days",
     focus: {
@@ -1370,27 +1369,6 @@
     return html;
   }
 
-  // Compact entry on habits「今天」→ opens dedicated diary page.
-  function dayJournalGateHtml(key) {
-    var entry = getDayEntry(key) || normalizeDayEntry({ date: key });
-    var mood = Number(entry.mood) || 0;
-    var holidayIds = holidayHabitIdList(key);
-    var holidayOn = holidayIds.length > 0;
-    var fullDay = isFullDayHoliday(key);
-    var html = '<button type="button" class="day-journal-gate day-journal-gate-slim" data-open-diary="' +
-      escAttr(key) + '" aria-label="打開今日日記">';
-    html += '<span class="day-journal-gate-title">今日日記</span>';
-    if (holidayOn) {
-      html += '<span class="tag tag-accent-2">' +
-        (fullDay ? "全日放假" : ("部分放假 " + holidayIds.length)) + "</span>";
-    } else if (mood) {
-      html += '<span class="tag tag-accent">' + moodEmoji(mood) + " " + moodLabel(mood) + "</span>";
-    }
-    html += '<span class="day-journal-gate-cta">打開日記 →</span>';
-    html += "</button>";
-    return html;
-  }
-
   function typeLabel(t) {
     if (t === "count") return "次數";
     if (t === "duration") return "計時";
@@ -1706,7 +1684,9 @@
       return '<button type="button" class="btn sm soft" data-nav="habits">返回習慣</button>';
     }
     if (view === "habits") {
-      return '<button type="button" class="icon-btn" data-action="add-habit" aria-label="新增習慣">' +
+      return '<button type="button" class="btn sm ghost" data-open-diary="' + todayKey() +
+        '" aria-label="今日日記">日記</button>' +
+        '<button type="button" class="icon-btn" data-action="add-habit" aria-label="新增習慣">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>';
     }
     if (view === "calendar" && ui.calMode === "timetable") {
@@ -1818,43 +1798,18 @@
     });
     var partialHoliday = !fullHoliday && excusedDue.length > 0;
     var holidayCount = excusedDue.length;
-    var mins = minutesOnDate(key);
-    var agenda = eventsForDate(key);
-    // Header SVG ring is the sole completion meter — strip only carries holiday / agenda / minutes.
-    if (!fullHoliday && !partialHoliday && !agenda.length && !mins) return "";
+    // Habits today: holiday status only — agenda / minutes live on calendar & focus.
+    if (!fullHoliday && !partialHoliday) return "";
     var html = '<div class="today-strip today-strip-slim">';
     html += '<div class="today-strip-head">';
     if (fullHoliday) {
-      html += '<div class="today-progress-text">今天全日放假 <strong>連續紀錄保留</strong>' +
-        (mins ? '<span class="stat-sep" aria-hidden="true">·</span>投入 <strong>' + fmtMin(mins) + "</strong>" : "") +
-        "</div>";
+      html += '<div class="today-progress-text">今天全日放假 <strong>連續紀錄保留</strong></div>';
       html += '<div class="holiday-chip-ring" aria-label="全日放假">假</div></div>';
       html += '<div class="tiny muted" style="margin-top:8px">全日放假不會計入未完成。</div>';
-    } else if (partialHoliday) {
-      html += '<div class="today-progress-text">' +
-        '<span class="today-stat today-stat-holiday">' + holidayCount + " 個放假</span>" +
-        (mins ? '<span class="stat-sep" aria-hidden="true">·</span><span class="today-stat">投入 <strong>' +
-          fmtMin(mins) + "</strong></span>" : "") +
-        "</div></div>";
-      html += '<div class="tiny muted" style="margin-top:8px">已放假習慣不計未完成，其餘仍可打卡。</div>';
     } else {
       html += '<div class="today-progress-text">' +
-        '<span class="today-stat">投入 <strong>' + fmtMin(mins) + "</strong></span></div></div>";
-    }
-    if (agenda.length) {
-      html += '<div class="today-agenda">';
-      agenda.slice(0, 3).forEach(function (ev) {
-        var t = ev.allDay ? "全天" : (ev.start || "");
-        var rep = eventRepeatLabel(ev.repeat);
-        html += '<button type="button" class="today-agenda-item" data-edit-event="' + ev.id + '">' +
-          '<span class="cal-event-dot" style="background:' + (ev.color || colors()[0]) + '"></span>' +
-          '<span class="today-agenda-title">' + esc(ev.title) + "</span>" +
-          '<span class="muted tiny">' + esc(t) + (rep ? " · " + rep : "") + "</span></button>";
-      });
-      if (agenda.length > 3) {
-        html += '<div class="muted tiny">還有 ' + (agenda.length - 3) + " 個行程</div>";
-      }
-      html += "</div>";
+        '<span class="today-stat today-stat-holiday">' + holidayCount + " 個放假</span></div></div>";
+      html += '<div class="tiny muted" style="margin-top:8px">已放假習慣不計未完成，其餘仍可打卡。</div>';
     }
     html += "</div>";
     return html;
@@ -2179,69 +2134,6 @@
       ' aria-label="' + (on ? "取消放假" : "設為放假") + '" title="' +
       (on ? "取消放假" : dayBit) + '">' +
       (on ? "取消" : "放假") + "</button>";
-  }
-
-  function todayUnifiedTimelineHtml() {
-    var key = todayKey();
-    var items = [];
-    eventsForDate(key).forEach(function (ev) {
-      items.push({
-        sort: ev.allDay ? -1 : timeToMinutes(ev.start || "09:00"),
-        time: ev.allDay ? "全天" : (ev.start || ""),
-        title: ev.title,
-        color: ev.color || colors()[0],
-        kind: "行程",
-        meta: eventRepeatLabel(ev.repeat),
-        eventId: ev.id
-      });
-    });
-    state.habits.filter(function (h) {
-      return !h.archived && habitDueOn(h, key) && h.timeOfDay;
-    }).forEach(function (h) {
-      var done = isHabitDone(h, key);
-      items.push({
-        sort: timeToMinutes(h.timeOfDay),
-        time: habitTimeLabel(h),
-        title: h.name,
-        color: h.color,
-        kind: done ? "習慣 · 已完成" : "習慣 · 點此打卡",
-        meta: "",
-        habitId: h.id,
-        done: done
-      });
-    });
-    items.sort(function (a, b) { return a.sort - b.sort; });
-    if (!items.length) return "";
-    // Remember open state across re-renders (打卡/放假 must not collapse the rail).
-    var html = '<details class="today-timeline-wrap"' + (ui.timelineOpen ? " open" : "") +
-      '><summary class="today-timeline-summary">今日時間軸' +
-      '<span class="today-timeline-count">' + items.length + "</span></summary>" +
-      '<div class="today-timeline">';
-    items.forEach(function (it) {
-      if (it.habitId) {
-        var hab = state.habits.find(function (x) { return x.id === it.habitId; });
-        // Circular check matches DC habit rows; fixed rail keeps 放假/打卡 columns aligned.
-        html += '<div class="today-timeline-item' + (it.done ? " done" : "") + '">' +
-          '<span class="today-timeline-time">' + esc(it.time) + "</span>" +
-          '<span class="today-timeline-dot" style="background:' + it.color + '"></span>' +
-          '<button type="button" class="today-timeline-body" data-habit-open="' + it.habitId + '">' +
-          "<strong>" + esc(it.title) + "</strong>" +
-          '<span class="muted tiny">' + esc(it.kind) + "</span></button>" +
-          '<span class="habit-row-actions">' +
-          (hab ? holidayBtnHtml(hab, key) : '<span class="habit-row-actions-spacer" aria-hidden="true"></span>') +
-          checkBtnHtml(hab || { id: it.habitId, color: it.color }, key, "check check-row") +
-          "</span></div>";
-      } else {
-        html += '<button type="button" class="today-timeline-item" data-edit-event="' + it.eventId + '">' +
-          '<span class="today-timeline-time">' + esc(it.time) + "</span>" +
-          '<span class="today-timeline-dot" style="background:' + it.color + '"></span>' +
-          '<span class="today-timeline-body"><strong>' + esc(it.title) + "</strong>" +
-          '<span class="muted tiny">' + esc(it.kind) + (it.meta ? " · " + it.meta : "") +
-          "</span></span></button>";
-      }
-    });
-    html += "</div></details>";
-    return html;
   }
 
   function todayCheckinHtml(todayHabits) {
@@ -2656,16 +2548,6 @@
     return html;
   }
 
-  // One-line jump only — full goal cards stay on 儀表板 / 設定.
-  function goalsTodayTeaserHtml() {
-    var n = state.goals.filter(isGoalOpen).length;
-    if (!n) return "";
-    return '<button type="button" class="goals-teaser" data-habits-panel="board" aria-label="在儀表板查看進行中目標">' +
-      '<span class="goals-teaser-label">進行中目標</span>' +
-      '<span class="goals-teaser-count">' + n + "</span>" +
-      '<span class="goals-teaser-cta">儀表板 →</span></button>';
-  }
-
   function weekSummaryHtml() {
     var start = startOfWeekMon(new Date());
     var due = 0;
@@ -2713,6 +2595,7 @@
     var todayHabits = state.habits.filter(function (h) { return !h.archived && habitDueOn(h, key); });
     var active = state.habits.filter(function (h) { return !h.archived; });
     var panel = ui.habitsPanel === "board" ? "board" : "today";
+    // Today: week streak + habits only. Diary / timeline / goals live on their own surfaces.
     var html = weekSummaryHtml();
     html += todayStripHtml(todayHabits);
     html += '<div class="seg habits-seg">' +
@@ -2721,17 +2604,12 @@
       '<button type="button" data-habits-panel="board" class="' + (panel === "board" ? "on" : "") +
       '">儀表板</button></div>';
     if (!active.length) {
-      html += dayJournalGateHtml(key);
       html += emptyHabitsHtml();
     } else if (panel === "board") {
       html += habitBoardHtml(active);
       html += activeGoalsStripHtml();
     } else {
-      // Soft habit cards first (DC Organic primary); goals live on 儀表板 to avoid crowding.
       html += todayCheckinHtml(todayHabits);
-      html += goalsTodayTeaserHtml();
-      html += dayJournalGateHtml(key);
-      html += todayUnifiedTimelineHtml();
     }
     document.getElementById("view-habits").innerHTML = html;
   }
@@ -4834,14 +4712,6 @@
 
   document.getElementById("app").addEventListener("click", handleUiClick);
   document.getElementById("modal").addEventListener("click", handleUiClick);
-
-  // Keep 今日時間軸 open across check-in / 放假 re-renders.
-  document.getElementById("app").addEventListener("toggle", function (e) {
-    var t = e.target;
-    if (t && t.classList && t.classList.contains("today-timeline-wrap")) {
-      ui.timelineOpen = !!t.open;
-    }
-  }, true);
 
   document.getElementById("app").addEventListener("change", function (e) {
     if (e.target.matches("[data-cal-opt]")) {

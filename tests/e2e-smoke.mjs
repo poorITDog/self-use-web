@@ -104,10 +104,10 @@ await assert(!!defaultTime, "new habit gets default suggested time");
 await page.evaluate(() => document.getElementById("hSave").click());
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
 
-// today timeline appears after timed habit exists
-await page.waitForSelector(".today-timeline");
-const timeline = await page.$(".today-timeline");
-await assert(!!timeline, "today timeline renders with timed habit");
+// today stays lean: no duplicate timeline dropdown under the habit list
+await assert(!await page.$(".today-timeline-wrap, .today-timeline"), "today has no timeline dropdown");
+await assert(!await page.$(".day-journal-gate"), "today has no diary gate card");
+await assert(!await page.$(".goals-teaser"), "today has no goals teaser");
 
 // complete via check on today row
 await page.waitForSelector(".habit-checkin-row .check-row, .habit-checkin-row [data-toggle]");
@@ -174,7 +174,7 @@ await page.evaluate(() => {
 });
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
 await page.click('[data-habits-panel="today"]');
-await page.waitForSelector(".today-timeline");
+await page.waitForSelector(".habit-checkin-row");
 const rangeText = await page.$eval("#view-habits", (el) => el.textContent);
 await assert(rangeText.includes("06:30") && rangeText.includes("08:30"), "habit time range 06:30–08:30 saved and shown");
 
@@ -247,9 +247,8 @@ await page.evaluate(() => { document.getElementById("logVal").value = "30"; });
 await page.evaluate(() => document.getElementById("logSave").click());
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
 
-await page.waitForSelector(".today-strip");
-const minsText = await page.$eval(".today-strip", (el) => el.textContent);
-await assert(minsText.includes("30") || minsText.includes("時"), "duration minutes reflected in today summary");
+const minsText = await page.$eval("#view-habits", (el) => el.textContent);
+await assert(minsText.includes("30") || minsText.includes("時") || minsText.includes("閱讀"), "duration habit logged on today list");
 
 // calendar
 await page.click('[data-nav="calendar"]');
@@ -469,8 +468,9 @@ await assert(
   segLabels.length === 2 && segLabels.includes("今天") && segLabels.includes("儀表板"),
   "habits seg is only 今天 | 儀表板"
 );
-const gate = await page.$(".day-journal-gate");
-await assert(!!gate, "today shows diary gate to open diary page");
+await assert(!await page.$(".day-journal-gate"), "today has no diary gate card");
+await assert(!await page.$(".today-timeline-wrap"), "today has no timeline dropdown");
+await assert(!!await page.$('#appBar [data-open-diary], .app-bar [data-open-diary]'), "app bar has diary entry");
 await assert(!await page.$("#view-habits .day-journal"), "full journal not embedded on habits today");
 await assert(!await page.$("#view-habits .holiday-habit-list"), "no holiday checklist on habits today");
 
@@ -491,10 +491,10 @@ await page.evaluate(() => {
   const btn = document.querySelector(".habit-checkin-row [data-toggle-habit-holiday]");
   if (btn) btn.click();
 });
-await page.waitForSelector(".excused-habits, .day-journal-gate .tag-accent-2");
+await page.waitForSelector(".excused-habits, .today-strip");
 
-// Open dedicated diary page via gate
-await page.click(".day-journal-gate");
+// Open dedicated diary page via app bar
+await page.click('#appBar [data-open-diary], .app-bar [data-open-diary]');
 await page.waitForSelector("#view-diary.active, #view-diary.view.active");
 await page.waitForFunction(() => {
   const v = document.getElementById("view-diary");
@@ -564,16 +564,13 @@ await page.waitForFunction(() => {
 await page.waitForSelector(".today-checkin, .excused-habits");
 const remainingChecks = await page.$$(".today-checkin .check-row, .today-checkin [data-toggle]");
 await assert(remainingChecks.length >= 1, "non-holiday habits remain on today list");
-const todayGate = await page.$(".day-journal-gate");
-await assert(!!todayGate, "today shows diary gate after partial holiday");
-const todayGateHoliday = await page.$eval(".day-journal-gate", (el) =>
-  el.textContent.includes("放假")
-);
-await assert(todayGateHoliday, "today gate shows holiday status without embedding diary");
+await assert(!await page.$(".day-journal-gate"), "today still has no diary gate after holiday");
+const stripHoliday = await page.$eval(".today-strip, .excused-habits", (el) => el.textContent.includes("放假"));
+await assert(stripHoliday, "today shows holiday status without diary gate");
 await assert(!await page.$("#view-habits .day-journal"), "today still has no embedded diary");
 await assert(
   !await page.$("#view-habits .holiday-banner"),
-  "today has no duplicate holiday banner (strip + gate cover status)"
+  "today has no duplicate holiday banner"
 );
 
 // Mark remaining habits holiday via row buttons → full-day banner on diary
@@ -587,8 +584,7 @@ for (let guard = 0; guard < 20; guard++) {
   if (!clicked) break;
   await new Promise((r) => setTimeout(r, 80));
 }
-await page.waitForSelector(".day-journal-gate");
-await page.evaluate(() => document.querySelector(".day-journal-gate").click());
+await page.click('#appBar [data-open-diary], .app-bar [data-open-diary]');
 await page.waitForFunction(() => {
   const v = document.getElementById("view-diary");
   return v && v.classList.contains("active");
@@ -625,8 +621,8 @@ await page.evaluate(() => {
   if (btn) btn.click();
 });
 await page.evaluate(() => {
-  const gate = document.querySelector(".day-journal-gate");
-  if (gate) gate.click();
+  const btn = document.querySelector('#appBar [data-open-diary], .app-bar [data-open-diary]');
+  if (btn) btn.click();
 });
 await page.waitForSelector("#view-diary .holiday-banner");
 await page.waitForSelector('#view-diary textarea[id^="dayComment-"]');
@@ -664,7 +660,7 @@ await page.waitForFunction(() => {
   const e = (raw.dayEntries || []).find((d) => d.date === key);
   return e && String(e.comment || "").includes("分頁草稿");
 });
-await page.click(".day-journal-gate");
+await page.click('#appBar [data-open-diary], .app-bar [data-open-diary]');
 await page.waitForSelector("#view-diary textarea[data-day-comment]");
 const draftAcrossPage = await page.$eval(
   "#view-diary textarea[data-day-comment]",
