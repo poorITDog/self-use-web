@@ -1234,6 +1234,11 @@
     return true;
   }
 
+  // Off-schedule day (e.g. Friday habit done on Saturday) — not holiday.
+  function isExtraDay(habit, key) {
+    return !habitScheduleDueOn(habit, key);
+  }
+
   function holidayBannerText(key) {
     var dayWord = key === todayKey() ? "今天" : "當日";
     if (isFullDayHoliday(key)) {
@@ -1481,10 +1486,16 @@
 
   function afterHabitCompleted(habit, key) {
     var result = bumpLinkedGoals(habit, key);
+    // Check-in may already be saved; persist goal bumps too.
+    if (result.bumped.length || result.finished.length) saveState();
     var s = streakFor(habit);
     var parts = [];
     if (s === 7 || s === 30 || s === 100) parts.push(habit.name + " 連續 " + s + " 天");
-    if (result.bumped.length) parts.push("目標進度 +" + result.bumped.length);
+    if (result.bumped.length) {
+      parts.push((isExtraDay(habit, key) ? "額外完成 · " : "") + "目標進度 +" + result.bumped.length);
+    } else if (isExtraDay(habit, key)) {
+      parts.push("已記為額外完成");
+    }
     if (result.finished.length) parts.push("成就解鎖：" + result.finished.join("、"));
     if (parts.length) toast(parts.join(" · "));
   }
@@ -1500,10 +1511,12 @@
         state.checkins = state.checkins.filter(function (c) { return c.id !== existing.id; });
       } else if (existing) {
         existing.value = 1;
+        if (isExtraDay(habit, key)) existing.extra = true;
         touch(existing);
       } else {
         state.checkins.push(touch({
-          id: uid(), habitId: habitId, date: key, value: 1, minutes: 0, note: ""
+          id: uid(), habitId: habitId, date: key, value: 1, minutes: 0, note: "",
+          extra: isExtraDay(habit, key)
         }));
       }
       saveState();
@@ -1728,6 +1741,12 @@
     var c = getCheckin(h.id, key);
     var time = habitTimeLabel(h);
     var timeBit = time ? " · " + time : "";
+    if (isExtraDay(h, key)) {
+      if (done) return "額外完成" + timeBit;
+      if (h.type === "yesno") return "非排程 · 可額外打卡" + timeBit;
+      if (h.type === "count") return "額外 · " + (c ? c.value : 0) + " / " + (h.target || 1) + " 次" + timeBit;
+      return "額外 · " + fmtMin(c ? (c.minutes || c.value || 0) : 0) + " / " + fmtMin(h.target || 1) + timeBit;
+    }
     if (!habitDueOn(h, key)) return "休息日";
     if (h.type === "yesno") return (done ? "已完成" : "未完成") + timeBit;
     if (h.type === "count") return (c ? c.value : 0) + " / " + (h.target || 1) + " 次" + timeBit;
@@ -1851,10 +1870,12 @@
       cur.setDate(start.getDate() + i);
       var key = dateKey(cur);
       var due = habitDueOn(habit, key);
+      var scheduleDue = habitScheduleDueOn(habit, key);
       var done = isHabitDone(habit, key);
       var cls = "week-cell";
       if (key === todayKey()) cls += " today";
-      if (!due) cls += " off";
+      if (!scheduleDue && done) cls += " extra";
+      else if (!scheduleDue || !due) cls += " off";
       else if (done) cls += " done";
       else if (key <= todayKey()) cls += " missed";
       else cls += " future";
@@ -2071,25 +2092,30 @@
     return html;
   }
 
-  function todayCheckinRowHtml(h) {
+  function todayCheckinRowHtml(h, opts) {
+    opts = opts || {};
     var key = todayKey();
     var done = isHabitDone(h, key);
     var streak = streakFor(h);
     var emoji = (h && h.emoji) ? h.emoji : "🌱";
     var tint = "color-mix(in srgb, " + (h.color || "var(--color-accent)") + " 16%, var(--color-neutral-100))";
+    var extra = !!opts.extra || isExtraDay(h, key);
     return '<article class="habit-card habit-checkin-row' + (done ? " done" : "") +
-      '" style="--hcolor:' + h.color + '">' +
+      (extra ? " is-extra" : "") + '" style="--hcolor:' + h.color + '">' +
       '<button type="button" class="habit-row-body" data-habit-open="' + h.id + '">' +
       '<span class="habit-emoji-tile" style="background:' + tint + '" aria-hidden="true">' + emoji + "</span>" +
       '<span class="habit-row-copy">' +
-      '<span class="habit-row-name">' + esc(h.name) + "</span>" +
+      '<span class="habit-row-name">' + esc(h.name) +
+      (extra ? '<span class="extra-tag">額外</span>' : "") + "</span>" +
       '<span class="habit-row-meta">' + todayStatusText(h, key) +
       (streak ? '<span class="habit-row-streak">🔥 ' + streak + "</span>" : "") +
       linkedGoalBadgeHtml(h, true) +
       "</span>" +
       "</span></button>" +
       '<span class="habit-row-actions">' +
-      holidayBtnHtml(h, key) +
+      (extra
+        ? '<span class="habit-row-actions-spacer" aria-hidden="true"></span>'
+        : holidayBtnHtml(h, key)) +
       checkBtnHtml(h, key, "check check-row") +
       "</span></article>";
   }
@@ -2174,16 +2200,25 @@
     var excused = state.habits.filter(function (h) {
       return !h.archived && isHabitHoliday(h, key) && habitScheduleDueOn(h, key);
     });
+    var extraHabits = state.habits.filter(function (h) {
+      return !h.archived && isExtraDay(h, key);
+    });
     if (!todayHabits.length) {
-      if (excused.length) {
+      if (excused.length && !extraHabits.length) {
         var emptyMsg = isFullDayHoliday(key)
           ? "今天全日放假，習慣已暫停，連續紀錄保留。"
           : "今日應做的習慣都放假了，連續紀錄保留。";
         return '<div class="empty compact"><p>' + emptyMsg + "</p></div>" +
           excusedHolidayListHtml(excused);
       }
-      return '<div class="empty compact"><p>今天沒有需要完成的習慣</p>' +
-        '<button class="btn sm" data-action="add-habit">+ 新增習慣</button></div>';
+      if (!extraHabits.length) {
+        return '<div class="empty compact"><p>今天沒有需要完成的習慣</p>' +
+          '<button class="btn sm" data-action="add-habit">+ 新增習慣</button></div>';
+      }
+      var onlyExtra = '<div class="empty compact"><p>今天沒有排程習慣</p></div>';
+      onlyExtra += extraHabitsHtml(extraHabits);
+      if (excused.length) onlyExtra += excusedHolidayListHtml(excused);
+      return onlyExtra;
     }
     var html = '<div class="today-checkin">';
     var grouped = {};
@@ -2198,11 +2233,21 @@
       html += '<div class="habit-group-section">' +
         '<div class="habit-group-label"><span>' + g + "</span>" +
         '<span class="habit-group-count">' + doneInGroup + "/" + grouped[g].length + "</span></div>";
-      html += grouped[g].map(todayCheckinRowHtml).join("");
+      html += grouped[g].map(function (h) { return todayCheckinRowHtml(h, { extra: false }); }).join("");
       html += "</div>";
     });
     html += "</div>";
+    if (extraHabits.length) html += extraHabitsHtml(extraHabits);
     if (excused.length) html += excusedHolidayListHtml(excused);
+    return html;
+  }
+
+  function extraHabitsHtml(extraHabits) {
+    var html = '<div class="extra-habits">' +
+      '<div class="habit-group-label extra-habits-label"><span>額外完成</span>' +
+      '<span class="extra-habits-hint">非今日排程，做了也可打卡並計入目標</span></div>';
+    html += extraHabits.map(function (h) { return todayCheckinRowHtml(h, { extra: true }); }).join("");
+    html += "</div>";
     return html;
   }
 
@@ -2324,17 +2369,20 @@
     for (var day = 1; day <= daysInMonth; day++) {
       var key = dateKey(new Date(y, m, day));
       var due = habitDueOn(habit, key);
+      var scheduleDue = habitScheduleDueOn(habit, key);
       var done = isHabitDone(habit, key);
       var cls = "habit-day";
       if (key === todayKey()) cls += " today";
-      if (!due) cls += " off";
+      if (!scheduleDue && done) cls += " extra";
+      else if (!scheduleDue || !due) cls += " off";
       else if (key > todayKey()) cls += " future";
       else if (done) cls += " done";
       else cls += " missed";
       var label = done ? "✓" : String(day);
       html += '<button type="button" class="' + cls + '" style="--hcolor:' + habit.color +
-        '" data-habit-day="' + habit.id + "|" + key + '" aria-label="' + key + '"' +
-        (due && key <= todayKey() ? "" : " tabindex=\"-1\"") + ">" + label + "</button>";
+        '" data-habit-day="' + habit.id + "|" + key + '" aria-label="' + key +
+        (scheduleDue ? "" : " 額外") + '"' +
+        (key <= todayKey() ? "" : " tabindex=\"-1\"") + ">" + label + "</button>";
     }
     html += "</div></div>";
     return html;
@@ -2844,13 +2892,15 @@
       if (!c) {
         c = touch({
           id: uid(), habitId: habit.id, date: key, value: val,
-          minutes: habit.type === "duration" ? val : 0, note: note
+          minutes: habit.type === "duration" ? val : 0, note: note,
+          extra: isExtraDay(habit, key)
         });
         state.checkins.push(c);
       } else {
         c.value = val;
         c.minutes = habit.type === "duration" ? val : (c.minutes || 0);
         c.note = note;
+        if (isExtraDay(habit, key)) c.extra = true;
         touch(c);
       }
       saveState();
@@ -2868,19 +2918,40 @@
   }
 
   function calDayHabitsHtml(selected) {
-    var due = state.habits.filter(function (h) { return !h.archived && habitDueOn(h, selected); });
-    if (!due.length) {
+    var active = state.habits.filter(function (h) { return !h.archived; });
+    var due = active.filter(function (h) { return habitDueOn(h, selected); });
+    var extra = active.filter(function (h) { return isExtraDay(h, selected); });
+    if (!due.length && !extra.length) {
       return '<div class="empty compact">當日沒有需要完成的習慣</div>';
     }
-    var html = '<div class="cal-habit-list">';
-    due.forEach(function (h) {
-      var done = isHabitDone(h, selected);
-      html += '<div class="cal-habit-row' + (done ? " done" : "") + '">' +
-        checkBtnHtml(h, selected, "check check-md") +
-        '<div class="cal-habit-info"><strong>' + esc(h.name) + '</strong>' +
-        '<span class="muted">' + todayStatusText(h, selected) + "</span></div></div>";
-    });
-    html += "</div>";
+    var html = "";
+    if (due.length) {
+      html += '<div class="cal-habit-list">';
+      due.forEach(function (h) {
+        var done = isHabitDone(h, selected);
+        html += '<div class="cal-habit-row' + (done ? " done" : "") + '">' +
+          checkBtnHtml(h, selected, "check check-md") +
+          '<div class="cal-habit-info"><strong>' + esc(h.name) + '</strong>' +
+          '<span class="muted">' + todayStatusText(h, selected) + "</span></div></div>";
+      });
+      html += "</div>";
+    } else {
+      html += '<div class="empty compact">當日沒有排程習慣</div>';
+    }
+    if (extra.length) {
+      html += '<div class="extra-habits cal-extra-habits">' +
+        '<div class="habit-group-label extra-habits-label"><span>額外完成</span></div>' +
+        '<div class="cal-habit-list">';
+      extra.forEach(function (h) {
+        var done = isHabitDone(h, selected);
+        html += '<div class="cal-habit-row is-extra' + (done ? " done" : "") + '">' +
+          checkBtnHtml(h, selected, "check check-md") +
+          '<div class="cal-habit-info"><strong>' + esc(h.name) +
+          ' <span class="extra-tag">額外</span></strong>' +
+          '<span class="muted">' + todayStatusText(h, selected) + "</span></div></div>";
+      });
+      html += "</div></div>";
+    }
     return html;
   }
 
@@ -3654,11 +3725,13 @@
             var c = getCheckin(habit.id, key);
             if (!c) {
               state.checkins.push(touch({
-                id: uid(), habitId: habit.id, date: key, value: mins, minutes: mins, note: "來自專注"
+                id: uid(), habitId: habit.id, date: key, value: mins, minutes: mins, note: "來自專注",
+                extra: isExtraDay(habit, key)
               }));
             } else {
               c.minutes = Number(c.minutes || 0) + mins;
               c.value = c.minutes;
+              if (isExtraDay(habit, key)) c.extra = true;
               touch(c);
             }
             afterHabitCompleted(habit, key);
@@ -3890,7 +3963,7 @@
       esc(g.outcome || "") + "</textarea></div>" +
       '<div class="field"><label>期限（可選）</label><input id="gDue" type="date" value="' + due + '" /></div>' +
       '<div class="field"><label>連結習慣（可選）</label><select id="gHabit">' + habitOpts + "</select>" +
-      '<p class="tiny muted" style="margin:6px 0 0">小時目標若連結「計時」習慣，打卡會按分鐘換算成小時。</p></div>' +
+      '<p class="tiny muted" style="margin:6px 0 0">打卡（含非排程額外日）會自動推進目標；小時目標若連結「計時」習慣，會按分鐘換算。</p></div>' +
       '<div class="row-actions"><button class="btn" id="gSave">儲存</button>' +
       (g.id ? '<button class="btn warn" id="gDel">刪除</button>' : "") +
       '<button class="btn ghost" id="gCancel">取消</button></div>'
