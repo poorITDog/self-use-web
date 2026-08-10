@@ -1234,9 +1234,15 @@
     return true;
   }
 
-  // Off-schedule day (e.g. Friday habit done on Saturday) — not holiday.
+  // Off-schedule weekday after the habit existed (e.g. Friday habit on Saturday).
+  // Not holiday: holiday uses schedule-due + excused. Not pre-createdAt days.
   function isExtraDay(habit, key) {
-    return !habitScheduleDueOn(habit, key);
+    var d = parseKey(key).getDay();
+    var freq = (habit.frequency || [0, 1, 2, 3, 4, 5, 6]).map(Number);
+    if (freq.indexOf(d) >= 0) return false;
+    var startMs = Number(habit.createdAt) || 0;
+    if (startMs && key < dateKey(startMs)) return false;
+    return true;
   }
 
   function holidayBannerText(key) {
@@ -1492,9 +1498,12 @@
     var parts = [];
     if (s === 7 || s === 30 || s === 100) parts.push(habit.name + " 連續 " + s + " 天");
     if (result.bumped.length) {
-      parts.push((isExtraDay(habit, key) ? "額外完成 · " : "") + "目標進度 +" + result.bumped.length);
+      var goalBit = result.bumped.length === 1
+        ? result.bumped[0] + " +1"
+        : "目標進度 +" + result.bumped.length;
+      parts.push((isExtraDay(habit, key) ? "已記為額外完成 · " : "") + goalBit);
     } else if (isExtraDay(habit, key)) {
-      parts.push("已記為額外完成");
+      parts.push("已記為額外完成（不影響連續天數）");
     }
     if (result.finished.length) parts.push("成就解鎖：" + result.finished.join("、"));
     if (parts.length) toast(parts.join(" · "));
@@ -1742,10 +1751,10 @@
     var time = habitTimeLabel(h);
     var timeBit = time ? " · " + time : "";
     if (isExtraDay(h, key)) {
-      if (done) return "額外完成" + timeBit;
-      if (h.type === "yesno") return "非排程 · 可額外打卡" + timeBit;
-      if (h.type === "count") return "額外 · " + (c ? c.value : 0) + " / " + (h.target || 1) + " 次" + timeBit;
-      return "額外 · " + fmtMin(c ? (c.minutes || c.value || 0) : 0) + " / " + fmtMin(h.target || 1) + timeBit;
+      if (done) return "已額外打卡" + timeBit;
+      if (h.type === "yesno") return "今日非排程 · 可加做" + timeBit;
+      if (h.type === "count") return "加做 · " + (c ? c.value : 0) + " / " + (h.target || 1) + " 次" + timeBit;
+      return "加做 · " + fmtMin(c ? (c.minutes || c.value || 0) : 0) + " / " + fmtMin(h.target || 1) + timeBit;
     }
     if (!habitDueOn(h, key)) return "休息日";
     if (h.type === "yesno") return (done ? "已完成" : "未完成") + timeBit;
@@ -1988,6 +1997,7 @@
     var cls = "habit-box-day";
     if (key === todayKey()) cls += " today";
     if (extra) cls += " extra";
+    else if (!scheduleDue && key <= todayKey()) cls += " can-extra";
     else if (!scheduleDue || !due) cls += " off";
     else if (done) cls += " done";
     else if (key > todayKey()) cls += " future";
@@ -2269,7 +2279,7 @@
   function extraHabitsHtml(extraHabits) {
     var html = '<div class="extra-habits">' +
       '<div class="habit-group-label extra-habits-label"><span>額外完成</span>' +
-      '<span class="extra-habits-hint">非今日排程，做了也可打卡並計入目標</span></div>';
+      '<span class="extra-habits-hint">今天沒排到，做了也能打卡並計入目標</span></div>';
     html += extraHabits.map(function (h) { return todayCheckinRowHtml(h, { extra: true }); }).join("");
     html += "</div>";
     return html;
@@ -2398,6 +2408,7 @@
       var cls = "habit-day";
       if (key === todayKey()) cls += " today";
       if (!scheduleDue && done) cls += " extra";
+      else if (!scheduleDue && key <= todayKey()) cls += " can-extra";
       else if (!scheduleDue || !due) cls += " off";
       else if (key > todayKey()) cls += " future";
       else if (done) cls += " done";
@@ -2933,9 +2944,11 @@
       }
       saveState();
       closeModal();
-      if (habit.type === "duration" || habit.type === "count") {
+      var nowDone = isHabitDone(habit, key);
+      // Duration always re-syncs hours goals; count/yesno only on newly completed.
+      if (habit.type === "duration") {
         afterHabitCompleted(habit, key);
-      } else if (!wasDone && isHabitDone(habit, key)) {
+      } else if (!wasDone && nowDone) {
         afterHabitCompleted(habit, key);
       } else {
         toast("已記錄");
@@ -2948,7 +2961,10 @@
   function calDayHabitsHtml(selected) {
     var active = state.habits.filter(function (h) { return !h.archived; });
     var due = active.filter(function (h) { return habitDueOn(h, selected); });
-    var extra = active.filter(function (h) { return isExtraDay(h, selected); });
+    // Only past/today: future days must not list every off-schedule habit as 額外.
+    var extra = selected <= todayKey()
+      ? active.filter(function (h) { return isExtraDay(h, selected); })
+      : [];
     if (!due.length && !extra.length) {
       return '<div class="empty compact">當日沒有需要完成的習慣</div>';
     }
