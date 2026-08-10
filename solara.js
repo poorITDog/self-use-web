@@ -9,6 +9,9 @@
   var GROUPS = ["早上", "下午", "晚上", "健康", "工作", "生活"];
   var TIME_GROUPS = ["早上", "下午", "晚上", "其他"];
   var DOW = ["日", "一", "二", "三", "四", "五", "六"];
+  // Calendar headers / week strips: Mon → Sun (HK / ISO week).
+  var DOW_MON = ["一", "二", "三", "四", "五", "六", "日"];
+  var DOW_MON_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
   var state = loadState();
   var ui = {
@@ -82,6 +85,18 @@
   function parseKey(k) {
     var p = k.split("-").map(Number);
     return new Date(p[0], p[1] - 1, p[2]);
+  }
+
+  // Week starts Monday (ISO / HK). Storage frequency still uses Date#getDay (0=Sun).
+  function startOfWeekMon(d) {
+    var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    var day = x.getDay();
+    x.setDate(x.getDate() + (day === 0 ? -6 : 1 - day));
+    return x;
+  }
+
+  function mondayPad(jsDow) {
+    return (Number(jsDow) + 6) % 7;
   }
 
   function startOfMonth(d) {
@@ -1870,10 +1885,8 @@
   var chevronSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
 
   function weekStripHtml(habit) {
-    var d = new Date();
-    var start = new Date(d);
-    start.setDate(d.getDate() - d.getDay());
-    var html = '<div class="week-strip" aria-label="本週記錄">';
+    var start = startOfWeekMon(new Date());
+    var html = '<div class="week-strip" aria-label="本週記錄 一至日">';
     for (var i = 0; i < 7; i++) {
       var cur = new Date(start);
       cur.setDate(start.getDate() + i);
@@ -1889,7 +1902,8 @@
       else if (key <= todayKey()) cls += " missed";
       else cls += " future";
       var inner = done ? "✓" : String(cur.getDate());
-      html += '<span class="' + cls + '" style="--hcolor:' + habit.color + '">' + inner + "</span>";
+      html += '<span class="' + cls + '" style="--hcolor:' + habit.color +
+        '" title="星期' + DOW[cur.getDay()] + '">' + inner + "</span>";
     }
     html += "</div>";
     return html;
@@ -1927,8 +1941,7 @@
     var now = new Date();
     var count = 0;
     if (mode === "week") {
-      var start = new Date(now);
-      start.setDate(now.getDate() - now.getDay());
+      var start = startOfWeekMon(now);
       for (var i = 0; i < 7; i++) {
         var cur = new Date(start);
         cur.setDate(start.getDate() + i);
@@ -2017,10 +2030,13 @@
     var month = startOfMonth(new Date());
     var y = month.getFullYear();
     var m = month.getMonth();
-    var firstDow = new Date(y, m, 1).getDay();
+    var firstPad = mondayPad(new Date(y, m, 1).getDay());
     var daysInMonth = new Date(y, m + 1, 0).getDate();
-    var html = '<div class="habit-box-cal habit-box-cal-month" style="--hcolor:' + habit.color + '"><div class="habit-box-grid">';
-    for (var i = 0; i < firstDow; i++) html += '<span class="habit-box-day pad" aria-hidden="true"></span>';
+    var html = '<div class="habit-box-cal habit-box-cal-month" style="--hcolor:' + habit.color +
+      '"><div class="habit-box-dow" aria-hidden="true">' +
+      DOW_MON.map(function (d) { return "<span>" + d + "</span>"; }).join("") +
+      '</div><div class="habit-box-grid">';
+    for (var i = 0; i < firstPad; i++) html += '<span class="habit-box-day pad" aria-hidden="true"></span>';
     for (var day = 1; day <= daysInMonth; day++) {
       var key = dateKey(new Date(y, m, day));
       html += habitBoxDayCellHtml(habit, key, day);
@@ -2030,10 +2046,11 @@
   }
 
   function habitBoxWeekCalHtml(habit) {
-    var d = new Date();
-    var start = new Date(d);
-    start.setDate(d.getDate() - d.getDay());
-    var html = '<div class="habit-box-cal habit-box-cal-week" style="--hcolor:' + habit.color + '"><div class="habit-box-grid week">';
+    var start = startOfWeekMon(new Date());
+    var html = '<div class="habit-box-cal habit-box-cal-week" style="--hcolor:' + habit.color +
+      '"><div class="habit-box-dow" aria-hidden="true">' +
+      DOW_MON.map(function (d) { return "<span>" + d + "</span>"; }).join("") +
+      '</div><div class="habit-box-grid week">';
     for (var i = 0; i < 7; i++) {
       var cur = new Date(start);
       cur.setDate(start.getDate() + i);
@@ -2053,9 +2070,7 @@
     mode = mode || state.settings.habitsBoardMode || "month";
     var rate = mode === "week"
       ? (function () {
-        var now = new Date();
-        var start = new Date(now);
-        start.setDate(now.getDate() - now.getDay());
+        var start = startOfWeekMon(new Date());
         var due = 0;
         var done = 0;
         for (var i = 0; i < 7; i++) {
@@ -2396,13 +2411,13 @@
     prefix = prefix || "habit";
     var y = month.getFullYear();
     var m = month.getMonth();
-    var firstDow = new Date(y, m, 1).getDay();
+    var firstPad = mondayPad(new Date(y, m, 1).getDay());
     var daysInMonth = new Date(y, m + 1, 0).getDate();
     var html = '<div class="' + prefix + '-cal" style="--hcolor:' + habit.color + '">';
     html += '<div class="' + prefix + '-dow">';
-    DOW.forEach(function (d) { html += "<span>" + d + "</span>"; });
+    DOW_MON.forEach(function (d) { html += "<span>" + d + "</span>"; });
     html += '</div><div class="' + prefix + '-grid">';
-    for (var i = 0; i < firstDow; i++) html += '<span class="habit-day pad" aria-hidden="true"></span>';
+    for (var i = 0; i < firstPad; i++) html += '<span class="habit-day pad" aria-hidden="true"></span>';
     for (var day = 1; day <= daysInMonth; day++) {
       var key = dateKey(new Date(y, m, day));
       var due = habitDueOn(habit, key);
@@ -2437,9 +2452,9 @@
     var end = new Date();
     var start = new Date();
     start.setDate(end.getDate() - 12 * 7 + 1);
-    while (start.getDay() !== 0) start.setDate(start.getDate() - 1);
+    start = startOfWeekMon(start);
     var html = '<div class="habit-year-heat"><div class="section-title" style="padding:8px 0 4px">近 12 週</div>' +
-      '<div class="habit-year-grid" aria-label="近十二週完成熱圖">';
+      '<div class="habit-year-grid" aria-label="近十二週完成熱圖（一至日）">';
     var cur = new Date(start);
     // Inclusive through today (fixed 84 cells used to stop 1–2 days early).
     while (dateKey(cur) <= todayKey()) {
@@ -2652,8 +2667,7 @@
   }
 
   function weekSummaryHtml() {
-    var start = new Date();
-    start.setDate(start.getDate() - start.getDay());
+    var start = startOfWeekMon(new Date());
     var due = 0;
     var done = 0;
     var evtCount = 0;
@@ -2681,7 +2695,7 @@
       else if (frac > 0) cls += " partial";
       dots += '<div class="week-dot-col">' +
         '<div class="' + cls + '" style="--heat:' + Math.max(0.12, frac) + '">' + d.getDate() + "</div>" +
-        '<span class="week-dot-label">' + DOW[d.getDay()] + "</span></div>";
+        '<span class="week-dot-label">' + DOW_MON[i] + "</span></div>";
       d.setDate(d.getDate() + 1);
     }
     var rate = due ? Math.round((done / due) * 100) : 0;
@@ -2831,8 +2845,9 @@
           '" data-color="' + c + '" style="background:' + c + '"></button>';
       }).join("") + '</div><input type="hidden" id="hColor" value="' + escAttr(h.color) + '" /></div>' +
       '<div class="field"><label>重複星期</label><div class="freq-picks" id="hFreq">' +
-      DOW.map(function (label, i) {
-        return '<button type="button" data-dow="' + i + '" class="' + (freq.indexOf(i) >= 0 ? "on" : "") + '">' + label + "</button>";
+      DOW_MON_ORDER.map(function (i) {
+        return '<button type="button" data-dow="' + i + '" class="' + (freq.indexOf(i) >= 0 ? "on" : "") +
+          '">' + DOW[i] + "</button>";
       }).join("") + "</div></div>" +
       '<div class="row-actions">' +
       '<button class="btn" id="hSave">儲存</button>' +
@@ -3084,8 +3099,7 @@
     var month = ui.calMonth;
     var y = month.getFullYear();
     var m = month.getMonth();
-    var start = new Date(y, m, 1);
-    while (start.getDay() !== 0) start.setDate(start.getDate() - 1);
+    var start = startOfWeekMon(new Date(y, m, 1));
     var html = '<div class="cal-week-grid">';
     for (var i = 0; i < 7; i++) {
       var d = new Date(start);
@@ -3095,7 +3109,7 @@
       if (key === todayKey()) cls += " today";
       if (key === ui.calSelected) cls += " selected";
       html += '<button type="button" class="' + cls + '" data-day="' + key + '">';
-      html += '<div class="cal-week-col-head">' + DOW[d.getDay()] + "<br>" + d.getDate() + "</div>";
+      html += '<div class="cal-week-col-head">' + DOW_MON[i] + "<br>" + d.getDate() + "</div>";
       var slots = 4;
       eventsForDate(key).slice(0, 2).forEach(function (ev) {
         if (slots <= 0) return;
@@ -3159,11 +3173,11 @@
     if (ui.calMode === "week") {
       html += calWeekViewHtml();
     } else {
-      var firstDow = new Date(y, m, 1).getDay();
+      var firstPad = mondayPad(new Date(y, m, 1).getDay());
       var daysInMonth = new Date(y, m + 1, 0).getDate();
       html += '<div class="cal-grid-wrap"><div class="cal-grid">';
-      DOW.forEach(function (d) { html += '<div class="cal-dow">' + d + "</div>"; });
-      for (var i = 0; i < firstDow; i++) html += '<div></div>';
+      DOW_MON.forEach(function (d) { html += '<div class="cal-dow">' + d + "</div>"; });
+      for (var i = 0; i < firstPad; i++) html += '<div></div>';
       for (var day = 1; day <= daysInMonth; day++) {
         var key = dateKey(new Date(y, m, day));
         var rate = completionRate(key);
@@ -3290,7 +3304,9 @@
       '<div class="grid-2"><div class="field"><label>開始</label><input id="bStart" type="time" value="' + escAttr(b.start) + '" /></div>' +
       '<div class="field"><label>結束</label><input id="bEnd" type="time" value="' + escAttr(b.end) + '" /></div></div>' +
       '<div class="field"><label>重複（星期）</label><select id="bDow">' +
-      DOW.map(function (label, i) { return opt(String(i), "逢星期" + label, b.date ? "once" : String(b.dayOfWeek)); }).join("") +
+      DOW_MON_ORDER.map(function (i) {
+        return opt(String(i), "逢星期" + DOW[i], b.date ? "once" : String(b.dayOfWeek));
+      }).join("") +
       '<option value="once"' + (b.date ? " selected" : "") + ">只限選定日期</option></select></div>" +
       '<div class="field"><label>顏色</label><select id="bColor">' +
       colors().map(function (c) { return opt(c, c, b.color); }).join("") + "</select></div>" +
@@ -3482,8 +3498,9 @@
     var dow = ui.timetableDow;
     var html = '<div class="timetable-wrap">';
     html += '<div class="week-picks" id="ttDow">';
-    DOW.forEach(function (label, i) {
-      html += '<button type="button" data-tt-dow="' + i + '" class="' + (i === dow ? "on" : "") + '">' + label + "</button>";
+    DOW_MON_ORDER.forEach(function (i) {
+      html += '<button type="button" data-tt-dow="' + i + '" class="' + (i === dow ? "on" : "") +
+        '">' + DOW[i] + "</button>";
     });
     html += "</div>";
     var blocks = state.blocks.filter(function (b) {
@@ -3710,8 +3727,7 @@
       (ui.focus.mode === "focus" ? "切去休息" : "切去專注") + "</button></div>";
     var todayFocus = state.focusSessions.filter(function (s) { return dateKey(s.startedAt) === todayKey(); });
     var sum = todayFocus.reduce(function (a, s) { return a + Number(s.minutes || 0); }, 0);
-    var weekStart = new Date();
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    var weekStart = startOfWeekMon(new Date());
     var weekSum = 0;
     var weekCount = 0;
     state.focusSessions.forEach(function (s) {
