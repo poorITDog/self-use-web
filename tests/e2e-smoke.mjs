@@ -428,7 +428,7 @@ await assert(!!(await page.$("[data-goal-reopen]")), "achievement has reopen con
 await page.click('[data-nav="habits"]');
 await page.waitForSelector("#globalFab");
 await assert(
-  await page.$eval("#globalFab", (el) => !!el.hidden),
+  await page.$eval("#globalFab", (el) => !!el.hidden && getComputedStyle(el).display === "none"),
   "FAB hidden on habits so it does not cover check-in rows"
 );
 await page.click('[data-nav="countdown"]');
@@ -494,6 +494,10 @@ await assert(theme === "sea", "theme switches to sea");
 await page.click('[data-nav="habits"]');
 const syncChip = await page.$("#syncChip");
 await assert(!!syncChip, "sync status chip visible");
+const syncCompact = await page.$eval("#syncChip", (el) =>
+  el.classList.contains("sync-chip-icon") && !el.textContent.trim()
+);
+await assert(syncCompact, "habits sync chip is icon-only (less app-bar crowding)");
 
 await assert(errors.filter((e) => !e.includes("favicon")).length === 0, "no page errors: " + JSON.stringify(errors));
 

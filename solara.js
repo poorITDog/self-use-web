@@ -342,12 +342,12 @@
   function renderSyncChip() {
     var el = document.getElementById("syncChip");
     if (!el) return;
-    el.className = "chip sync-chip sync-" + syncStatus;
+    el.className = "chip sync-chip sync-chip-icon sync-" + syncStatus;
     el.setAttribute("title", syncStatus === "needsAuth"
       ? "登入已過期，點一下重新同步"
-      : "雲端同步狀態");
+      : "點一下立即同步：" + syncStatusLabel());
     el.setAttribute("aria-label", "雲端同步狀態：" + syncStatusLabel());
-    el.innerHTML = '<span class="sync-dot" aria-hidden="true"></span>' + syncStatusLabel();
+    el.innerHTML = '<span class="sync-dot" aria-hidden="true"></span>';
   }
 
   function getStoredToken() {
@@ -1659,13 +1659,7 @@
   bindModalPullDismiss();
 
   function renderTopChips() {
-    var chip = document.getElementById("syncChip");
-    if (chip) {
-      chip.className = "chip sync-chip sync-" + syncStatus;
-      chip.setAttribute("title", "雲端同步狀態");
-      chip.setAttribute("aria-label", "雲端同步狀態：" + syncStatusLabel());
-      chip.innerHTML = '<span class="sync-dot" aria-hidden="true"></span>' + syncStatusLabel();
-    }
+    renderSyncChip();
   }
 
   function dateChipLabel() {
@@ -1732,11 +1726,11 @@
         return !h.archived && habitDueOn(h, key);
       });
       var doneCount = todayHabits.filter(function (h) { return isHabitDone(h, key); }).length;
-      html += '<button type="button" class="chip sync-chip sync-' + syncStatus +
+      html += '<button type="button" class="chip sync-chip sync-chip-icon sync-' + syncStatus +
         '" id="syncChip" data-sync="drive-pull" title="' +
-        (syncStatus === "needsAuth" ? "登入已過期，點一下重新同步" : "點一下立即同步") +
+        (syncStatus === "needsAuth" ? "登入已過期，點一下重新同步" : "點一下立即同步：" + syncStatusLabel()) +
         '" aria-label="雲端同步狀態：' + escAttr(syncStatusLabel()) +
-        '"><span class="sync-dot" aria-hidden="true"></span>' + syncStatusLabel() + "</button>";
+        '"><span class="sync-dot" aria-hidden="true"></span></button>';
       html += appBarProgressRingHtml(doneCount, todayHabits.length);
     }
     html += "</div>";
@@ -2143,11 +2137,12 @@
         return !h.archived && isExtraDay(h, key);
       });
     if (!todayHabits.length) {
-      if (excused.length) {
-        var emptyMsg = isFullDayHoliday(key)
-          ? "今天全日放假，習慣已暫停，連續紀錄保留。"
-          : "今日應做的習慣都放假了，連續紀錄保留。";
-        var holidayEmpty = '<div class="empty compact"><p>' + emptyMsg + "</p></div>";
+        if (excused.length) {
+        var holidayEmpty = "";
+        if (!isFullDayHoliday(key)) {
+          // Full-day already has the slim strip — don't repeat the same empty copy.
+          holidayEmpty = '<div class="empty compact"><p>今日應做的習慣都放假了，連續紀錄保留。</p></div>';
+        }
         if (extraHabits.length) holidayEmpty += extraHabitsHtml(extraHabits);
         holidayEmpty += excusedHolidayListHtml(excused);
         return holidayEmpty;

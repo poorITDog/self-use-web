@@ -2341,6 +2341,12 @@ button.linkish {
   transition: transform 0.15s, background 0.15s;
 }
 
+/* display:grid above beats the UA [hidden] rule — force hide when set. */
+.fab[hidden],
+.global-fab[hidden] {
+  display: none !important;
+}
+
 .fab:hover { background: var(--color-accent-600); }
 .fab:active { transform: scale(0.94); background: var(--color-accent-600); }
 
@@ -4389,6 +4395,13 @@ button.habit-box-day:active {
   font-weight: 700;
   border: none;
   box-shadow: none;
+}
+
+.sync-chip-icon {
+  width: 34px;
+  min-width: 34px;
+  padding: 0;
+  justify-content: center;
 }
 
 .sync-chip strong { font-weight: 700; }
