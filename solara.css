@@ -5128,6 +5128,53 @@ button.habit-box-day:active {
   margin-top: 8px;
 }
 
+// Organic: 額外完成 peer of 今日放假 (must follow habit-checkin-row reset).
+.extra-habits {
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--color-accent) 7%, var(--color-neutral-100));
+  box-shadow: var(--shadow-sm);
+  border: none;
+  padding: 10px 12px 4px;
+  margin-top: 8px;
+}
+
+.extra-habits .extra-habits-label {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 9px;
+  margin: 0 4px 10px;
+  padding: 0;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--color-neutral-700);
+}
+
+.extra-habits .extra-habits-hint {
+  width: 100%;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-neutral-500);
+}
+
+.habit-card.habit-checkin-row.is-extra,
+.habit-checkin-row.is-extra {
+  background: var(--color-neutral-100);
+  box-shadow: none;
+  border: none;
+  border-left: 3px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  border-radius: 16px;
+}
+
+.habit-day.extra,
+.week-cell.extra {
+  background: color-mix(in srgb, var(--hcolor, var(--color-accent)) 18%, var(--color-neutral-100));
+  border: 1.5px solid color-mix(in srgb, var(--hcolor, var(--color-accent)) 55%, transparent);
+  color: var(--color-accent);
+  font-weight: 800;
+}
+
 .diary-page .day-journal,
 .diary-holiday-list {
   border-radius: 20px;
