@@ -4100,14 +4100,16 @@
         var existing = getCheckin(habit.id, key);
         if (existing) {
           existing.value = 1;
+          if (isExtraDay(habit, key)) existing.extra = true;
           touch(existing);
         } else {
           state.checkins.push(touch({
-            id: uid(), habitId: habit.id, date: key, value: 1, minutes: 0, note: ""
+            id: uid(), habitId: habit.id, date: key, value: 1, minutes: 0, note: "",
+            extra: isExtraDay(habit, key)
           }));
         }
-        afterHabitCompleted(habit, key);
         saveState();
+        afterHabitCompleted(habit, key);
         render();
         return;
       }
