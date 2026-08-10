@@ -690,13 +690,18 @@ const selectedCalDay = await page.evaluate(() => {
     String(today.getDate()).padStart(2, "0");
   const tDow = today.getDay();
   const days = Array.from(document.querySelectorAll(".cal-day[data-day]"));
-  // Prefer same weekday so scheduled habits appear on diary holiday list
-  const sameDow = days.find((el) => {
+  // Prefer future same weekday so habitScheduleDueOn still includes habits
+  // created today (past days are gated by createdAt).
+  const futureSameDow = days.find((el) => {
     const key = el.getAttribute("data-day");
-    if (!key || key === tKey) return false;
+    if (!key || key === tKey || key < tKey) return false;
     return new Date(key + "T12:00:00").getDay() === tDow;
   });
-  const other = sameDow || days.find((el) => {
+  const anyFuture = days.find((el) => {
+    const key = el.getAttribute("data-day");
+    return key && key > tKey;
+  });
+  const other = futureSameDow || anyFuture || days.find((el) => {
     const key = el.getAttribute("data-day");
     return key && key !== tKey;
   });
@@ -841,6 +846,127 @@ const yRate = await page.evaluate((yKey) => {
 }, pastRateStable);
 await assert(yRate.due === 3 && yRate.rate === 100,
   "yesterday stays 100% after adding a new habit today");
+
+// Off-schedule habit under 額外完成; check-in bumps linked goal +1
+await page.click('[data-nav="habits"]');
+await page.waitForSelector('[data-habits-panel="today"]');
+await page.evaluate(() => {
+  document.querySelector('[data-habits-panel="today"]').click();
+});
+await page.evaluate(() => {
+  const raw = localStorage.getItem("solara-v1");
+  const s = raw ? JSON.parse(raw) : {};
+  const todayWd = new Date().getDay();
+  const otherWd = (todayWd + 3) % 7;
+  s.habits = s.habits || [];
+  s.goals = s.goals || [];
+  s.checkins = s.checkins || [];
+  s.habits.push({
+    id: "hx-extra",
+    name: "額外閱讀",
+    type: "yesno",
+    color: "#7c9a82",
+    frequency: [otherWd],
+    group: "生活",
+    target: 1,
+    emoji: "📖",
+    archived: false,
+    createdAt: Date.now() - 86400000 * 14,
+    updatedAt: Date.now()
+  });
+  s.goals.push({
+    id: "gx-extra",
+    title: "閱讀目標",
+    kind: "short",
+    goalType: "general",
+    target: 10,
+    current: 0,
+    unitMode: "count",
+    unit: "次",
+    habitId: "hx-extra",
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  });
+  localStorage.setItem("solara-v1", JSON.stringify(s));
+});
+await page.reload({ waitUntil: "networkidle0" });
+await page.waitForSelector(".extra-habits .habit-checkin-row");
+const extraLabel = await page.$eval(".extra-habits .extra-habits-label", (el) => el.textContent);
+await assert(extraLabel.includes("額外完成"), "extra section label visible");
+const extraNames = await page.$$eval(
+  ".extra-habits .habit-checkin-row .habit-row-name",
+  (els) => els.map((el) => el.textContent)
+);
+await assert(
+  extraNames.some((n) => n.includes("額外閱讀")),
+  "extra section shows off-schedule habit: " + JSON.stringify(extraNames)
+);
+
+await page.evaluate(() => {
+  const row = Array.from(document.querySelectorAll(".extra-habits .habit-checkin-row")).find((el) =>
+    el.textContent.includes("額外閱讀")
+  );
+  row.querySelector("[data-toggle]").click();
+});
+await page.waitForFunction(() => {
+  const raw = localStorage.getItem("solara-v1");
+  if (!raw) return false;
+  const s = JSON.parse(raw);
+  const g = (s.goals || []).find((x) => x.id === "gx-extra");
+  const today = new Date();
+  const key =
+    today.getFullYear() +
+    "-" +
+    String(today.getMonth() + 1).padStart(2, "0") +
+    "-" +
+    String(today.getDate()).padStart(2, "0");
+  const c = (s.checkins || []).find((x) => x.habitId === "hx-extra" && x.date === key);
+  return g && g.current === 1 && c && c.value && c.extra;
+});
+const afterExtra = await page.evaluate(() => {
+  const s = JSON.parse(localStorage.getItem("solara-v1"));
+  const g = s.goals.find((x) => x.id === "gx-extra");
+  const today = new Date();
+  const key =
+    today.getFullYear() +
+    "-" +
+    String(today.getMonth() + 1).padStart(2, "0") +
+    "-" +
+    String(today.getDate()).padStart(2, "0");
+  const c = s.checkins.find((x) => x.habitId === "hx-extra" && x.date === key);
+  return { goal: g.current, extra: !!c.extra, done: !!c.value, lastBumpKey: g.lastBumpKey };
+});
+await assert(afterExtra.done && afterExtra.extra, "extra check-in marks done+extra");
+await assert(afterExtra.goal === 1, "extra check-in bumps linked goal +1");
+
+// Habit detail must record the extra day (calendar + 本月額外)
+await page.evaluate(() => {
+  const btn = document.querySelector('.extra-habits [data-habit-open="hx-extra"]');
+  if (btn) btn.click();
+});
+await page.waitForSelector(".habit-detail .habit-full-cal");
+const detailExtra = await page.evaluate(() => {
+  const stats = Array.from(document.querySelectorAll(".habit-detail-stats .detail-stat")).map((el) => ({
+    label: el.querySelector(".label")?.textContent || "",
+    value: el.querySelector(".value")?.textContent || ""
+  }));
+  const extraStat = stats.find((s) => s.label.includes("本月額外"));
+  const calExtra = document.querySelectorAll(".habit-full-cal .habit-day.extra").length;
+  const heatExtra = document.querySelectorAll(".habit-year-heat .heat-cell.extra").length;
+  return {
+    extraStat: extraStat ? extraStat.value : null,
+    calExtra,
+    heatExtra
+  };
+});
+await assert(!!detailExtra.extraStat && !detailExtra.extraStat.startsWith("0"),
+  "habit detail shows 本月額外 record: " + detailExtra.extraStat);
+await assert(detailExtra.calExtra >= 1, "habit month calendar records extra day cell");
+await assert(detailExtra.heatExtra >= 1, "habit year heatmap records extra day cell");
+await page.evaluate(() => {
+  const close = document.getElementById("hdClose") || document.getElementById("hdBack");
+  if (close) close.click();
+});
 
 await browser.close();
 console.log("\nAll e2e smoke tests passed.");

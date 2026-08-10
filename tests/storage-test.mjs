@@ -457,5 +457,29 @@ run("hours goal same-day delta math accumulates", () => {
   assert.equal(maybeFinishGoal(g, 123), true);
 });
 
+run("count goal +1 once per day even on extra (off-schedule) day", () => {
+  // Mirrors bumpLinkedGoals count path used for scheduled + extra check-ins.
+  const g = normalizeGoal({
+    title: "閱讀",
+    unitMode: "count",
+    current: 2,
+    target: 10,
+    habitId: "h-read",
+    lastBumpKey: "",
+  });
+  const bump = (key) => {
+    if (g.lastBumpKey === key) return false;
+    g.current = Math.round((Number(g.current) + 1) * 100) / 100;
+    g.lastBumpKey = key;
+    g.lastBumpAmount = 1;
+    return true;
+  };
+  // Saturday extra for a Friday-only habit still counts once.
+  assert.equal(bump("2026-08-08"), true);
+  assert.equal(g.current, 3);
+  assert.equal(bump("2026-08-08"), false);
+  assert.equal(g.current, 3);
+});
+
 console.log("\n" + passed + " passed, " + failed + " failed");
 process.exit(failed > 0 ? 1 : 0);
