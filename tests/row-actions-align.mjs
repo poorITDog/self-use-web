@@ -1,4 +1,4 @@
-// Assert 放假 + circular check share a fixed action rail across rows.
+// Assert 放假 + circular check share a fixed action rail across habit rows.
 import { createRequire } from "module";
 import { spawnSync } from "child_process";
 
@@ -38,7 +38,12 @@ async function addHabit(name) {
 await addHabit("晨跑對齊");
 await addHabit("聽力對齊");
 await page.waitForSelector(".habit-checkin-row .habit-row-actions");
-await page.waitForSelector(".today-timeline-item .habit-row-actions");
+
+function assert(cond, name) {
+  if (!cond) throw new Error("FAIL: " + name);
+}
+
+assert(!(await page.$(".today-timeline, .today-timeline-wrap")), "today timeline removed");
 
 const checkin = await page.evaluate(() => {
   return [...document.querySelectorAll(".habit-checkin-row")].map((row) => {
@@ -54,33 +59,10 @@ const checkin = await page.evaluate(() => {
       holLeft: Math.round(hr.left),
       checkLeft: Math.round(cr.left),
       holH: Math.round(hr.height),
-      checkH: Math.round(cr.height)
+      checkH: Math.round(cr.height),
+      checkIsCircle: Math.abs(cr.width - cr.height) <= 1
     };
   }).filter(Boolean);
-});
-
-const timeline = await page.evaluate(() => {
-  return [...document.querySelectorAll(".today-timeline-item .habit-row-actions")].map((actions) => {
-    const hol = actions.querySelector(".habit-holiday-btn, .habit-row-actions-spacer");
-    const check = actions.querySelector(".check-row, [data-toggle]");
-    const ar = actions.getBoundingClientRect();
-    const hr = hol.getBoundingClientRect();
-    const cr = check.getBoundingClientRect();
-    return {
-      actionsLeft: Math.round(ar.left),
-      holLeft: Math.round(hr.left),
-      checkLeft: Math.round(cr.left),
-      checkIsCircle: Math.abs(cr.width - cr.height) <= 1,
-      hasTextCheck: !!actions.querySelector(".timeline-check-btn, .btn.sm")
-    };
-  });
-});
-
-const order = await page.evaluate(() => {
-  const checkinEl = document.querySelector(".today-checkin");
-  const timelineEl = document.querySelector(".today-timeline");
-  if (!checkinEl || !timelineEl) return null;
-  return (checkinEl.compareDocumentPosition(timelineEl) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 });
 
 function assertCol(rows, key, label) {
@@ -96,22 +78,17 @@ function assertCol(rows, key, label) {
 assertCol(checkin, "actionsLeft", "checkin");
 assertCol(checkin, "holLeft", "checkin");
 assertCol(checkin, "checkLeft", "checkin");
-assertCol(timeline, "actionsLeft", "timeline");
-assertCol(timeline, "holLeft", "timeline");
-assertCol(timeline, "checkLeft", "timeline");
 
 for (const r of checkin) {
   if (Math.abs(r.holH - r.checkH) > 1) {
     throw new Error("checkin action heights differ " + r.holH + "/" + r.checkH);
   }
+  if (!r.checkIsCircle) {
+    throw new Error("check button must stay circular");
+  }
 }
-if (timeline.some((r) => !r.checkIsCircle || r.hasTextCheck)) {
-  throw new Error("timeline must use circular check, not text 打卡/已完成");
-}
-if (!order) throw new Error("soft habit cards must render before timeline (DC order)");
 
 console.log("PASS checkin action columns aligned across", checkin.length, "rows");
-console.log("PASS timeline action columns aligned across", timeline.length, "rows");
-console.log("PASS timeline uses circular check (no text wrap)");
-console.log("PASS habit cards appear before timeline");
+console.log("PASS check buttons are circular");
+console.log("PASS today has no timeline duplicate rail");
 await browser.close();
