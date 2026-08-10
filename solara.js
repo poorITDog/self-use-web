@@ -342,12 +342,12 @@
   function renderSyncChip() {
     var el = document.getElementById("syncChip");
     if (!el) return;
-    el.className = "chip sync-chip sync-" + syncStatus;
+    el.className = "chip sync-chip sync-chip-icon sync-" + syncStatus;
     el.setAttribute("title", syncStatus === "needsAuth"
       ? "登入已過期，點一下重新同步"
-      : "雲端同步狀態");
+      : "點一下立即同步：" + syncStatusLabel());
     el.setAttribute("aria-label", "雲端同步狀態：" + syncStatusLabel());
-    el.innerHTML = '<span class="sync-dot" aria-hidden="true"></span>' + syncStatusLabel();
+    el.innerHTML = '<span class="sync-dot" aria-hidden="true"></span>';
   }
 
   function getStoredToken() {
@@ -1659,13 +1659,7 @@
   bindModalPullDismiss();
 
   function renderTopChips() {
-    var chip = document.getElementById("syncChip");
-    if (chip) {
-      chip.className = "chip sync-chip sync-" + syncStatus;
-      chip.setAttribute("title", "雲端同步狀態");
-      chip.setAttribute("aria-label", "雲端同步狀態：" + syncStatusLabel());
-      chip.innerHTML = '<span class="sync-dot" aria-hidden="true"></span>' + syncStatusLabel();
-    }
+    renderSyncChip();
   }
 
   function dateChipLabel() {
@@ -1687,8 +1681,15 @@
       return '<button type="button" class="btn sm soft" data-nav="habits">返回習慣</button>';
     }
     if (view === "habits") {
-      return '<button type="button" class="btn sm ghost" data-open-diary="' + todayKey() +
-        '" aria-label="今日日記">日記</button>' +
+      // Soft Organic chip; mood glyph when already logged so diary stays one tap.
+      var diaryKey = todayKey();
+      var diaryEntry = getDayEntry(diaryKey);
+      var diaryMood = diaryEntry ? Number(diaryEntry.mood) || 0 : 0;
+      var diaryLabel = diaryMood
+        ? '<span class="diary-mood-glyph" aria-hidden="true">' + moodEmoji(diaryMood) + "</span>"
+        : "今日日記";
+      return '<button type="button" class="btn sm soft diary-app-btn" data-open-diary="' + diaryKey +
+        '" aria-label="今日日記" title="今日日記">' + diaryLabel + "</button>" +
         '<button type="button" class="icon-btn" data-action="add-habit" aria-label="新增習慣">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>';
     }
@@ -1725,11 +1726,11 @@
         return !h.archived && habitDueOn(h, key);
       });
       var doneCount = todayHabits.filter(function (h) { return isHabitDone(h, key); }).length;
-      html += '<button type="button" class="chip sync-chip sync-' + syncStatus +
+      html += '<button type="button" class="chip sync-chip sync-chip-icon sync-' + syncStatus +
         '" id="syncChip" data-sync="drive-pull" title="' +
-        (syncStatus === "needsAuth" ? "登入已過期，點一下重新同步" : "點一下立即同步") +
+        (syncStatus === "needsAuth" ? "登入已過期，點一下重新同步" : "點一下立即同步：" + syncStatusLabel()) +
         '" aria-label="雲端同步狀態：' + escAttr(syncStatusLabel()) +
-        '"><span class="sync-dot" aria-hidden="true"></span>' + syncStatusLabel() + "</button>";
+        '"><span class="sync-dot" aria-hidden="true"></span></button>';
       html += appBarProgressRingHtml(doneCount, todayHabits.length);
     }
     html += "</div>";
@@ -1795,27 +1796,13 @@
 
   function todayStripHtml(todayHabits) {
     var key = todayKey();
-    var fullHoliday = isFullDayHoliday(key);
-    var excusedDue = state.habits.filter(function (h) {
-      return !h.archived && isHabitHoliday(h, key) && habitScheduleDueOn(h, key);
-    });
-    var partialHoliday = !fullHoliday && excusedDue.length > 0;
-    var holidayCount = excusedDue.length;
-    // Habits today: holiday status only — agenda / minutes live on calendar & focus.
-    if (!fullHoliday && !partialHoliday) return "";
-    var html = '<div class="today-strip today-strip-slim">';
-    html += '<div class="today-strip-head">';
-    if (fullHoliday) {
-      html += '<div class="today-progress-text">今天全日放假 <strong>連續紀錄保留</strong></div>';
-      html += '<div class="holiday-chip-ring" aria-label="全日放假">假</div></div>';
-      html += '<div class="tiny muted" style="margin-top:8px">全日放假不會計入未完成。</div>';
-    } else {
-      html += '<div class="today-progress-text">' +
-        '<span class="today-stat today-stat-holiday">' + holidayCount + " 個放假</span></div></div>";
-      html += '<div class="tiny muted" style="margin-top:8px">已放假習慣不計未完成，其餘仍可打卡。</div>';
-    }
-    html += "</div>";
-    return html;
+    // Partial holidays already show under 今日放假 — strip only for full-day banner.
+    if (!isFullDayHoliday(key)) return "";
+    return '<div class="today-strip today-strip-slim">' +
+      '<div class="today-strip-head">' +
+      '<div class="today-progress-text">今天全日放假 <strong>連續紀錄保留</strong></div>' +
+      '<div class="holiday-chip-ring" aria-label="全日放假">假</div></div>' +
+      '<div class="tiny muted" style="margin-top:8px">全日放假不會計入未完成。</div></div>';
   }
 
   function groupOrderIndex(group) {
@@ -2116,7 +2103,6 @@
       (extra ? '<span class="extra-tag">額外</span>' : "") + "</span>" +
       '<span class="habit-row-meta">' + todayStatusText(h, key) +
       (streak ? '<span class="habit-row-streak">🔥 ' + streak + "</span>" : "") +
-      linkedGoalBadgeHtml(h, true) +
       "</span>" +
       "</span></button>" +
       '<span class="habit-row-actions">' +
@@ -2151,21 +2137,22 @@
         return !h.archived && isExtraDay(h, key);
       });
     if (!todayHabits.length) {
-      if (excused.length && !extraHabits.length) {
-        var emptyMsg = isFullDayHoliday(key)
-          ? "今天全日放假，習慣已暫停，連續紀錄保留。"
-          : "今日應做的習慣都放假了，連續紀錄保留。";
-        return '<div class="empty compact"><p>' + emptyMsg + "</p></div>" +
-          excusedHolidayListHtml(excused);
+        if (excused.length) {
+        var holidayEmpty = "";
+        if (!isFullDayHoliday(key)) {
+          // Full-day already has the slim strip — don't repeat the same empty copy.
+          holidayEmpty = '<div class="empty compact"><p>今日應做的習慣都放假了，連續紀錄保留。</p></div>';
+        }
+        if (extraHabits.length) holidayEmpty += extraHabitsHtml(extraHabits);
+        holidayEmpty += excusedHolidayListHtml(excused);
+        return holidayEmpty;
       }
       if (!extraHabits.length) {
         return '<div class="empty compact"><p>今天沒有需要完成的習慣</p>' +
           '<button class="btn sm" data-action="add-habit">+ 新增習慣</button></div>';
       }
-      var onlyExtra = '<div class="empty compact"><p>今天沒有排程習慣</p></div>';
-      onlyExtra += extraHabitsHtml(extraHabits);
-      if (excused.length) onlyExtra += excusedHolidayListHtml(excused);
-      return onlyExtra;
+      return '<div class="empty compact"><p>今天沒有排程習慣</p></div>' +
+        extraHabitsHtml(extraHabits);
     }
     var html = '<div class="today-checkin">';
     var grouped = {};
@@ -2191,8 +2178,7 @@
 
   function extraHabitsHtml(extraHabits) {
     var html = '<div class="extra-habits">' +
-      '<div class="habit-group-label extra-habits-label"><span>額外完成</span>' +
-      '<span class="extra-habits-hint">今天沒排到，做了也能打卡並計入目標</span></div>';
+      '<div class="habit-group-label extra-habits-label"><span>額外完成</span></div>';
     html += extraHabits.map(function (h) { return todayCheckinRowHtml(h, { extra: true }); }).join("");
     html += "</div>";
     return html;
@@ -2217,7 +2203,9 @@
     var mode = state.settings.habitsBoardMode || "month";
     var html = '<div class="habits-board">';
     html += '<div class="habits-board-toolbar">' +
-      '<span class="section-title">儀表板</span>' +
+      '<div class="habits-board-title-row">' +
+      '<button type="button" class="btn sm soft" data-habits-panel="today">今天</button>' +
+      '<span class="section-title">儀表板</span></div>' +
       '<div class="seg seg-inline">' +
       '<button type="button" data-habits-board-mode="month" class="' + (mode === "month" ? "on" : "") + '">每月</button>' +
       '<button type="button" data-habits-board-mode="week" class="' + (mode === "week" ? "on" : "") + '">每週</button>' +
@@ -2551,7 +2539,7 @@
     return html;
   }
 
-  function weekSummaryHtml() {
+  function weekSummaryHtml(panel) {
     var start = startOfWeekMon(new Date());
     var due = 0;
     var done = 0;
@@ -2582,34 +2570,37 @@
       d.setDate(d.getDate() + 1);
     }
     var rate = due ? Math.round((done / due) * 100) : 0;
+    var onToday = !panel || panel === "today";
+    var hasActive = state.habits.some(function (h) { return !h.archived; });
+    // Quiet board entry — only when there are habits to show on the board.
+    var boardLink = onToday && hasActive
+      ? ' · <button type="button" class="week-board-link" data-habits-panel="board">儀表板</button>'
+      : "";
     return '<div class="week-summary week-summary-card">' +
       '<div class="week-summary-head">' +
       '<span class="week-summary-title">本週</span>' +
       '<span class="week-summary-meta">最佳連續 ' + bestStreak() + " 天 🔥</span></div>" +
       '<div class="week-dots">' + dots + "</div>" +
       '<div class="week-summary-foot muted tiny">達成 ' + rate + "% · 打卡 " + done + "/" + due +
-      "</div></div>";
+      boardLink + "</div></div>";
   }
 
   function renderHabits() {
     var key = todayKey();
     var todayHabits = state.habits.filter(function (h) { return !h.archived && habitDueOn(h, key); });
     var active = state.habits.filter(function (h) { return !h.archived; });
+    // No habits → force today and clear poisoned board panel state.
+    if (!active.length) ui.habitsPanel = "today";
     var panel = ui.habitsPanel === "board" ? "board" : "today";
-    // Today: week streak + habits only. Diary / timeline / goals live on their own surfaces.
-    var html = weekSummaryHtml();
-    html += todayStripHtml(todayHabits);
-    html += '<div class="seg habits-seg">' +
-      '<button type="button" data-habits-panel="today" class="' + (panel === "today" ? "on" : "") +
-      '">今天</button>' +
-      '<button type="button" data-habits-panel="board" class="' + (panel === "board" ? "on" : "") +
-      '">儀表板</button></div>';
+    // Today: week streak → habits. Board opens from week foot / board toolbar.
+    var html = weekSummaryHtml(panel);
     if (!active.length) {
       html += emptyHabitsHtml();
     } else if (panel === "board") {
       html += habitBoardHtml(active);
       html += activeGoalsStripHtml();
     } else {
+      html += todayStripHtml(todayHabits);
       html += todayCheckinHtml(todayHabits);
     }
     document.getElementById("view-habits").innerHTML = html;
@@ -4276,7 +4267,9 @@
     else if (ui.view === "settings") renderSettings();
     var fab = document.getElementById("globalFab");
     if (fab) {
-      fab.hidden = ui.view === "calendar" && ui.calMode === "timetable" || ui.view === "diary";
+      // Habits already has app-bar +; hide FAB so it doesn't cover trailing rows.
+      fab.hidden = ui.view === "habits" || ui.view === "diary" ||
+        (ui.view === "calendar" && ui.calMode === "timetable");
     }
     if (state.settings.notifyEnabled) scheduleHabitNotifications();
   }
@@ -4313,7 +4306,9 @@
       flushDayJournalDrafts();
       saveState();
       var nextPanel = habitsPanel.getAttribute("data-habits-panel");
-      ui.habitsPanel = nextPanel === "board" ? "board" : "today";
+      var hasActive = state.habits.some(function (h) { return !h.archived; });
+      // Ignore board while empty — otherwise first habit save lands on 儀表板.
+      ui.habitsPanel = nextPanel === "board" && hasActive ? "board" : "today";
       renderHabits();
       return;
     }

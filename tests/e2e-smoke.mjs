@@ -53,16 +53,15 @@ async function assert(cond, name) {
 const brand = await page.$eval(".app-bar-title", (el) => el.getAttribute("aria-label") || el.textContent.trim());
 await assert(brand === "Solara", "brand mark visible on habits");
 
-// default tab is habits; today panel is default
+// default tab is habits; today panel is default (no primary seg)
 const activeNav = await page.$eval("#nav button.active", (el) => el.getAttribute("data-nav"));
 await assert(activeNav === "habits", "default nav is habits");
 
-await page.waitForSelector('[data-habits-panel="today"].on');
-const todayDefault = await page.$eval('[data-habits-panel="today"]', (el) => el.classList.contains("on"));
-await assert(todayDefault, "habits today panel is default");
+await page.waitForSelector(".week-summary");
+await assert(!await page.$(".habits-board"), "habits today panel is default (no board)");
+await assert(!await page.$(".habits-seg"), "today has no primary 今天|儀表板 seg");
 
 // week summary card renders (header ring is the progress meter; strip is optional)
-await page.waitForSelector(".week-summary");
 const weekSummary = await page.$(".week-summary");
 await assert(!!weekSummary, "week summary renders on habits");
 const weekTitle = await page.$eval(".week-summary-title", (el) => el.textContent.trim());
@@ -71,10 +70,8 @@ const weekDow = await page.$$eval(".week-dot-label", (els) => els.map((el) => el
 await assert(weekDow === "一二三四五六日", "week summary labels are Mon→Sun: " + weekDow);
 await assert(!await page.$(".today-strip .progress-ring"), "no duplicate progress ring in today strip");
 
-// habits segment: 今天 | 儀表板
-await page.waitForSelector('[data-habits-panel="board"]');
-const boardTab = await page.$eval('[data-habits-panel="board"]', (el) => el.textContent);
-await assert(boardTab.includes("儀表板"), "habits board tab label is Traditional Chinese");
+// board opens from quiet week-foot link (not a primary seg) — only after habits exist
+await assert(!await page.$('[data-habits-panel="board"]'), "empty today has no 儀表板 link");
 
 // first-run empty state guides the user
 await page.waitForSelector(".empty-steps");
@@ -94,6 +91,26 @@ async function clickAction(action) {
   }, action);
 }
 
+async function ensureHabitsToday() {
+  await page.click('[data-nav="habits"]');
+  await page.waitForSelector(".week-summary");
+  await page.evaluate(() => {
+    const t = document.querySelector('[data-habits-panel="today"]');
+    if (t) t.click();
+  });
+  await page.waitForFunction(() => !document.querySelector(".habits-board"));
+}
+
+async function ensureHabitsBoard() {
+  await page.click('[data-nav="habits"]');
+  await page.waitForSelector(".week-summary");
+  await page.evaluate(() => {
+    const b = document.querySelector('[data-habits-panel="board"]');
+    if (b) b.click();
+  });
+  await page.waitForSelector(".habits-board");
+}
+
 // create yes/no habit (defaults to suggested time)
 await clickAction("add-habit");
 await page.waitForSelector("#hName");
@@ -103,6 +120,13 @@ const defaultTime = await page.$eval("#hTime", (el) => el.value);
 await assert(!!defaultTime, "new habit gets default suggested time");
 await page.evaluate(() => document.getElementById("hSave").click());
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
+
+// first habit stays on today (empty must not poison panel → board)
+await page.waitForSelector(".habit-checkin-row");
+await assert(!await page.$(".habits-board"), "first habit lands on today check-in, not board");
+await page.waitForSelector('[data-habits-panel="board"]');
+const boardTab = await page.$eval('[data-habits-panel="board"]', (el) => el.textContent);
+await assert(boardTab.includes("儀表板"), "habits board entry label is Traditional Chinese");
 
 // today stays lean: no duplicate timeline dropdown under the habit list
 await assert(!await page.$(".today-timeline-wrap, .today-timeline"), "today has no timeline dropdown");
@@ -120,7 +144,7 @@ const rate = await page.$eval(".app-bar-ring-label, .progress-ring-inner strong"
 await assert(rate.includes("1/") || rate.includes("100"), "completion updates after yes/no checkin");
 
 // habit dashboard boxes on board
-await page.click('[data-habits-panel="board"]');
+await ensureHabitsBoard();
 await page.waitForSelector(".habit-box");
 const habitBox = await page.$(".habit-box");
 await assert(!!habitBox, "habit dashboard box renders");
@@ -132,9 +156,9 @@ const dayBtn = await page.$(".habit-box-day[data-habit-day]");
 await assert(!!dayBtn, "habit box day cells are clickable buttons");
 
 // switch to today panel still works
-await page.click('[data-habits-panel="today"]');
+await ensureHabitsToday();
 await page.waitForSelector(".habit-checkin-row, .habit-row");
-await page.click('[data-habits-panel="board"]');
+await ensureHabitsBoard();
 await page.waitForSelector(".habit-box");
 
 // open habit detail from box — edit must work inside modal (outside #app)
@@ -173,13 +197,13 @@ await page.evaluate(() => {
   document.getElementById("hSave").click();
 });
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
-await page.click('[data-habits-panel="today"]');
+await ensureHabitsToday();
 await page.waitForSelector(".habit-checkin-row");
 const rangeText = await page.$eval("#view-habits", (el) => el.textContent);
 await assert(rangeText.includes("06:30") && rangeText.includes("08:30"), "habit time range 06:30–08:30 saved and shown");
 
 // pull habit detail sheet down to return to main habits page
-await page.click('[data-habits-panel="board"]');
+await ensureHabitsBoard();
 await page.waitForSelector("[data-habit-box-open]");
 await page.click('[data-habit-box-open]');
 await page.waitForSelector(".habit-detail .sheet-handle");
@@ -219,7 +243,7 @@ const habitsHasArchiveBlock = await page.$("#view-habits .archived-habits");
 await assert(!habitsHasArchiveBlock, "habits main view no longer shows archive block");
 
 // overview mode week strip
-await page.click('[data-habits-panel="board"]');
+await ensureHabitsBoard();
 await page.click('[data-habits-board-mode="overview"]');
 await page.waitForSelector(".habit-row .week-strip");
 const weekStrip = await page.$(".habit-row .week-strip");
@@ -235,7 +259,7 @@ await page.evaluate(() => { document.getElementById("hTarget").value = "30"; });
 await page.evaluate(() => document.getElementById("hSave").click());
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
 
-await page.click('[data-habits-panel="today"]');
+await ensureHabitsToday();
 await page.waitForFunction(() => document.querySelectorAll(".habit-checkin-row, .habit-row").length >= 2);
 await page.evaluate(() => {
   const btn = document.querySelectorAll(".habit-checkin-row [data-toggle]")[1];
@@ -247,8 +271,13 @@ await page.evaluate(() => { document.getElementById("logVal").value = "30"; });
 await page.evaluate(() => document.getElementById("logSave").click());
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
 
-const minsText = await page.$eval("#view-habits", (el) => el.textContent);
-await assert(minsText.includes("30") || minsText.includes("時") || minsText.includes("閱讀"), "duration habit logged on today list");
+const minsRow = await page.evaluate(() => {
+  const row = Array.from(document.querySelectorAll(".habit-checkin-row")).find((el) =>
+    el.textContent.includes("閱讀")
+  );
+  return row ? row.textContent : "";
+});
+await assert(minsRow.includes("30") && minsRow.includes("分"), "duration habit logged 30 分 on today list");
 
 // calendar
 await page.click('[data-nav="calendar"]');
@@ -333,24 +362,24 @@ await page.evaluate(() => document.getElementById("gCancel").click());
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
 
 // habits today stays calm; full goals strip lives on 儀表板
-await page.click('[data-nav="habits"]');
-await page.waitForSelector('[data-habits-panel="today"].on, [data-habits-panel="today"]');
+await ensureHabitsToday();
+await page.waitForSelector(".habit-checkin-row, .empty, .week-summary");
 const noGoalsOnToday = await page.evaluate(() => {
   const root = document.getElementById("view-habits");
   return !root.querySelector(".goals-strip");
 });
 await assert(noGoalsOnToday, "habits today has no full goals strip (avoids crowding)");
-await page.click('[data-habits-panel="board"]');
+await ensureHabitsBoard();
 await page.waitForSelector(".goals-strip");
 const habitsBeforeGoals = await page.evaluate(() => {
   const root = document.getElementById("view-habits");
   const goals = root.querySelector(".goals-strip");
-  const habits = root.querySelector(".habit-box, .habits-board, .habits-seg");
+  const habits = root.querySelector(".habit-box, .habits-board");
   if (!goals || !habits) return false;
   return (habits.compareDocumentPosition(goals) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 });
 await assert(habitsBeforeGoals, "habits board shows goals after habit dashboard");
-await page.click('[data-habits-panel="today"]');
+await ensureHabitsToday();
 await page.waitForSelector(".habit-checkin-row, .habit-card, .empty");
 
 // habit detail linked goals: manage button + colored block
@@ -395,9 +424,18 @@ await assert(achieveBody.includes("AWS SAA 證書"), "finished cert goal appears
 await assert(achieveBody.includes("取得 AWS Solutions Architect Associate"), "achievement shows outcome text");
 await assert(!!(await page.$("[data-goal-reopen]")), "achievement has reopen control");
 
-// global quick-add FAB
+// global quick-add FAB (hidden on habits — app bar + already covers add)
 await page.click('[data-nav="habits"]');
 await page.waitForSelector("#globalFab");
+await assert(
+  await page.$eval("#globalFab", (el) => !!el.hidden && getComputedStyle(el).display === "none"),
+  "FAB hidden on habits so it does not cover check-in rows"
+);
+await page.click('[data-nav="countdown"]');
+await page.waitForFunction(() => {
+  const fab = document.getElementById("globalFab");
+  return fab && !fab.hidden;
+});
 await page.evaluate(() => document.getElementById("globalFab").click());
 await page.waitForSelector("#qaHabit");
 const quickAdd = await page.$("#qaEvent");
@@ -456,21 +494,27 @@ await assert(theme === "sea", "theme switches to sea");
 await page.click('[data-nav="habits"]');
 const syncChip = await page.$("#syncChip");
 await assert(!!syncChip, "sync status chip visible");
+const syncCompact = await page.$eval("#syncChip", (el) =>
+  el.classList.contains("sync-chip-icon") && !el.textContent.trim()
+);
+await assert(syncCompact, "habits sync chip is icon-only (less app-bar crowding)");
 
 await assert(errors.filter((e) => !e.includes("favicon")).length === 0, "no page errors: " + JSON.stringify(errors));
 
 // Diary is its own page (not a habits tab); holiday sits next to finish on today rows
 await page.click('[data-nav="habits"]');
-await page.waitForSelector('[data-habits-panel="today"].on');
+await page.waitForSelector(".habit-checkin-row, .week-summary");
 await assert(!await page.$('[data-habits-panel="journal"]'), "habits has no 日記 tab");
-const segLabels = await page.$$eval(".habits-seg button", (els) => els.map((el) => el.textContent.trim()));
-await assert(
-  segLabels.length === 2 && segLabels.includes("今天") && segLabels.includes("儀表板"),
-  "habits seg is only 今天 | 儀表板"
-);
+await assert(!await page.$(".habits-seg"), "today has no primary habits seg");
+await assert(!!await page.$('[data-habits-panel="board"]'), "week foot still opens 儀表板");
 await assert(!await page.$(".day-journal-gate"), "today has no diary gate card");
 await assert(!await page.$(".today-timeline-wrap"), "today has no timeline dropdown");
-await assert(!!await page.$('#appBar [data-open-diary], .app-bar [data-open-diary]'), "app bar has diary entry");
+const diaryBtn = await page.$eval('#appBar [data-open-diary], .app-bar [data-open-diary]', (el) => ({
+  label: (el.getAttribute("aria-label") || "") + el.textContent,
+  soft: el.classList.contains("soft")
+}));
+await assert(diaryBtn.label.includes("今日日記") || diaryBtn.label.includes("日記"), "app bar has diary entry");
+await assert(diaryBtn.soft, "diary app-bar control uses soft Organic style");
 await assert(!await page.$("#view-habits .day-journal"), "full journal not embedded on habits today");
 await assert(!await page.$("#view-habits .holiday-habit-list"), "no holiday checklist on habits today");
 
@@ -491,7 +535,8 @@ await page.evaluate(() => {
   const btn = document.querySelector(".habit-checkin-row [data-toggle-habit-holiday]");
   if (btn) btn.click();
 });
-await page.waitForSelector(".excused-habits, .today-strip");
+await page.waitForSelector(".excused-habits");
+await assert(!await page.$(".today-strip"), "partial holiday has no strip (avoids double-tell)");
 
 // Open dedicated diary page via app bar
 await page.click('#appBar [data-open-diary], .app-bar [data-open-diary]');
@@ -848,11 +893,7 @@ await assert(yRate.due === 3 && yRate.rate === 100,
   "yesterday stays 100% after adding a new habit today");
 
 // Off-schedule habit under 額外完成; check-in bumps linked goal +1
-await page.click('[data-nav="habits"]');
-await page.waitForSelector('[data-habits-panel="today"]');
-await page.evaluate(() => {
-  document.querySelector('[data-habits-panel="today"]').click();
-});
+await ensureHabitsToday();
 await page.evaluate(() => {
   const raw = localStorage.getItem("solara-v1");
   const s = raw ? JSON.parse(raw) : {};
