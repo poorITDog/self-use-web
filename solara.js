@@ -2234,9 +2234,12 @@
     var excused = state.habits.filter(function (h) {
       return !h.archived && isHabitHoliday(h, key) && habitScheduleDueOn(h, key);
     });
-    var extraHabits = state.habits.filter(function (h) {
-      return !h.archived && isExtraDay(h, key);
-    });
+    // Full-day holiday pauses everything — don't offer off-schedule extras.
+    var extraHabits = isFullDayHoliday(key)
+      ? []
+      : state.habits.filter(function (h) {
+        return !h.archived && isExtraDay(h, key);
+      });
     if (!todayHabits.length) {
       if (excused.length && !extraHabits.length) {
         var emptyMsg = isFullDayHoliday(key)
@@ -2962,7 +2965,8 @@
     var active = state.habits.filter(function (h) { return !h.archived; });
     var due = active.filter(function (h) { return habitDueOn(h, selected); });
     // Only past/today: future days must not list every off-schedule habit as 額外.
-    var extra = selected <= todayKey()
+    // Full-day holiday: no extra check-ins (same pause as scheduled habits).
+    var extra = (selected <= todayKey() && !isFullDayHoliday(selected))
       ? active.filter(function (h) { return isExtraDay(h, selected); })
       : [];
     if (!due.length && !extra.length) {
