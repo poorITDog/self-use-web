@@ -1945,6 +1945,25 @@
     return count;
   }
 
+  // Extra (off-schedule) completions in a month — kept separate from schedule rate.
+  function monthExtraDaysFor(habit, month) {
+    var y = month.getFullYear();
+    var m = month.getMonth();
+    var days = new Date(y, m + 1, 0).getDate();
+    var count = 0;
+    for (var d = 1; d <= days; d++) {
+      var key = dateKey(new Date(y, m, d));
+      if (key > todayKey()) break;
+      if (!isExtraDay(habit, key)) continue;
+      if (isHabitDone(habit, key)) count++;
+    }
+    return count;
+  }
+
+  function monthExtraDays(habit) {
+    return monthExtraDaysFor(habit, ui.habitDetailMonth || startOfMonth(new Date()));
+  }
+
   function monthRateFor(habit, month) {
     var y = month.getFullYear();
     var m = month.getMonth();
@@ -1963,18 +1982,23 @@
 
   function habitBoxDayCellHtml(habit, key, dayLabel) {
     var due = habitDueOn(habit, key);
+    var scheduleDue = habitScheduleDueOn(habit, key);
     var done = isHabitDone(habit, key);
+    var extra = !scheduleDue && done;
     var cls = "habit-box-day";
     if (key === todayKey()) cls += " today";
-    if (!due) cls += " off";
+    if (extra) cls += " extra";
+    else if (!scheduleDue || !due) cls += " off";
     else if (done) cls += " done";
     else if (key > todayKey()) cls += " future";
     else cls += " missed";
-    var inner = !due ? "–" : String(dayLabel);
+    var inner = done ? "✓" : (!scheduleDue ? "–" : String(dayLabel));
     var style = ' style="--hcolor:' + habit.color + '"';
-    if (due && key <= todayKey()) {
+    // Past/today: allow schedule days and off-schedule extra check-ins.
+    if (key <= todayKey()) {
       return '<button type="button" class="' + cls + '"' + style +
-        ' data-habit-day="' + habit.id + "|" + key + '" aria-label="' + key + '">' + inner + "</button>";
+        ' data-habit-day="' + habit.id + "|" + key + '" aria-label="' + key +
+        (scheduleDue ? "" : " 額外") + '">' + inner + "</button>";
     }
     return '<span class="' + cls + '"' + style + '>' + inner + "</span>";
   }
@@ -2394,7 +2418,7 @@
     return { label: "完成日數", value: totalDoneDays(h) + " 日" };
   }
 
-  // Compact 12-week contribution heatmap (Habitify-style glance).
+  // Compact ~12-week contribution heatmap (Habitify-style glance).
   function habitYearHeatHtml(habit) {
     var end = new Date();
     var start = new Date();
@@ -2403,16 +2427,19 @@
     var html = '<div class="habit-year-heat"><div class="section-title" style="padding:8px 0 4px">近 12 週</div>' +
       '<div class="habit-year-grid" aria-label="近十二週完成熱圖">';
     var cur = new Date(start);
-    for (var i = 0; i < 84; i++) {
+    // Inclusive through today (fixed 84 cells used to stop 1–2 days early).
+    while (dateKey(cur) <= todayKey()) {
       var key = dateKey(cur);
+      var scheduleDue = habitScheduleDueOn(habit, key);
       var due = habitDueOn(habit, key);
-      var done = due && isHabitDone(habit, key);
+      var done = isHabitDone(habit, key);
       var cls = "heat-cell";
-      if (!due) cls += " off";
-      else if (key > todayKey()) cls += " future";
+      if (!scheduleDue && done) cls += " extra";
+      else if (!scheduleDue || !due) cls += " off";
       else if (done) cls += " done";
       else cls += " missed";
-      html += '<span class="' + cls + '" style="--hcolor:' + habit.color + '" title="' + key + '"></span>';
+      html += '<span class="' + cls + '" style="--hcolor:' + habit.color + '" title="' + key +
+        (scheduleDue ? "" : (done ? " 額外完成" : " 非排程")) + '"></span>';
       cur.setDate(cur.getDate() + 1);
     }
     html += "</div></div>";
@@ -2441,6 +2468,7 @@
       '<div class="detail-stat"><div class="label">連續天數</div><div class="value">' + streakFor(habit) + "</div></div>" +
       '<div class="detail-stat"><div class="label">本月完成率</div><div class="value">' + monthRate(habit) + "%</div></div>" +
       '<div class="detail-stat"><div class="label">本月完成</div><div class="value">' + monthDoneDays(habit) + " 日</div></div>" +
+      '<div class="detail-stat"><div class="label">本月額外</div><div class="value">' + monthExtraDays(habit) + " 日</div></div>" +
       '<div class="detail-stat"><div class="label">' + stat.label + '</div><div class="value">' + stat.value + "</div></div>" +
       "</div>" +
       '<div class="habit-detail-quick-actions" role="group" aria-label="習慣操作">' +

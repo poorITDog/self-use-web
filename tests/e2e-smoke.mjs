@@ -939,5 +939,34 @@ const afterExtra = await page.evaluate(() => {
 await assert(afterExtra.done && afterExtra.extra, "extra check-in marks done+extra");
 await assert(afterExtra.goal === 1, "extra check-in bumps linked goal +1");
 
+// Habit detail must record the extra day (calendar + 本月額外)
+await page.evaluate(() => {
+  const btn = document.querySelector('.extra-habits [data-habit-open="hx-extra"]');
+  if (btn) btn.click();
+});
+await page.waitForSelector(".habit-detail .habit-full-cal");
+const detailExtra = await page.evaluate(() => {
+  const stats = Array.from(document.querySelectorAll(".habit-detail-stats .detail-stat")).map((el) => ({
+    label: el.querySelector(".label")?.textContent || "",
+    value: el.querySelector(".value")?.textContent || ""
+  }));
+  const extraStat = stats.find((s) => s.label.includes("本月額外"));
+  const calExtra = document.querySelectorAll(".habit-full-cal .habit-day.extra").length;
+  const heatExtra = document.querySelectorAll(".habit-year-heat .heat-cell.extra").length;
+  return {
+    extraStat: extraStat ? extraStat.value : null,
+    calExtra,
+    heatExtra
+  };
+});
+await assert(!!detailExtra.extraStat && !detailExtra.extraStat.startsWith("0"),
+  "habit detail shows 本月額外 record: " + detailExtra.extraStat);
+await assert(detailExtra.calExtra >= 1, "habit month calendar records extra day cell");
+await assert(detailExtra.heatExtra >= 1, "habit year heatmap records extra day cell");
+await page.evaluate(() => {
+  const close = document.getElementById("hdClose") || document.getElementById("hdBack");
+  if (close) close.click();
+});
+
 await browser.close();
 console.log("\nAll e2e smoke tests passed.");
