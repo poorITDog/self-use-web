@@ -2576,8 +2576,9 @@
     }
     var rate = due ? Math.round((done / due) * 100) : 0;
     var onToday = !panel || panel === "today";
-    // Quiet board entry in the foot — keeps today stack streak → habits only.
-    var boardLink = onToday
+    var hasActive = state.habits.some(function (h) { return !h.archived; });
+    // Quiet board entry — only when there are habits to show on the board.
+    var boardLink = onToday && hasActive
       ? ' · <button type="button" class="week-board-link" data-habits-panel="board">儀表板</button>'
       : "";
     return '<div class="week-summary week-summary-card">' +
@@ -2593,8 +2594,9 @@
     var key = todayKey();
     var todayHabits = state.habits.filter(function (h) { return !h.archived && habitDueOn(h, key); });
     var active = state.habits.filter(function (h) { return !h.archived; });
-    // No habits → stay on today empty; board is meaningless without rows.
-    var panel = ui.habitsPanel === "board" && active.length ? "board" : "today";
+    // No habits → force today and clear poisoned board panel state.
+    if (!active.length) ui.habitsPanel = "today";
+    var panel = ui.habitsPanel === "board" ? "board" : "today";
     // Today: week streak → habits. Board opens from week foot / board toolbar.
     var html = weekSummaryHtml(panel);
     if (!active.length) {
@@ -4309,7 +4311,9 @@
       flushDayJournalDrafts();
       saveState();
       var nextPanel = habitsPanel.getAttribute("data-habits-panel");
-      ui.habitsPanel = nextPanel === "board" ? "board" : "today";
+      var hasActive = state.habits.some(function (h) { return !h.archived; });
+      // Ignore board while empty — otherwise first habit save lands on 儀表板.
+      ui.habitsPanel = nextPanel === "board" && hasActive ? "board" : "today";
       renderHabits();
       return;
     }

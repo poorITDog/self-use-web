@@ -70,10 +70,8 @@ const weekDow = await page.$$eval(".week-dot-label", (els) => els.map((el) => el
 await assert(weekDow === "一二三四五六日", "week summary labels are Mon→Sun: " + weekDow);
 await assert(!await page.$(".today-strip .progress-ring"), "no duplicate progress ring in today strip");
 
-// board opens from quiet week-foot link (not a primary seg)
-await page.waitForSelector('[data-habits-panel="board"]');
-const boardTab = await page.$eval('[data-habits-panel="board"]', (el) => el.textContent);
-await assert(boardTab.includes("儀表板"), "habits board entry label is Traditional Chinese");
+// board opens from quiet week-foot link (not a primary seg) — only after habits exist
+await assert(!await page.$('[data-habits-panel="board"]'), "empty today has no 儀表板 link");
 
 // first-run empty state guides the user
 await page.waitForSelector(".empty-steps");
@@ -122,6 +120,13 @@ const defaultTime = await page.$eval("#hTime", (el) => el.value);
 await assert(!!defaultTime, "new habit gets default suggested time");
 await page.evaluate(() => document.getElementById("hSave").click());
 await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
+
+// first habit stays on today (empty must not poison panel → board)
+await page.waitForSelector(".habit-checkin-row");
+await assert(!await page.$(".habits-board"), "first habit lands on today check-in, not board");
+await page.waitForSelector('[data-habits-panel="board"]');
+const boardTab = await page.$eval('[data-habits-panel="board"]', (el) => el.textContent);
+await assert(boardTab.includes("儀表板"), "habits board entry label is Traditional Chinese");
 
 // today stays lean: no duplicate timeline dropdown under the habit list
 await assert(!await page.$(".today-timeline-wrap, .today-timeline"), "today has no timeline dropdown");
