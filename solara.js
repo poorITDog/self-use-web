@@ -1072,9 +1072,12 @@
   function isFullDayHoliday(key) {
     var ids = holidayHabitIdList(key);
     if (!ids.length) return false;
-    var active = state.habits.filter(function (h) { return !h.archived; });
-    if (!active.length) return true;
-    return active.every(function (h) { return ids.indexOf(h.id) >= 0; });
+    // Only scheduled-due habits gate full-day; off-schedule extras don't block it.
+    var due = state.habits.filter(function (h) {
+      return !h.archived && habitScheduleDueOn(h, key);
+    });
+    if (!due.length) return true;
+    return due.every(function (h) { return ids.indexOf(h.id) >= 0; });
   }
 
   function setHolidayHabitIds(key, ids) {
@@ -2552,7 +2555,6 @@
     var start = startOfWeekMon(new Date());
     var due = 0;
     var done = 0;
-    var evtCount = 0;
     var dots = "";
     var d = new Date(start);
     var today = todayKey();
@@ -2568,7 +2570,6 @@
           done++;
         }
       });
-      evtCount += eventsForDate(key).length;
       var frac = dayDue ? dayDone / dayDue : 0;
       var isToday = key === today;
       var cls = "week-dot-cell";
@@ -2587,7 +2588,7 @@
       '<span class="week-summary-meta">最佳連續 ' + bestStreak() + " 天 🔥</span></div>" +
       '<div class="week-dots">' + dots + "</div>" +
       '<div class="week-summary-foot muted tiny">達成 ' + rate + "% · 打卡 " + done + "/" + due +
-      " · 行程 " + evtCount + "</div></div>";
+      "</div></div>";
   }
 
   function renderHabits() {
