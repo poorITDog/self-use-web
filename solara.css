@@ -5128,7 +5128,7 @@ button.habit-box-day:active {
   margin-top: 8px;
 }
 
-// Organic: 額外完成 peer of 今日放假 (must follow habit-checkin-row reset).
+/* Organic: 額外完成 peer of 今日放假 (must follow habit-checkin-row reset). */
 .extra-habits {
   border-radius: 20px;
   background: color-mix(in srgb, var(--color-accent) 7%, var(--color-neutral-100));
