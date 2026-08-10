@@ -1123,38 +1123,6 @@ textarea:disabled {
   transition: width 0.3s var(--ease);
 }
 
-.today-agenda {
-  margin-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.today-agenda-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-neutral-300);
-  border-radius: var(--radius-lg);
-  background: var(--color-accent-100);
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.today-agenda-item:active {
-  transform: scale(0.99);
-}
-
-.today-agenda-title {
-  flex: 1;
-  font-size: 0.86rem;
-  font-weight: 600;
-}
-
 .habit-linked-goals {
   display: flex;
   flex-direction: column;
@@ -1466,45 +1434,6 @@ button.linkish {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-}
-
-.goals-teaser {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  margin: 4px 0 16px;
-  padding: 10px 14px;
-  border: none;
-  border-radius: var(--radius-pill);
-  background: var(--color-neutral-100);
-  box-shadow: var(--shadow-sm);
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-  text-align: left;
-}
-
-.goals-teaser-label {
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--color-neutral-700);
-}
-
-.goals-teaser-count {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-accent-700);
-  background: var(--color-accent-100);
-  padding: 2px 9px;
-  border-radius: var(--radius-pill);
-}
-
-.goals-teaser-cta {
-  margin-left: auto;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--color-accent-700);
 }
 
 .habit-goal-chip {
@@ -2569,31 +2498,6 @@ button.linkish {
   gap: 8px;
 }
 
-.week-summary-cell {
-  padding: 12px 8px;
-  border-radius: var(--radius-xs);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  text-align: center;
-}
-
-.week-summary-cell .label {
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-mute);
-  margin-bottom: 6px;
-}
-
-.week-summary-cell .value {
-  font-family: var(--display);
-  font-size: 1.28rem;
-  font-weight: 800;
-  color: var(--text);
-  line-height: 1.15;
-}
-
 .habit-year-heat {
   margin-top: 4px;
 }
@@ -2625,53 +2529,6 @@ button.linkish {
 .heat-cell.off,
 .heat-cell.future {
   opacity: 0.35;
-}
-
-.today-timeline {
-  margin: 0 0 var(--space-3);
-  padding: var(--space-4) var(--space-5);
-  border-radius: var(--radius-lg);
-  background: var(--color-neutral-100);
-  border: 1px solid var(--line);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.today-timeline .section-title {
-  margin: 0 0 4px;
-  padding: 0;
-}
-
-.today-timeline-item {
-  display: grid;
-  grid-template-columns: 56px 8px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 10px 4px;
-  border: 0;
-  border-radius: var(--radius-lg);
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  box-sizing: border-box;
-}
-
-.today-timeline-item.done {
-  opacity: 0.72;
-}
-
-.today-timeline-item .today-timeline-body {
-  border: 0;
-  background: transparent;
-  padding: 0;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  min-width: 0;
 }
 
 /* Fixed action rail: 放假 + circular check stay column-aligned across rows */
@@ -2730,44 +2587,6 @@ button.linkish {
 
 .focus-history-row:last-child {
   border-bottom: 0;
-}
-
-.today-timeline-item:active {
-  background: var(--surface-2);
-}
-
-.timeline-check-btn:not(.soft) {
-  box-shadow: 0 3px 10px color-mix(in srgb, var(--accent-2) 38%, transparent);
-}
-
-.timeline-check-btn:not(.soft):active {
-  animation: checkBtnPulse 0.35s var(--ease);
-  box-shadow: 0 1px 4px color-mix(in srgb, var(--accent-2) 28%, transparent);
-}
-
-.today-timeline-time {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-soft);
-  font-variant-numeric: tabular-nums;
-}
-
-.today-timeline-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.today-timeline-body {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.today-timeline-body strong {
-  font-size: 0.88rem;
-  font-weight: 650;
 }
 
 /* ── Countdown ── */
@@ -2970,25 +2789,9 @@ button.linkish {
   text-align: left;
 }
 
-.today-timeline-item {
-  display: grid;
-  grid-template-columns: 56px 8px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-}
-
-.today-timeline {
-  border-radius: 20px;
-  background: var(--color-neutral-100);
-  box-shadow: var(--shadow-sm);
-  padding: 12px 14px;
-  margin-bottom: 14px;
-  border: none;
-}
-
 .today-strip-slim {
   padding: 12px 16px;
-  margin: 0 0 14px;
+  margin: 0 0 18px;
 }
 
 .today-strip-slim .progress-ring,
@@ -3698,34 +3501,6 @@ details.advanced-sync summary {
   color: var(--text-soft);
 }
 
-/* ── Habits: today / board segments ── */
-.habits-seg {
-  margin: var(--space-3) 0 var(--space-4);
-  padding: var(--space-1);
-  gap: var(--space-1);
-  background: var(--color-accent-100);
-  border: 1px solid var(--color-neutral-300);
-  border-radius: var(--radius-pill);
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-
-.habits-seg button {
-  min-height: 40px;
-  border-radius: var(--radius-pill);
-  opacity: 1;
-  color: var(--color-neutral-700);
-  font-weight: 600;
-}
-
-.habits-seg button.on {
-  background: var(--color-neutral-100);
-  color: var(--color-accent-700);
-  box-shadow: var(--shadow-sm);
-  border-bottom: 0;
-  margin-bottom: 0;
-}
-
 .habit-checkin-row {
   display: flex;
   align-items: center;
@@ -3852,6 +3627,13 @@ details.advanced-sync summary {
   justify-content: space-between;
   gap: 10px;
   padding: 8px 0 12px;
+}
+
+.habits-board-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 .habits-board-toolbar .section-title {
@@ -4244,131 +4026,6 @@ button.habit-box-day:active {
   box-shadow: var(--shadow-sm);
 }
 
-.day-journal-gate {
-  display: block;
-  width: 100%;
-  margin: var(--space-3) 0 var(--space-4);
-  padding: var(--space-4) var(--space-5);
-  border-radius: var(--radius-lg);
-  background: var(--color-neutral-100);
-  border: 1px solid var(--color-neutral-300);
-  box-shadow: var(--shadow-sm);
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
-  transition: background 0.15s var(--ease), border-color 0.15s;
-}
-
-.day-journal-gate-slim {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 4px 0 14px;
-  padding: 10px 14px;
-  border: none;
-  border-radius: 999px;
-}
-
-.day-journal-gate-title {
-  font-size: 13.5px;
-  font-weight: 800;
-  color: var(--color-neutral-700);
-}
-
-.day-journal-gate-slim .day-journal-gate-cta {
-  margin-left: auto;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--color-accent-700);
-}
-
-.today-timeline-wrap {
-  margin: 0 0 14px;
-  border-radius: 20px;
-  background: var(--color-neutral-100);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
-}
-
-.today-timeline-summary {
-  list-style: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 14px;
-  font-size: 13.5px;
-  font-weight: 800;
-  color: var(--color-neutral-700);
-  user-select: none;
-}
-
-.today-timeline-summary::-webkit-details-marker {
-  display: none;
-}
-
-.today-timeline-summary::after {
-  content: "▸";
-  margin-left: auto;
-  color: var(--color-neutral-500);
-  transition: transform 0.15s;
-}
-
-.today-timeline-wrap[open] .today-timeline-summary::after {
-  transform: rotate(90deg);
-}
-
-.today-timeline-count {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-neutral-500);
-  background: var(--color-neutral-200);
-  padding: 2px 9px;
-  border-radius: var(--radius-pill);
-}
-
-.today-timeline-wrap .today-timeline {
-  margin: 0;
-  box-shadow: none;
-  border-radius: 0;
-  padding-top: 0;
-}
-
-.day-journal-gate:hover {
-  background: var(--color-accent-100);
-  border-color: var(--color-accent-200);
-}
-
-.day-journal-gate:focus-visible {
-  outline: 2px solid var(--color-accent-2-600);
-  outline-offset: 2px;
-}
-
-.day-journal-gate-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-
-.day-journal-gate-head .section-title {
-  padding: 0;
-  margin: 0;
-}
-
-.day-journal-gate p {
-  margin: 0 0 var(--space-2);
-}
-
-.day-journal-gate-cta {
-  display: inline-block;
-  font-size: 0.88rem;
-  font-weight: 800;
-  color: var(--color-accent-700);
-}
-
 .day-panel .day-journal {
   margin: 0 var(--space-4) var(--space-4);
 }
@@ -4556,16 +4213,11 @@ button.habit-box-day:active {
 
 .extra-habits-label {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 9px;
   padding: 4px 0 8px;
   color: var(--color-accent);
-}
-
-.extra-habits-hint {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--color-neutral-600);
 }
 
 .extra-tag {
@@ -4758,27 +4410,6 @@ button.habit-box-day:active {
   background: var(--color-accent);
 }
 
-.habits-seg {
-  background: var(--color-neutral-200);
-  border: none;
-  padding: 4px;
-  gap: 4px;
-  margin: 0 0 18px;
-}
-
-.habits-seg button {
-  color: var(--color-neutral-600);
-  opacity: 1;
-}
-
-.habits-seg button.on {
-  background: var(--color-accent);
-  color: #fff;
-  box-shadow: var(--shadow-sm);
-  border-bottom: 0;
-  margin-bottom: 0;
-}
-
 /* Week dots card (DC) */
 .week-summary-card {
   display: block;
@@ -4810,6 +4441,32 @@ button.habit-box-day:active {
   color: var(--color-neutral-600);
   font-weight: 700;
   text-align: right;
+}
+
+.week-board-link {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent-700);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.week-board-link:hover {
+  text-decoration: underline;
+}
+
+.diary-app-btn {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.diary-mood-glyph {
+  font-size: 1.05rem;
+  line-height: 1;
 }
 
 .week-dots {
@@ -4875,7 +4532,7 @@ button.habit-box-day:active {
 
 .today-checkin .habit-group-section {
   border-bottom: 0;
-  margin-bottom: 28px;
+  margin-bottom: 18px;
   background: transparent;
 }
 
@@ -5021,18 +4678,7 @@ button.habit-box-day:active {
   display: none;
 }
 
-/* Soft cards: diary gate, today strip, calendar, countdown */
-.day-journal-gate {
-  border-radius: 20px;
-  box-shadow: var(--shadow-sm);
-  border: none;
-  background: var(--color-neutral-100);
-}
-
-.day-journal-gate-slim {
-  border-radius: 999px;
-}
-
+/* Soft cards: today strip, calendar, countdown */
 .today-strip {
   border-radius: 24px;
   box-shadow: var(--shadow-sm);
@@ -5140,7 +4786,7 @@ button.habit-box-day:active {
   box-shadow: var(--shadow-sm);
   border: none;
   padding: 8px 0;
-  margin-top: 8px;
+  margin-top: 18px;
 }
 
 /* Organic: 額外完成 peer of 今日放假 (must follow habit-checkin-row reset). */
@@ -5150,7 +4796,7 @@ button.habit-box-day:active {
   box-shadow: var(--shadow-sm);
   border: none;
   padding: 10px 12px 4px;
-  margin-top: 8px;
+  margin-top: 18px;
 }
 
 .extra-habits .extra-habits-label {
@@ -5163,14 +4809,6 @@ button.habit-box-day:active {
   font-size: 13.5px;
   font-weight: 800;
   color: var(--color-neutral-700);
-}
-
-.extra-habits .extra-habits-hint {
-  width: 100%;
-  margin: 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-neutral-500);
 }
 
 .habit-card.habit-checkin-row.is-extra,
