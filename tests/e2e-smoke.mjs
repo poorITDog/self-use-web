@@ -67,6 +67,8 @@ const weekSummary = await page.$(".week-summary");
 await assert(!!weekSummary, "week summary renders on habits");
 const weekTitle = await page.$eval(".week-summary-title", (el) => el.textContent.trim());
 await assert(weekTitle === "本週", "week card title is 本週");
+const weekDow = await page.$$eval(".week-dot-label", (els) => els.map((el) => el.textContent.trim()).join(""));
+await assert(weekDow === "一二三四五六日", "week summary labels are Mon→Sun: " + weekDow);
 await assert(!await page.$(".today-strip .progress-ring"), "no duplicate progress ring in today strip");
 
 // habits segment: 今天 | 儀表板
@@ -140,6 +142,8 @@ await page.click('[data-habit-box-open]');
 await page.waitForSelector(".habit-full-cal");
 const detailCal = await page.$(".habit-full-cal");
 await assert(!!detailCal, "habit detail calendar renders");
+const detailDow = await page.$eval(".habit-full-dow", (el) => el.textContent.replace(/\s+/g, ""));
+await assert(detailDow === "一二三四五六日", "habit detail calendar headers are Mon→Sun: " + detailDow);
 const yearHeat = await page.$(".habit-year-heat");
 await assert(!!yearHeat, "habit detail year heatmap renders");
 const detailEdit = await page.$('#modal [data-edit-habit]');

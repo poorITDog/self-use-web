@@ -3956,6 +3956,21 @@ details.advanced-sync summary {
   gap: 3px;
 }
 
+.habit-box-dow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-bottom: 4px;
+  padding: 0 2px;
+}
+
+.habit-box-dow span {
+  text-align: center;
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--color-neutral-500);
+}
+
 .habit-box-cal .habit-box-grid.week {
   gap: 4px;
 }
