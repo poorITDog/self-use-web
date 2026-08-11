@@ -166,6 +166,41 @@ run("mergeSyncState tombstone keeps hard delete from resurrecting", () => {
   assert.ok(state.tombstones.gone);
 });
 
+run("mergeSyncState checkin undo tombstone blocks done from resurrecting", () => {
+  // Phone undoes yes/no check; cloud still has the done checkin from earlier push.
+  const local = defaultState();
+  local.syncUpdatedAt = Date.now();
+  local.habits = [{ id: "run", name: "晨跑", type: "yesno", updatedAt: 2 }];
+  local.checkins = [];
+  local.tombstones = { "c1": 2000, "run|2026-08-10": 2000 };
+  const remote = defaultState();
+  remote.habits = [{ id: "run", name: "晨跑", type: "yesno", updatedAt: 1 }];
+  remote.checkins = [
+    { id: "c1", habitId: "run", date: "2026-08-10", value: 1, updatedAt: 1000 },
+  ];
+  const { state } = mergeSyncState(local, remote, 1500);
+  assert.equal(state.checkins.length, 0, "undone checkin must not resurrect as done");
+  assert.ok(state.tombstones["run|2026-08-10"]);
+});
+
+run("mergeSyncState re-check after undo wins over older tombstone", () => {
+  const local = defaultState();
+  local.syncUpdatedAt = Date.now();
+  local.habits = [{ id: "run", name: "晨跑", type: "yesno", updatedAt: 2 }];
+  local.checkins = [
+    { id: "c2", habitId: "run", date: "2026-08-10", value: 1, updatedAt: 3000 },
+  ];
+  local.tombstones = { "c1": 2000, "run|2026-08-10": 2000 };
+  const remote = defaultState();
+  remote.checkins = [
+    { id: "c1", habitId: "run", date: "2026-08-10", value: 1, updatedAt: 1000 },
+  ];
+  const { state } = mergeSyncState(local, remote, 1500);
+  assert.equal(state.checkins.length, 1);
+  assert.equal(state.checkins[0].id, "c2");
+  assert.equal(state.checkins[0].updatedAt, 3000);
+});
+
 run("shouldPushAfterMerge allows tombstone-only delete-last push", () => {
   const local = defaultState();
   local.tombstones = { h1: Date.now() };

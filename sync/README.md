@@ -124,7 +124,19 @@ Drive 同步跟 Git／常見雲端同步一樣，**唔會盲推本機蓋過雲�
 | `未連接` | 尚未按連接；或 Token 已過期（重新按連接） |
 | `失敗` | 網絡問題；Drive API 未啟用；授權範圍不足（要有 `drive.appdata`） |
 | 多裝置資料不一致 | 等自動同步完成；或到設定按「立即同步」 |
+| **取消打卡後另一邊又變回已完成** | 舊版取消 yes/no 打卡只刪本機紀錄、冇 tombstone，合併時雲端舊「已完成」會復活。而家取消會寫 `habitId\|date` tombstone，同刪除習慣一樣唔會被舊雲端蓋返 |
 | **重裝／再加入主畫面後係空嘅** | ① 要用**同一個** Client ID + **同一個** Google 帳戶重新連接；② 唔好新建 OAuth Client；③ 連接後等「已從雲端還原」；④ 若從未開過 Drive 同步，只能靠「匯入備份」 |
+
+### 同一般雲端服務差喺邊
+
+| | Solara Drive sync | 常見雲端（Notion / TickTick 等） |
+|--|--|--|
+| 單位 | 整包 JSON snapshot（`solara-v1.json`） | 多數係逐條 API／CRDT |
+| 合併 | Fetch → union-by-id → LWW(`updatedAt`) → push | 伺服器權威或操作式同步 |
+| 刪除 | 要靠 **tombstone**（否則舊 snapshot 會把刪除項「復活」） | 伺服器標記刪除／tombstone |
+| 打卡取消 | 必須 tombstone `habitId\|date`（同 id） | 更新同一條為 undone／刪除事件 |
+
+所以 Solara 嘅正確模型比較似 **Git + tombstone**，唔係「最後一部機整包蓋過」。一邊取消打卡如果唔寫 tombstone，另一邊／雲端舊嘅「完成」就會永遠釘死做已完成。
 
 ### 403 快速檢查清單
 

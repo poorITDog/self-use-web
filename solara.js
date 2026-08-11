@@ -279,6 +279,18 @@
     state.tombstones[key] = Date.now();
   }
 
+  // Remove a check-in and tombstone it so sync cannot resurrect "done" from cloud.
+  // Without this, undoing a yes/no check on one device always comes back finished after merge.
+  function removeCheckinRecord(c) {
+    if (!c) return;
+    if (c.id) markTombstone(c.id);
+    if (c.habitId && c.date) markTombstone(String(c.habitId) + "|" + String(c.date));
+    var cid = c.id;
+    state.checkins = state.checkins.filter(function (x) {
+      return x && x.id !== cid;
+    });
+  }
+
 
   // Calendar appointment occurrence (not a habit).
   function eventOccursOn(ev, key) {
@@ -552,6 +564,9 @@
           render();
           if (fromEmpty && (result.winner === "remote" || result.winner === "merged")) {
             toast("已從雲端還原資料");
+          } else if (result.action === "merge" && todayCheckinSig(prev) !== todayCheckinSig(state)) {
+            // Surface remote undo/check so sync does not feel like a silent flip.
+            toast("已從另一部裝置更新今日打卡");
           }
           var doPush = wantPush && shouldPushAfterMerge(result, !!pack.file);
           // Extra guard: never upload empty snapshot onto a non-empty cloud file.
@@ -657,6 +672,16 @@
       (n.goals.length || 0) + (n.blocks.length || 0) +
       (n.focusSessions.length || 0) + ((n.dayEntries && n.dayEntries.length) || 0) +
       ((n.transactions && n.transactions.length) || 0);
+  }
+
+  // Compact signature of today's check-ins — used to toast remote merge flips.
+  function todayCheckinSig(s) {
+    var key = todayKey();
+    return (s && s.checkins ? s.checkins : []).filter(function (c) {
+      return c && c.date === key;
+    }).map(function (c) {
+      return String(c.habitId) + ":" + Number(c.value || 0) + ":" + Number(c.minutes || 0);
+    }).sort().join("|");
   }
 
   function mergeTombstones(a, b) {
@@ -1513,7 +1538,7 @@
     if (habit.type === "yesno") {
       var wasDone = isHabitDone(habit, key);
       if (existing && existing.value) {
-        state.checkins = state.checkins.filter(function (c) { return c.id !== existing.id; });
+        removeCheckinRecord(existing);
       } else if (existing) {
         existing.value = 1;
         if (isExtraDay(habit, key)) existing.extra = true;
@@ -4100,7 +4125,8 @@
       '<span class="chip sync-chip sync-' + syncStatus + '">' + syncStatusLabel() + "</span></div>";
     html += '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
       '<p class="muted tiny" style="margin:0">Git 式同步：先拉取合併，再上傳（' + DRIVE_FILE +
-      "）。空本機不會覆寫雲端。開啟 App 或返回時會自動登入並同步；背景定時同步不會反覆彈出 Google 視窗。若你關閉登入視窗，可按「立即同步」再登。</p></div>";
+      "）。空本機不會覆寫雲端；取消打卡／刪除唔會被舊雲端蓋返已完成／已刪項目。" +
+      "開啟 App 或返回時會自動登入並同步；背景定時同步不會反覆彈出 Google 視窗。若你關閉登入視窗，可按「立即同步」再登。</p></div>";
     html += '<div class="settings-row" style="flex-direction:column;align-items:stretch">' +
       '<label class="settings-row-label">OAuth Client ID</label>' +
       '<input id="googleClientId" value="' + escAttr(state.settings.googleClientId || "") +
