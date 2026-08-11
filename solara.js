@@ -279,6 +279,18 @@
     state.tombstones[key] = Date.now();
   }
 
+  // Remove a check-in and tombstone it so sync cannot resurrect "done" from cloud.
+  // Without this, undoing a yes/no check on one device always comes back finished after merge.
+  function removeCheckinRecord(c) {
+    if (!c) return;
+    if (c.id) markTombstone(c.id);
+    if (c.habitId && c.date) markTombstone(String(c.habitId) + "|" + String(c.date));
+    var cid = c.id;
+    state.checkins = state.checkins.filter(function (x) {
+      return x && x.id !== cid;
+    });
+  }
+
 
   // Calendar appointment occurrence (not a habit).
   function eventOccursOn(ev, key) {
@@ -1513,7 +1525,7 @@
     if (habit.type === "yesno") {
       var wasDone = isHabitDone(habit, key);
       if (existing && existing.value) {
-        state.checkins = state.checkins.filter(function (c) { return c.id !== existing.id; });
+        removeCheckinRecord(existing);
       } else if (existing) {
         existing.value = 1;
         if (isExtraDay(habit, key)) existing.extra = true;

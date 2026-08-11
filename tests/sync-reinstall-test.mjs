@@ -69,8 +69,25 @@ assert.equal(deleted.winner, "merged");
 assert.equal(deleted.state.habits.some((h) => h.id === "h1"), false, "tombstone blocks resurrect");
 assert.equal(shouldPushAfterMerge(deleted, true), true);
 
+// Undo a yes/no check-in on one device must not come back "done" from cloud.
+const afterUndo = normalizeState(ff.state);
+afterUndo.checkins = afterUndo.checkins.filter((c) => c.id !== "c1");
+afterUndo.tombstones = Object.assign({}, afterUndo.tombstones, {
+  c1: Date.now(),
+  "h1|2026-08-01": Date.now(),
+});
+afterUndo.syncUpdatedAt = Date.now();
+const undone = mergeSyncState(afterUndo, cloud, cloudFileModified);
+assert.equal(
+  undone.state.checkins.some((c) => c.habitId === "h1" && c.date === "2026-08-01"),
+  false,
+  "checkin undo tombstone blocks done resurrect"
+);
+assert.equal(shouldPushAfterMerge(undone, true), true);
+
 console.log("✓ sync-reinstall: empty fresh fast-forwards cloud");
 console.log("✓ sync-gitlike: two-device habits union-merge + push");
 console.log("✓ sync-gitlike: never push empty over cloud");
 console.log("✓ sync-gitlike: tombstone delete survives merge");
-console.log("\n4 passed, 0 failed");
+console.log("✓ sync-gitlike: checkin undo tombstone survives merge");
+console.log("\n5 passed, 0 failed");
