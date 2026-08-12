@@ -1009,5 +1009,149 @@ await page.evaluate(() => {
   if (close) close.click();
 });
 
+// ── Tasks (待辦) smoke @390 ──
+await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2 });
+await page.click('[data-nav="tasks"]');
+await page.waitForSelector("#view-tasks.active");
+await assert(
+  await page.$eval("#globalFab", (el) => !!el.hidden),
+  "FAB hidden on tasks view"
+);
+const navOk = await page.evaluate(() => {
+  const labels = [...document.querySelectorAll("#nav .nav-label")].map((el) => el.textContent.trim());
+  const cols = getComputedStyle(document.getElementById("nav")).gridTemplateColumns.split(" ").length;
+  return labels.join("·") === "習慣·待辦·日曆·倒數·專注·設定" && cols === 6;
+});
+await assert(navOk, "nav is 6-col 習慣·待辦·日曆·倒數·專注·設定 @390");
+const addHit = await page.$eval('[data-action="add-task"]', (el) => {
+  const r = el.getBoundingClientRect();
+  return { w: r.width, h: r.height };
+});
+await assert(addHit.w >= 44 && addHit.h >= 44, "app-bar + hit target ≥44×44");
+
+await page.waitForSelector('[data-action="add-task"]');
+await page.evaluate(() => document.querySelector('[data-action="add-task"]').click());
+await page.waitForSelector("#modalBackdrop.open #tTitle");
+await page.evaluate(() => document.getElementById("tSave").click());
+await page.waitForFunction(() =>
+  (document.getElementById("toast") || {}).textContent === "請輸入標題"
+);
+await assert(true, "empty title rejected");
+
+await page.type("#tTitle", "買牛奶");
+await page.evaluate(() => {
+  document.getElementById("tDue").value = "2099-01-15";
+  document.getElementById("tSave").click();
+});
+await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
+await page.waitForFunction(() =>
+  (document.querySelector("#view-tasks .task-title") || {}).textContent === "買牛奶"
+);
+const dueText = await page.$eval("#view-tasks .task-due", (el) => el.textContent);
+await assert(!!dueText, "task shows due meta text");
+await assert(
+  !(await page.evaluate(() => document.getElementById("view-tasks").textContent.includes("未完成"))),
+  "no visible 未完成 heading"
+);
+await assert(
+  !(await page.$("[data-tasks-done-toggle]")),
+  "no 已完成 chrome when completedCount is 0"
+);
+
+await page.evaluate(() => document.querySelector("[data-edit-task]").click());
+await page.waitForSelector("#modalBackdrop.open #tTitle");
+await page.evaluate(() => {
+  document.getElementById("tTitle").value = "買燕麥奶";
+  document.getElementById("tDue").value = "";
+  document.getElementById("tNote").value = "無糖";
+  document.getElementById("tSave").click();
+});
+await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
+await page.waitForFunction(() =>
+  (document.querySelector("#view-tasks .task-title") || {}).textContent === "買燕麥奶"
+);
+await assert(
+  !(await page.$("#view-tasks .task-due")),
+  "due cleared from row meta"
+);
+const noteSaved = await page.evaluate(() => {
+  const s = JSON.parse(localStorage.getItem("solara-v1") || "{}");
+  return (s.tasks || []).some((t) => t.title === "買燕麥奶" && t.note === "無糖" && !t.due);
+});
+await assert(noteSaved, "note persisted and due cleared in state");
+
+const noWholeRowToggle = await page.evaluate(() => {
+  const row = document.querySelector(".task-row");
+  return !!(row && row.querySelector("[data-toggle-task]") && row.querySelector("[data-edit-task]") &&
+    !row.hasAttribute("data-toggle-task"));
+});
+await assert(noWholeRowToggle, "checkbox toggles; title opens editor (no whole-row toggle)");
+
+await page.evaluate(() => document.querySelector("[data-toggle-task]").click());
+await page.waitForFunction(() => {
+  const s = JSON.parse(localStorage.getItem("solara-v1") || "{}");
+  return (s.tasks || []).some((t) => t.title === "買燕麥奶" && t.done);
+});
+await page.waitForSelector("[data-tasks-done-toggle]");
+const doneCollapsed = await page.evaluate(() => {
+  const btn = document.querySelector("[data-tasks-done-toggle]");
+  const list = document.querySelector(".tasks-done-list");
+  return btn && btn.getAttribute("aria-expanded") === "false" &&
+    list && list.classList.contains("is-collapsed") &&
+    /已完成 \(1\)/.test(btn.textContent);
+});
+await assert(doneCollapsed, "已完成 (1) collapsed by default");
+await page.evaluate(() => document.querySelector("[data-tasks-done-toggle]").click());
+await page.waitForSelector(".tasks-done-list:not(.is-collapsed) [data-toggle-task]");
+await page.evaluate(() =>
+  document.querySelector(".tasks-done-list [data-toggle-task]").click()
+);
+await page.waitForFunction(() => {
+  const s = JSON.parse(localStorage.getItem("solara-v1") || "{}");
+  return (s.tasks || []).some((t) => t.title === "買燕麥奶" && !t.done);
+});
+
+await page.evaluate(() => document.querySelector("[data-edit-task]").click());
+await page.waitForSelector("#modalBackdrop.open #tDel");
+await page.evaluate(() => {
+  const real = window.confirm;
+  window.confirm = () => true;
+  document.getElementById("tDel").click();
+  window.confirm = real;
+});
+await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
+await page.waitForFunction(() => {
+  const s = JSON.parse(localStorage.getItem("solara-v1") || "{}");
+  return !(s.tasks || []).some((t) => t.title === "買燕麥奶");
+});
+
+// Browser normalizeState path (solara.js) drops bad tasks on reload.
+await page.evaluate(() => {
+  const s = JSON.parse(localStorage.getItem("solara-v1") || "{}");
+  s.tasks = [
+    { id: "", title: "no-id" },
+    { id: "blank", title: "  " },
+    { id: "keep", title: "有效", done: false, due: "bad-date", updatedAt: 1, createdAt: 1 },
+  ];
+  localStorage.setItem("solara-v1", JSON.stringify(s));
+});
+await page.reload({ waitUntil: "networkidle0" });
+await page.click('[data-nav="tasks"]');
+await page.waitForSelector("#view-tasks.active");
+const normalized = await page.evaluate(() => {
+  const s = JSON.parse(localStorage.getItem("solara-v1") || "{}");
+  return s.tasks || [];
+});
+await assert(normalized.length === 1 && normalized[0].id === "keep" && normalized[0].due === "",
+  "solara.js normalize drops invalid tasks and coerces due");
+
+await page.click('[data-nav="habits"]');
+await page.waitForSelector("#view-habits.active");
+const noTaskUiOnHabits = await page.evaluate(() => {
+  const root = document.getElementById("view-habits");
+  return !root.querySelector(".task-row, .tasks-page, [data-toggle-task], [data-edit-task]");
+});
+await assert(noTaskUiOnHabits, "habits view has no task UI");
+
 await browser.close();
 console.log("\nAll e2e smoke tests passed.");

@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   dateKey,
   parseKey,
@@ -25,7 +28,12 @@ import {
   isDayHoliday,
   isHabitHoliday,
   streakForHabit,
+  normalizeTask,
+  openTasksSig,
 } from "../solara-core.mjs";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, "..");
 
 function test(name, fn) {
   try {
@@ -514,6 +522,181 @@ run("count goal +1 once per day even on extra (off-schedule) day", () => {
   assert.equal(g.current, 3);
   assert.equal(bump("2026-08-08"), false);
   assert.equal(g.current, 3);
+});
+
+run("normalizeTask drops null id / empty title; coerces due + finishedAt", () => {
+  assert.equal(normalizeTask(null), null);
+  assert.equal(normalizeTask({ id: "", title: "x" }), null);
+  assert.equal(normalizeTask({ id: "t1", title: "  " }), null);
+  assert.equal(normalizeTask({ id: "  ", title: "a" }), null);
+  const badDue = normalizeTask({ id: "t1", title: "買菜", due: "soon", done: false });
+  assert.equal(badDue.due, "");
+  assert.equal(badDue.finishedAt, null);
+  const doneNoFin = normalizeTask({
+    id: "t2",
+    title: "寄信",
+    done: true,
+    updatedAt: 100,
+    createdAt: 50,
+  });
+  assert.equal(doneNoFin.finishedAt, 100);
+  const undone = normalizeTask({
+    id: "t3",
+    title: "洗車",
+    done: false,
+    finishedAt: 999,
+    createdAt: 1,
+  });
+  assert.equal(undone.finishedAt, null);
+  const ok = normalizeTask({ id: "t4", title: " 任務 ", due: "2026-08-12", note: "n" });
+  assert.equal(ok.title, "任務");
+  assert.equal(ok.due, "2026-08-12");
+  assert.equal(ok.note, "n");
+});
+
+run("normalizeState filters invalid tasks", () => {
+  const s = normalizeState({
+    tasks: [
+      { id: "ok", title: "有效" },
+      { id: "", title: "無 id" },
+      { id: "x", title: "" },
+      null,
+    ],
+  });
+  assert.equal(s.tasks.length, 1);
+  assert.equal(s.tasks[0].id, "ok");
+});
+
+run("openTasksSig tracks open task ids only", () => {
+  const base = {
+    tasks: [
+      { id: "a", title: "A", done: false },
+      { id: "b", title: "B", done: true },
+      { id: "c", title: "C", done: false },
+    ],
+  };
+  assert.equal(openTasksSig(base), "a|c");
+  const renamed = {
+    tasks: [
+      { id: "a", title: "A2", done: false },
+      { id: "b", title: "B", done: true },
+      { id: "c", title: "C", done: false },
+    ],
+  };
+  assert.equal(openTasksSig(renamed), openTasksSig(base), "rename-only does not change sig");
+  const completed = {
+    tasks: [
+      { id: "a", title: "A", done: true },
+      { id: "b", title: "B", done: true },
+      { id: "c", title: "C", done: false },
+    ],
+  };
+  assert.equal(openTasksSig(completed), "c");
+  const deleted = { tasks: [{ id: "c", title: "C", done: false }] };
+  assert.equal(openTasksSig(deleted), "c");
+  const added = {
+    tasks: [
+      { id: "a", title: "A", done: false },
+      { id: "c", title: "C", done: false },
+      { id: "d", title: "D", done: false },
+    ],
+  };
+  assert.notEqual(openTasksSig(added), openTasksSig(base));
+});
+
+run("mergeSyncState unions tasks and respects tombstones", () => {
+  const local = defaultState();
+  local.syncUpdatedAt = 900;
+  local.tasks = [
+    { id: "keep", title: "本地", updatedAt: 900, done: false },
+    { id: "gone", title: "刪", updatedAt: 500, done: false },
+  ];
+  local.tombstones = { gone: 800 };
+  local.tasks = local.tasks.filter((t) => t.id !== "gone");
+  const remote = defaultState();
+  remote.tasks = [
+    { id: "keep", title: "雲端舊", updatedAt: 100, done: false },
+    { id: "gone", title: "應刪", updatedAt: 100, done: false },
+    { id: "remote", title: "遠端", updatedAt: 200, done: false },
+  ];
+  const { state, winner, action } = mergeSyncState(local, remote, 200);
+  assert.equal(winner, "merged");
+  assert.equal(action, "merge");
+  const ids = state.tasks.map((t) => t.id).sort();
+  assert.deepEqual(ids, ["keep", "remote"]);
+  assert.equal(state.tasks.find((t) => t.id === "keep").title, "本地");
+});
+
+run("tasks-only weight pushes to empty remote; delete-last + tomb pushes", () => {
+  const local = defaultState();
+  local.syncUpdatedAt = 50;
+  local.tasks = [{ id: "t1", title: "唯一", updatedAt: 50, done: false }];
+  assert.ok(syncContentWeight(local) > 0);
+  const emptyRemote = defaultState();
+  const pushResult = mergeSyncState(local, emptyRemote, 0);
+  assert.equal(pushResult.action, "push");
+  assert.equal(shouldPushAfterMerge(pushResult, false), true);
+
+  const afterDel = defaultState();
+  afterDel.syncUpdatedAt = 90;
+  afterDel.tasks = [];
+  afterDel.tombstones = { t1: 90 };
+  const remoteStillHas = defaultState();
+  remoteStillHas.tasks = [{ id: "t1", title: "唯一", updatedAt: 50, done: false }];
+  const delMerge = mergeSyncState(afterDel, remoteStillHas, 50);
+  assert.equal(delMerge.action, "merge");
+  assert.equal(delMerge.state.tasks.length, 0);
+  assert.equal(shouldPushAfterMerge(delMerge, true), true);
+});
+
+run("task rename LWW + toggle does not wipe habits", () => {
+  const local = defaultState();
+  local.syncUpdatedAt = 200;
+  local.habits = [{ id: "h1", name: "晨跑", updatedAt: 10 }];
+  local.checkins = [{ id: "c1", habitId: "h1", date: "2026-08-10", value: 1, updatedAt: 10 }];
+  local.goals = [{ id: "g1", title: "目標", updatedAt: 10 }];
+  local.tasks = [{ id: "t1", title: "本地名", done: true, finishedAt: 150, updatedAt: 200 }];
+  const remote = defaultState();
+  remote.habits = [{ id: "h1", name: "晨跑", updatedAt: 10 }];
+  remote.checkins = [{ id: "c1", habitId: "h1", date: "2026-08-10", value: 1, updatedAt: 10 }];
+  remote.goals = [{ id: "g1", title: "目標", updatedAt: 10 }];
+  remote.tasks = [{ id: "t1", title: "遠端名", done: false, finishedAt: null, updatedAt: 100 }];
+  const { state } = mergeSyncState(local, remote, 100);
+  assert.equal(state.tasks[0].title, "本地名");
+  assert.equal(state.tasks[0].done, true);
+  assert.equal(state.habits.length, 1);
+  assert.equal(state.habits[0].id, "h1");
+  assert.equal(state.checkins.length, 1);
+  assert.equal(state.goals.length, 1);
+});
+
+run("newer post-tombstone recreate wins when updatedAt > tomb", () => {
+  const local = defaultState();
+  local.syncUpdatedAt = 300;
+  local.tombstones = { t1: 200 };
+  local.tasks = [];
+  const remote = defaultState();
+  remote.tasks = [{ id: "t1", title: "重生", updatedAt: 250, done: false }];
+  const { state } = mergeSyncState(local, remote, 250);
+  assert.equal(state.tasks.length, 1);
+  assert.equal(state.tasks[0].title, "重生");
+});
+
+run("solara.js ships same tasks normalize/merge/toast contracts", () => {
+  const src = fs.readFileSync(path.join(repoRoot, "solara.js"), "utf8");
+  assert.match(src, /if\s*\(\s*!id\s*\|\|\s*!title\s*\)\s*return\s*null/);
+  assert.match(src, /out\.tasks\s*=\s*out\.tasks\.map\(normalizeTask\)\.filter/);
+  assert.match(src, /merged\.tasks\s*=\s*applyTombstones\s*\(/);
+  assert.match(src, /openTasksSig\(prev\)\s*!==\s*openTasksSig\(state\)/);
+  assert.match(src, /已從另一部裝置更新今日打卡/);
+  assert.match(src, /已從另一部裝置更新待辦/);
+  assert.match(src, /toastQueue/);
+  assert.match(src, /restoredFromEmpty/);
+  assert.match(src, /function deleteTaskById[\s\S]*?markTombstone\(id\)/);
+  assert.match(src, /function toggleTaskDone[\s\S]*?touch\(task\)/);
+  assert.ok(!/function toggleTaskDone[\s\S]*?markTombstone/.test(
+    src.slice(src.indexOf("function toggleTaskDone"), src.indexOf("function deleteTaskById"))
+  ), "toggle must not tombstone");
 });
 
 console.log("\n" + passed + " passed, " + failed + " failed");

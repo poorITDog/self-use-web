@@ -132,7 +132,7 @@ Drive 同步跟 Git／常見雲端同步一樣，**唔會盲推本機蓋過雲�
 | | Solara Drive sync | 常見雲端（Notion / TickTick 等） |
 |--|--|--|
 | 單位 | 整包 JSON snapshot（`solara-v1.json`） | 多數係逐條 API／CRDT |
-| 合併 | Fetch → union-by-id → LWW(`updatedAt`) → push | 伺服器權威或操作式同步 |
+| 合併 | Fetch → union-by-id → LWW(`updatedAt`) → push（待辦整行 LWW：改名＋打勾衝突以較新 `updatedAt` 整行勝出） | 伺服器權威或操作式同步 |
 | 刪除 | 要靠 **tombstone**（否則舊 snapshot 會把刪除項「復活」） | 伺服器標記刪除／tombstone |
 | 打卡取消 | 必須 tombstone `habitId\|date`（同 id） | 更新同一條為 undone／刪除事件 |
 

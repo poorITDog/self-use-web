@@ -26,6 +26,7 @@
     habitsPanel: "today",
     diaryDate: dateKey(new Date()),
     countdownUnit: "days",
+    tasksDoneOpen: false,
     focus: {
       running: false,
       mode: "focus",
@@ -177,12 +178,28 @@
     return h + " 時 " + mm + " 分";
   }
 
+  // Sequential queue so dual sync toasts (check-in + tasks) both show.
+  var toastQueue = [];
+  var toastBusy = false;
   function toast(msg) {
+    if (!msg) return;
+    toastQueue.push(String(msg));
+    drainToastQueue();
+  }
+  function drainToastQueue() {
+    if (toastBusy) return;
+    var next = toastQueue.shift();
+    if (!next) return;
+    toastBusy = true;
     var el = document.getElementById("toast");
-    el.textContent = msg;
+    el.textContent = next;
     el.classList.add("show");
     clearTimeout(toast._t);
-    toast._t = setTimeout(function () { el.classList.remove("show"); }, 2200);
+    toast._t = setTimeout(function () {
+      el.classList.remove("show");
+      toastBusy = false;
+      setTimeout(drainToastQueue, 180);
+    }, 2200);
   }
 
   function defaultState() {
@@ -219,8 +236,39 @@
       goals: [],
       events: [],
       dayEntries: [],
+      tasks: [],
       tombstones: {}
     };
+  }
+
+  function normalizeTask(raw) {
+    var d = raw || {};
+    var id = String(d.id || "").trim();
+    var title = String(d.title || "").trim();
+    if (!id || !title) return null;
+    var done = !!d.done;
+    var due = String(d.due || "");
+    if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) due = "";
+    var createdAt = Number(d.createdAt) || Number(d.updatedAt) || 0;
+    var updatedAt = Number(d.updatedAt) || createdAt;
+    var finishedAt = d.finishedAt == null || d.finishedAt === "" ? null : Number(d.finishedAt);
+    if (done && !finishedAt) finishedAt = updatedAt || createdAt || Date.now();
+    if (!done) finishedAt = null;
+    return {
+      id: id,
+      title: title,
+      done: done,
+      due: due,
+      note: String(d.note || ""),
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      finishedAt: finishedAt
+    };
+  }
+
+  function openTasksSig(s) {
+    return ((s && s.tasks) || []).filter(function (t) { return t && !t.done; })
+      .map(function (t) { return t.id; }).sort().join("|");
   }
 
   function normalizeState(data) {
@@ -250,7 +298,7 @@
         repeat: c.repeat || (kind === "birthday" ? "yearly" : "none")
       });
     });
-    ["habits", "checkins", "blocks", "countdowns", "focusSessions", "goals", "events", "dayEntries"].forEach(function (k) {
+    ["habits", "checkins", "blocks", "countdowns", "focusSessions", "goals", "events", "dayEntries", "tasks"].forEach(function (k) {
       if (!Array.isArray(out[k])) out[k] = [];
     });
     out.dayEntries = out.dayEntries.map(function (d) { return normalizeDayEntry(d); });
@@ -266,6 +314,7 @@
       });
     });
     out.goals = out.goals.map(function (g) { return normalizeGoal(g); });
+    out.tasks = out.tasks.map(normalizeTask).filter(function (t) { return t && t.id && t.title; });
     if (Array.isArray(data.transactions)) out.transactions = data.transactions;
     out.syncUpdatedAt = Number(out.syncUpdatedAt) || 0;
     out.syncBaseAt = Number(out.syncBaseAt) || 0;
@@ -564,9 +613,15 @@
           render();
           if (fromEmpty && (result.winner === "remote" || result.winner === "merged")) {
             toast("已從雲端還原資料");
-          } else if (result.action === "merge" && todayCheckinSig(prev) !== todayCheckinSig(state)) {
-            // Surface remote undo/check so sync does not feel like a silent flip.
-            toast("已從另一部裝置更新今日打卡");
+            result.restoredFromEmpty = true;
+          } else if (result.action === "merge") {
+            if (todayCheckinSig(prev) !== todayCheckinSig(state)) {
+              // Surface remote undo/check so sync does not feel like a silent flip.
+              toast("已從另一部裝置更新今日打卡");
+            }
+            if (openTasksSig(prev) !== openTasksSig(state)) {
+              toast("已從另一部裝置更新待辦");
+            }
           }
           var doPush = wantPush && shouldPushAfterMerge(result, !!pack.file);
           // Extra guard: never upload empty snapshot onto a non-empty cloud file.
@@ -641,9 +696,10 @@
       state.settings.googleConnected = true;
       state.settings.autoSync = true;
       saveStateLocal();
-      driveSync({ push: true, force: true }).then(function () {
+      driveSync({ push: true, force: true }).then(function (result) {
         startAutoSyncLoop();
-        toast("已連接 Google Drive");
+        // Skip connect toast when restore already spoke — queue would still delay it.
+        if (!(result && result.restoredFromEmpty)) toast("已連接 Google Drive");
         render();
       });
     });
@@ -671,7 +727,8 @@
       (n.events.length || 0) + (n.countdowns.length || 0) +
       (n.goals.length || 0) + (n.blocks.length || 0) +
       (n.focusSessions.length || 0) + ((n.dayEntries && n.dayEntries.length) || 0) +
-      ((n.transactions && n.transactions.length) || 0);
+      ((n.transactions && n.transactions.length) || 0) +
+      ((n.tasks && n.tasks.length) || 0);
   }
 
   // Compact signature of today's check-ins — used to toast remote merge flips.
@@ -792,6 +849,10 @@
       mergeEntityLists(localNorm.dayEntries || [], remoteNorm.dayEntries || [], function (x) {
         return x.date || x.id;
       }),
+      merged.tombstones
+    );
+    merged.tasks = applyTombstones(
+      mergeEntityLists(localNorm.tasks || [], remoteNorm.tasks || [], function (x) { return x.id; }),
       merged.tombstones
     );
     if (localNorm.transactions || remoteNorm.transactions) {
@@ -1564,6 +1625,7 @@
       '<p class="muted tiny" style="margin:0 0 12px">從任何頁面快速建立內容</p>' +
       '<div class="quick-add-grid">' +
       '<button type="button" class="quick-add-btn" id="qaHabit"><span>習慣</span><small>打卡追蹤</small></button>' +
+      '<button type="button" class="quick-add-btn" id="qaTask"><span>待辦</span><small>一次性清單</small></button>' +
       '<button type="button" class="quick-add-btn" id="qaEvent"><span>行程</span><small>可重複約會</small></button>' +
       '<button type="button" class="quick-add-btn" id="qaGoal"><span>目標</span><small>可連習慣</small></button>' +
       '<button type="button" class="quick-add-btn" id="qaCountdown"><span>倒數</span><small>生日／紀念日</small></button>' +
@@ -1572,6 +1634,11 @@
     );
     document.getElementById("qaCancel").onclick = closeModal;
     document.getElementById("qaHabit").onclick = function () { closeModal(); openHabitEditor(); };
+    document.getElementById("qaTask").onclick = function () {
+      closeModal();
+      setView("tasks");
+      openTaskEditor();
+    };
     document.getElementById("qaEvent").onclick = function () {
       closeModal();
       if (ui.view !== "calendar") {
@@ -1694,6 +1761,7 @@
 
   var VIEW_TITLES = {
     habits: "習慣",
+    tasks: "待辦",
     diary: "日記",
     calendar: "日曆",
     countdown: "倒數",
@@ -1716,6 +1784,10 @@
       return '<button type="button" class="btn sm soft diary-app-btn" data-open-diary="' + diaryKey +
         '" aria-label="今日日記" title="今日日記">' + diaryLabel + "</button>" +
         '<button type="button" class="icon-btn" data-action="add-habit" aria-label="新增習慣">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>';
+    }
+    if (view === "tasks") {
+      return '<button type="button" class="icon-btn" data-action="add-task" aria-label="新增待辦">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>';
     }
     if (view === "calendar" && ui.calMode === "timetable") {
@@ -4264,6 +4336,190 @@
     setView("settings");
   }
 
+  function sortOpenTasks(list) {
+    return (list || []).slice().sort(function (a, b) {
+      var ad = a.due || "";
+      var bd = b.due || "";
+      if (ad && bd && ad !== bd) return ad < bd ? -1 : 1;
+      if (ad && !bd) return -1;
+      if (!ad && bd) return 1;
+      return (Number(a.createdAt) || 0) - (Number(b.createdAt) || 0);
+    });
+  }
+
+  function sortDoneTasks(list) {
+    return (list || []).slice().sort(function (a, b) {
+      var af = Number(a.finishedAt) || Number(a.updatedAt) || 0;
+      var bf = Number(b.finishedAt) || Number(b.updatedAt) || 0;
+      return bf - af;
+    });
+  }
+
+  function taskDueMetaHtml(task) {
+    var due = task && task.due ? String(task.due) : "";
+    if (!due) return "";
+    var today = todayKey();
+    var cls = "task-due";
+    var label;
+    if (due === today) {
+      cls += " today";
+      label = "今天";
+    } else if (due < today) {
+      cls += " overdue";
+      label = "已過期";
+    } else {
+      label = due.slice(5).replace("-", "月") + "日";
+    }
+    return '<span class="' + cls + '">' + esc(label) + "</span>";
+  }
+
+  function taskRowHtml(task) {
+    var done = !!(task && task.done);
+    var mark = done
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>'
+      : "";
+    var dueMeta = taskDueMetaHtml(task);
+    return '<article class="task-row' + (done ? " done" : "") + '" data-task-id="' + escAttr(task.id) + '">' +
+      '<button type="button" class="task-check' + (done ? " on" : "") +
+      '" data-toggle-task="' + escAttr(task.id) +
+      '" aria-label="' + (done ? "標記未完成" : "標記完成") + '">' + mark + "</button>" +
+      '<button type="button" class="task-main" data-edit-task="' + escAttr(task.id) +
+      '" aria-label="編輯待辦">' +
+      '<span class="task-title">' + esc(task.title) + "</span>" +
+      dueMeta +
+      "</button></article>";
+  }
+
+  function renderTasks() {
+    var root = document.getElementById("view-tasks");
+    if (!root) return;
+    var tasks = state.tasks || [];
+    var open = sortOpenTasks(tasks.filter(function (t) { return t && !t.done; }));
+    var done = sortDoneTasks(tasks.filter(function (t) { return t && t.done; }));
+    var html = '<div class="tasks-page">';
+    if (!tasks.length) {
+      html += '<div class="empty compact">' +
+        "<p><strong>還沒有待辦</strong></p>" +
+        '<p class="muted tiny">一次性事項，打勾即完成——不計連續、不佔目標。</p>' +
+        '<button type="button" class="btn soft" data-action="add-task">+ 新增待辦</button></div>';
+    } else {
+      if (!open.length) {
+        html += '<div class="empty compact"><p>未完成都清空了</p></div>';
+      } else {
+        open.forEach(function (t) { html += taskRowHtml(t); });
+      }
+      if (done.length) {
+        var expanded = !!ui.tasksDoneOpen;
+        html += '<button type="button" class="tasks-done-toggle" data-tasks-done-toggle="1" aria-expanded="' +
+          (expanded ? "true" : "false") + '" aria-label="已完成，' +
+          (expanded ? "已展開" : "已收合") + '">' +
+          '<span class="chev" aria-hidden="true">›</span>已完成 (' + done.length + ")</button>";
+        html += '<div class="tasks-done-list' + (expanded ? "" : " is-collapsed") + '">';
+        done.forEach(function (t) { html += taskRowHtml(t); });
+        html += "</div>";
+      }
+    }
+    html += "</div>";
+    root.innerHTML = html;
+  }
+
+  function openTaskEditor(taskOrNull) {
+    var t = taskOrNull || {
+      id: "", title: "", done: false, due: "", note: "",
+      createdAt: 0, updatedAt: 0, finishedAt: null
+    };
+    openModal(
+      '<div class="task-modal">' +
+      '<h3 class="task-modal-title">' + (t.id ? "編輯待辦" : "新增待辦") + "</h3>" +
+      '<div class="field"><label>標題</label><input id="tTitle" value="' + escAttr(t.title || "") +
+      '" placeholder="要做的事" autofocus /></div>' +
+      '<div class="field"><label>到期日</label><input id="tDue" type="date" value="' +
+      escAttr(t.due || "") + '" /></div>' +
+      '<div class="field"><label>備註</label><textarea id="tNote" rows="3">' +
+      esc(t.note || "") + "</textarea></div>" +
+      '<div class="row-actions"><button class="btn" id="tSave">儲存</button>' +
+      (t.id ? '<button class="btn warn" id="tDel">刪除待辦</button>' : "") +
+      '<button class="btn ghost" id="tCancel">取消</button></div></div>'
+    );
+    document.getElementById("tCancel").onclick = closeModal;
+    document.getElementById("tSave").onclick = function () {
+      var title = document.getElementById("tTitle").value.trim();
+      if (!title) return toast("請輸入標題");
+      var due = String(document.getElementById("tDue").value || "").trim();
+      if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) due = "";
+      var note = document.getElementById("tNote").value;
+      if (t.id) {
+        var existing = state.tasks.find(function (x) { return x.id === t.id; });
+        if (!existing) return;
+        existing.title = title;
+        existing.due = due;
+        existing.note = note;
+        touch(existing);
+      } else {
+        var now = Date.now();
+        state.tasks.push(touch({
+          id: uid(),
+          title: title,
+          done: false,
+          due: due,
+          note: note,
+          createdAt: now,
+          updatedAt: now,
+          finishedAt: null
+        }));
+      }
+      saveState();
+      closeModal();
+      toast(t.id ? "已儲存" : "已新增待辦");
+      render();
+    };
+    if (t.id) {
+      document.getElementById("tDel").onclick = function () {
+        if (!window.confirm("確定刪除此待辦？")) return;
+        deleteTaskById(t.id);
+        closeModal();
+        toast("已刪除");
+        render();
+      };
+    }
+  }
+
+  function toggleTaskDone(id) {
+    var task = state.tasks.find(function (x) { return x.id === id; });
+    if (!task) return;
+    var completing = !task.done;
+    task.done = !task.done;
+    if (task.done) task.finishedAt = Date.now();
+    else task.finishedAt = null;
+    touch(task);
+    saveState();
+    var row = document.querySelector('.task-row[data-task-id="' + id + '"]');
+    var btn = row ? row.querySelector("[data-toggle-task]") : null;
+    if (completing && row && btn) {
+      // Pulse + fade on the open row before it moves into collapsed 已完成.
+      btn.classList.add("on", "pulse");
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+      row.classList.add("is-completing");
+      clearTimeout(toggleTaskDone._t);
+      toggleTaskDone._t = setTimeout(function () { render(); }, 380);
+      return;
+    }
+    render();
+    btn = document.querySelector('[data-toggle-task="' + id + '"]');
+    if (btn) {
+      btn.classList.remove("pulse");
+      void btn.offsetWidth;
+      btn.classList.add("pulse");
+    }
+  }
+
+  function deleteTaskById(id) {
+    if (!id) return;
+    markTombstone(id);
+    state.tasks = state.tasks.filter(function (x) { return x && x.id !== id; });
+    saveState();
+  }
+
   function setView(name) {
     flushDayJournalDrafts();
     saveState();
@@ -4286,6 +4542,7 @@
     renderAppBar();
     renderTopChips();
     if (ui.view === "habits") renderHabits();
+    else if (ui.view === "tasks") renderTasks();
     else if (ui.view === "diary") renderDiary();
     else if (ui.view === "calendar") renderCalendar();
     else if (ui.view === "countdown") renderCountdown();
@@ -4293,8 +4550,8 @@
     else if (ui.view === "settings") renderSettings();
     var fab = document.getElementById("globalFab");
     if (fab) {
-      // Habits already has app-bar +; hide FAB so it doesn't cover trailing rows.
-      fab.hidden = ui.view === "habits" || ui.view === "diary" ||
+      // Habits / tasks already have app-bar +; hide FAB so it doesn't cover trailing rows.
+      fab.hidden = ui.view === "habits" || ui.view === "tasks" || ui.view === "diary" ||
         (ui.view === "calendar" && ui.calMode === "timetable");
     }
     if (state.settings.notifyEnabled) scheduleHabitNotifications();
@@ -4473,12 +4730,35 @@
     if (action) {
       var act = action.getAttribute("data-action");
       if (act === "add-habit") openHabitEditor();
+      else if (act === "add-task") openTaskEditor();
       else if (act === "add-block") openBlockEditor();
       else if (act === "add-countdown") openCountdownEditor();
       else if (act === "add-event") openEventEditor();
       else if (act === "add-goal-short") openGoalEditor("short");
       else if (act === "add-goal-long") openGoalEditor("long");
       else if (act === "quick-add") openQuickAdd();
+      return;
+    }
+
+    var toggleTask = t.closest("[data-toggle-task]");
+    if (toggleTask) {
+      toggleTaskDone(toggleTask.getAttribute("data-toggle-task"));
+      return;
+    }
+
+    var editTask = t.closest("[data-edit-task]");
+    if (editTask) {
+      var task = state.tasks.find(function (x) {
+        return x.id === editTask.getAttribute("data-edit-task");
+      });
+      if (task) openTaskEditor(task);
+      return;
+    }
+
+    var tasksDoneToggle = t.closest("[data-tasks-done-toggle]");
+    if (tasksDoneToggle) {
+      ui.tasksDoneOpen = !ui.tasksDoneOpen;
+      renderTasks();
       return;
     }
 

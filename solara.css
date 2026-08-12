@@ -821,8 +821,10 @@ button {
 }
 
 .icon-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: var(--radius-pill);
   display: grid;
   place-items: center;
@@ -912,7 +914,7 @@ main {
   min-height: var(--nav-h);
   padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   background: color-mix(in srgb, var(--color-bg) 78%, transparent);
   backdrop-filter: blur(14px) saturate(1.1);
   -webkit-backdrop-filter: blur(14px) saturate(1.1);
@@ -931,12 +933,21 @@ main {
   justify-content: center;
   gap: 2px;
   color: var(--color-neutral-500);
-  font-size: 0.58rem;
+  font-size: 0.55rem;
   font-weight: 500;
-  padding: 4px 2px;
+  padding: 4px 1px;
   border-radius: 12px;
   transition: color 0.15s, background 0.2s var(--ease);
   background: transparent;
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.nav button .nav-label {
+  line-height: 1.1;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: clip;
 }
 
 .nav button.active {
@@ -4862,4 +4873,167 @@ button.habit-box-day:active {
   border-radius: 16px;
   background: var(--color-neutral-100);
   box-shadow: var(--shadow-sm);
+}
+
+/* ── Tasks (待辦) ── */
+/* Own view-in; suppress global .view.active fadeIn so motion count stays 3. */
+.view.active[data-view="tasks"] {
+  animation: none;
+}
+
+.tasks-page {
+  animation: view-in 0.28s var(--ease);
+}
+
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 14px;
+  background: var(--color-neutral-100);
+  border-radius: 20px;
+  box-shadow: none;
+  border: none;
+  margin-bottom: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  transition: opacity 0.28s var(--ease), transform 0.28s var(--ease);
+}
+
+.task-row.is-completing {
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+}
+
+.task-row.done {
+  opacity: 0.72;
+}
+
+.task-row.done .task-title {
+  opacity: 0.55;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.task-check {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--color-neutral-300);
+  background: transparent;
+  color: var(--color-neutral-400);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  box-shadow: none;
+}
+
+.task-check.on {
+  background: var(--color-accent);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: none;
+}
+
+.task-check.pulse,
+.task-row.pulse .task-check {
+  animation: checkPulse 0.45s var(--ease);
+}
+
+.task-check svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.task-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.task-title {
+  display: block;
+  font-weight: 700;
+  font-size: 15.5px;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.task-due {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-neutral-600);
+}
+
+.task-due.today,
+.task-due.overdue {
+  color: color-mix(in srgb, var(--color-accent) 72%, var(--color-neutral-700));
+}
+
+.tasks-done-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 14px 0 8px;
+  padding: 6px 2px;
+  background: none;
+  border: none;
+  font-family: var(--display);
+  font-size: 1.05rem;
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.tasks-done-toggle .chev {
+  font-size: 0.75rem;
+  color: var(--color-neutral-500);
+  transition: transform 0.2s var(--ease);
+}
+
+.tasks-done-toggle[aria-expanded="true"] .chev {
+  transform: rotate(90deg);
+}
+
+.tasks-done-list {
+  margin: 0;
+  padding: 0;
+}
+
+.tasks-done-list.is-collapsed {
+  display: none;
+}
+
+.tasks-page .empty.compact {
+  margin-top: 8px;
+}
+
+.modal .task-modal-title {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+
+.task-modal .field label,
+.task-modal .field input,
+.task-modal .field textarea {
+  font-family: var(--font-body);
 }
