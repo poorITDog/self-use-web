@@ -106,8 +106,16 @@ Whole-entity LWW: concurrent title edit + toggle → newer `updatedAt` wins **en
 
 ### App bar
 
+- Title「待辦」+ **one** soft `+` only
+- Soft `+` control lock (mirror countdown app-bar): ghost ink / terracotta icon button — **no** pill fill, **no** glow, **no** badge count
 - No sync chip / ring on tasks view
-- Populated list → app-bar `+` only; empty → body CTA + app-bar `+` OK (same action)
+- Populated list → app-bar `+` only; empty → body CTA + app-bar `+` OK (same `openTaskEditor` action)
+
+### Row interaction (binding — no alternate bullets)
+
+- **Checkbox** (plus left hit pad) → toggle done only
+- **Title** → open editor modal (due / note / rename / delete)
+- Rest of row: no second toggle binding; no long-press; no inline「編輯」confirm affordance
 
 ## UX (first viewport) — locked
 
