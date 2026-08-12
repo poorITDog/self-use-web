@@ -2,7 +2,7 @@
 
 **Status:** planning only — no implementation until Features / Bug / UX / UI all score this plan **> 95** (strict, no allowance).
 
-**Plan revision:** R2 — merged required edits from Features (90), Bug (72), UX (81), UI (78→R1).
+**Plan revision:** R2.2 — UX blockers (hide 已完成 (0), copy lock, 44×44 check hit) + UI soft-+ token from R2.1.
 
 ## Problem
 
@@ -44,12 +44,14 @@ task: {
 
 ### `normalizeTask` (binding)
 
-1. `title = trim(title)`; if empty after trim → drop row in `normalizeState` map filter (or refuse save in UI)
-2. `done = !!done`
-3. `due` only `""` or `/^\d{4}-\d{2}-\d{2}$/`, else `""`
-4. `note = String(note || "")`
-5. `finishedAt`: prefer `null` (align goals). If `done && !finishedAt` → `finishedAt = updatedAt || createdAt || Date.now()`. If `!done` → `finishedAt = null`
-6. Coerce `createdAt` / `updatedAt` to numbers
+1. `id = String(id || "").trim()`; if `!id` → **drop** row (same as empty title)
+2. `title = trim(title)`; if empty after trim → drop
+3. `done = !!done`
+4. `due` only `""` or `/^\d{4}-\d{2}-\d{2}$/`, else `""`
+5. `note = String(note || "")`
+6. `createdAt = Number(createdAt) || Number(updatedAt) || 0`
+7. `updatedAt = Number(updatedAt) || createdAt`
+8. `finishedAt`: prefer `null` (align goals). If `done && !finishedAt` → `finishedAt = updatedAt || createdAt || Date.now()`. If `!done` → `finishedAt = null`
 
 ### State / sync wire-up (both `solara.js` + `solara-core.mjs`)
 
