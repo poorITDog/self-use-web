@@ -2,7 +2,7 @@
 
 **Status:** planning only — no implementation until Features / Bug / UX / UI all score this plan **> 95** (strict, no allowance).
 
-**Plan revision:** R2.2 — UX blockers (hide 已完成 (0), copy lock, 44×44 check hit) + UI soft-+ token from R2.1.
+**Plan revision:** R2.3 — Bug blockers (drop empty id, dual-path tests / shared core, exact toast predicate, openTasksSig test) + R2.2 UX.
 
 ## Problem
 
@@ -122,8 +122,8 @@ Whole-entity LWW: concurrent title edit + toggle → newer `updatedAt` wins **en
 ## UX (first viewport) — locked
 
 - Composition: app-bar「待辦」+ list only — **no** stats, goals strip, week strip, badges, cards
-- **Section chrome:** if only open tasks (`completedCount === 0`), omit「未完成」heading — list alone. If `completedCount > 0`, show open list (optional「未完成」only when mixed clarity needs it; default **omit**「未完成」label when open rows are the sole primary list) + 已完成 control below
-- **已完成 control:** if `completedCount === 0`, render **no** 已完成 chrome. If `completedCount > 0`, collapsed by default; label always「已完成 (N)」with `aria-expanded`; expands muted strikethrough list in place
+- **Section chrome (binding):** **never** render on-screen「未完成」heading in v1 — open list is unlabeled under the app-bar. Only completed chrome is「已完成 (N)」when `N > 0` (collapsed by default, `aria-expanded`).「未完成」may exist as an internal sort bucket name only — **not** visible copy
+- **已完成 control:** if `completedCount === 0`, render **no** 已完成 chrome. If `completedCount > 0`, collapsed by default; label always「已完成 (N)」; expands muted strikethrough list in place
 - Row: checkbox + title + optional due **meta text** only — **no** streak / time-group / goal badge / chips / pills
 - Interaction: see **Row interaction** above
 - Distinction empty line:「一次性事項，打勾即完成——不計連續、不佔目標。」
@@ -147,8 +147,8 @@ Organic compact empty — no illustration stack.
 
 ### Copy deck (zh-HK)
 
-- 待辦 / 新增待辦 / 還沒有待辦 / 未完成 / 已完成 (N) / 標題 / 到期日 / 備註 / 刪除待辦 / 確定刪除此待辦？ / 今天 / 已過期 / 一次性清單 / 一次性事項，打勾即完成——不計連續、不佔目標。 / 未完成都清空了 / 已從另一部裝置更新待辦
-- **Delete**「顯示已完成」from deck — collapsed/expanded control uses「已完成 (N)」only (`aria-expanded` for state)
+- 待辦 / 新增待辦 / 還沒有待辦 / 已完成 (N) / 標題 / 到期日 / 備註 / 刪除待辦 / 確定刪除此待辦？ / 今天 / 已過期 / 一次性清單 / 一次性事項，打勾即完成——不計連續、不佔目標。 / 未完成都清空了 / 已從另一部裝置更新待辦
+- **Visible deck excludes**「未完成」and「顯示已完成」— open bucket is unlabeled; completed control is「已完成 (N)」only
 - aria:「新增待辦」「標記完成」「標記未完成」「編輯待辦」「已完成，已收合／已展開」
 
 ### List order (deterministic)
@@ -176,18 +176,27 @@ Organic compact empty — no illustration stack.
 
 ## Sync toast
 
-- `openTasksSig` = sorted ids of `!done` tasks joined (not “today”)
-- After merge (non-fast-forward-from-empty), if `openTasksSig(prev) !== openTasksSig(state)` → toast「已從另一部裝置更新待辦」
+- `openTasksSig(s)` = sorted ids of `!done` tasks joined by `|`
+- Exact mirror of check-in toast predicate:
+  ```js
+  if (fromEmpty && (result.winner === "remote" || result.winner === "merged")) {
+    toast("已從雲端還原資料");
+  } else if (result.action === "merge" && openTasksSig(prev) !== openTasksSig(state)) {
+    toast("已從另一部裝置更新待辦");
+  }
+  ```
+- Keep fromEmpty「雲端還原」separate; do not fire both for the same restore
 
 ## Tests (required)
 
-1. `normalizeTask` / `normalizeState`: empty title dropped; bad due → `""`; done↔finishedAt coercion
-2. Merge union both devices’ tasks (`solara-core`)
-3. Delete tombstone blocks **older** remote; newer post-tombstone recreate/toggle wins if `updatedAt > tomb`
+1. `normalizeTask` / `normalizeState`: missing/`""` id dropped; empty title dropped; bad due → `""`; done↔finishedAt; createdAt/updatedAt fallbacks
+2. Merge union / tombstone / empty-overwrite / `syncContentWeight` including tasks — must pass against **both** `solara-core.mjs` and the `solara.js` merge path (or mandate one shared export used by both — prefer shared `solara-core.mjs` helpers called from `solara.js` for tasks merge/normalize to prevent drift)
+3. Delete tombstone blocks **older** remote; newer post-tombstone recreate wins if `updatedAt > tomb`
 4. Toggle done LWW + uncomplete LWW + rename + clear due
 5. Tasks-only local pushes to empty remote; delete-last + tomb pushes; never empty-clobber
 6. Task CRUD does **not** mutate habits/goals/checkins
-7. e2e @390: nav 待辦 → add → rename → set/clear due → toggle done → uncomplete → delete; FAB hidden; habits today has no task UI
+7. `openTasksSig`: remote add/complete/delete of open tasks changes sig; rename-only does **not**
+8. e2e @390: nav 待辦 → add → rename → set/clear due → toggle done → uncomplete → delete; FAB hidden; habits today has no task UI
 
 ## Acceptance (definition of done)
 
