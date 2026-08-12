@@ -178,12 +178,28 @@
     return h + " 時 " + mm + " 分";
   }
 
+  // Sequential queue so dual sync toasts (check-in + tasks) both show.
+  var toastQueue = [];
+  var toastBusy = false;
   function toast(msg) {
+    if (!msg) return;
+    toastQueue.push(String(msg));
+    drainToastQueue();
+  }
+  function drainToastQueue() {
+    if (toastBusy) return;
+    var next = toastQueue.shift();
+    if (!next) return;
+    toastBusy = true;
     var el = document.getElementById("toast");
-    el.textContent = msg;
+    el.textContent = next;
     el.classList.add("show");
     clearTimeout(toast._t);
-    toast._t = setTimeout(function () { el.classList.remove("show"); }, 2200);
+    toast._t = setTimeout(function () {
+      el.classList.remove("show");
+      toastBusy = false;
+      setTimeout(drainToastQueue, 180);
+    }, 2200);
   }
 
   function defaultState() {
@@ -597,6 +613,7 @@
           render();
           if (fromEmpty && (result.winner === "remote" || result.winner === "merged")) {
             toast("已從雲端還原資料");
+            result.restoredFromEmpty = true;
           } else if (result.action === "merge") {
             if (todayCheckinSig(prev) !== todayCheckinSig(state)) {
               // Surface remote undo/check so sync does not feel like a silent flip.
@@ -679,9 +696,10 @@
       state.settings.googleConnected = true;
       state.settings.autoSync = true;
       saveStateLocal();
-      driveSync({ push: true, force: true }).then(function () {
+      driveSync({ push: true, force: true }).then(function (result) {
         startAutoSyncLoop();
-        toast("已連接 Google Drive");
+        // Skip connect toast when restore already spoke — queue would still delay it.
+        if (!(result && result.restoredFromEmpty)) toast("已連接 Google Drive");
         render();
       });
     });
@@ -4411,7 +4429,8 @@
       createdAt: 0, updatedAt: 0, finishedAt: null
     };
     openModal(
-      "<h3>" + (t.id ? "編輯待辦" : "新增待辦") + "</h3>" +
+      '<div class="task-modal">' +
+      '<h3 class="task-modal-title">' + (t.id ? "編輯待辦" : "新增待辦") + "</h3>" +
       '<div class="field"><label>標題</label><input id="tTitle" value="' + escAttr(t.title || "") +
       '" placeholder="要做的事" autofocus /></div>' +
       '<div class="field"><label>到期日</label><input id="tDue" type="date" value="' +
@@ -4420,7 +4439,7 @@
       esc(t.note || "") + "</textarea></div>" +
       '<div class="row-actions"><button class="btn" id="tSave">儲存</button>' +
       (t.id ? '<button class="btn warn" id="tDel">刪除待辦</button>' : "") +
-      '<button class="btn ghost" id="tCancel">取消</button></div>'
+      '<button class="btn ghost" id="tCancel">取消</button></div></div>'
     );
     document.getElementById("tCancel").onclick = closeModal;
     document.getElementById("tSave").onclick = function () {
@@ -4468,16 +4487,27 @@
   function toggleTaskDone(id) {
     var task = state.tasks.find(function (x) { return x.id === id; });
     if (!task) return;
+    var completing = !task.done;
     task.done = !task.done;
     if (task.done) task.finishedAt = Date.now();
     else task.finishedAt = null;
     touch(task);
     saveState();
+    var row = document.querySelector('.task-row[data-task-id="' + id + '"]');
+    var btn = row ? row.querySelector("[data-toggle-task]") : null;
+    if (completing && row && btn) {
+      // Pulse + fade on the open row before it moves into collapsed 已完成.
+      btn.classList.add("on", "pulse");
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+      row.classList.add("is-completing");
+      clearTimeout(toggleTaskDone._t);
+      toggleTaskDone._t = setTimeout(function () { render(); }, 380);
+      return;
+    }
     render();
-    var btn = document.querySelector('[data-toggle-task="' + id + '"]');
+    btn = document.querySelector('[data-toggle-task="' + id + '"]');
     if (btn) {
       btn.classList.remove("pulse");
-      // Force reflow so animation can replay.
       void btn.offsetWidth;
       btn.classList.add("pulse");
     }

@@ -821,8 +821,10 @@ button {
 }
 
 .icon-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: var(--radius-pill);
   display: grid;
   place-items: center;
@@ -4874,6 +4876,11 @@ button.habit-box-day:active {
 }
 
 /* ── Tasks (待辦) ── */
+/* Own view-in; suppress global .view.active fadeIn so motion count stays 3. */
+.view.active[data-view="tasks"] {
+  animation: none;
+}
+
 .tasks-page {
   animation: view-in 0.28s var(--ease);
 }
@@ -4885,12 +4892,18 @@ button.habit-box-day:active {
   padding: 13px 14px;
   background: var(--color-neutral-100);
   border-radius: 20px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   border: none;
   margin-bottom: 10px;
   width: 100%;
   box-sizing: border-box;
-  transition: opacity 0.28s var(--ease);
+  transition: opacity 0.28s var(--ease), transform 0.28s var(--ease);
+}
+
+.task-row.is-completing {
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
 }
 
 .task-row.done {
@@ -4923,8 +4936,7 @@ button.habit-box-day:active {
   background: var(--color-accent);
   border-color: transparent;
   color: #fff;
-  box-shadow: var(--shadow-sm);
-  animation: checkBtnPulse 0.35s var(--ease);
+  box-shadow: none;
 }
 
 .task-check.pulse,
@@ -5012,4 +5024,16 @@ button.habit-box-day:active {
 
 .tasks-page .empty.compact {
   margin-top: 8px;
+}
+
+.modal .task-modal-title {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+
+.task-modal .field label,
+.task-modal .field input,
+.task-modal .field textarea {
+  font-family: var(--font-body);
 }

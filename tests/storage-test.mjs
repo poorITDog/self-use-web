@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   dateKey,
   parseKey,
@@ -28,6 +31,9 @@ import {
   normalizeTask,
   openTasksSig,
 } from "../solara-core.mjs";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, "..");
 
 function test(name, fn) {
   try {
@@ -674,6 +680,23 @@ run("newer post-tombstone recreate wins when updatedAt > tomb", () => {
   const { state } = mergeSyncState(local, remote, 250);
   assert.equal(state.tasks.length, 1);
   assert.equal(state.tasks[0].title, "重生");
+});
+
+run("solara.js ships same tasks normalize/merge/toast contracts", () => {
+  const src = fs.readFileSync(path.join(repoRoot, "solara.js"), "utf8");
+  assert.match(src, /if\s*\(\s*!id\s*\|\|\s*!title\s*\)\s*return\s*null/);
+  assert.match(src, /out\.tasks\s*=\s*out\.tasks\.map\(normalizeTask\)\.filter/);
+  assert.match(src, /merged\.tasks\s*=\s*applyTombstones\s*\(/);
+  assert.match(src, /openTasksSig\(prev\)\s*!==\s*openTasksSig\(state\)/);
+  assert.match(src, /已從另一部裝置更新今日打卡/);
+  assert.match(src, /已從另一部裝置更新待辦/);
+  assert.match(src, /toastQueue/);
+  assert.match(src, /restoredFromEmpty/);
+  assert.match(src, /function deleteTaskById[\s\S]*?markTombstone\(id\)/);
+  assert.match(src, /function toggleTaskDone[\s\S]*?touch\(task\)/);
+  assert.ok(!/function toggleTaskDone[\s\S]*?markTombstone/.test(
+    src.slice(src.indexOf("function toggleTaskDone"), src.indexOf("function deleteTaskById"))
+  ), "toggle must not tombstone");
 });
 
 console.log("\n" + passed + " passed, " + failed + " failed");
