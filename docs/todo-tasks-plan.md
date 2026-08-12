@@ -113,26 +113,27 @@ Whole-entity LWW: concurrent title edit + toggle → newer `updatedAt` wins **en
 
 ### Row interaction (binding — no alternate bullets)
 
-- **Checkbox** (plus left hit pad) → toggle done only
-- **Title** → open editor modal (due / note / rename / delete)
-- Rest of row: no second toggle binding; no long-press; no inline「編輯」confirm affordance
+- **Checkbox** hit target ≥44×44 (plus left hit pad) → toggle done **only**
+- **Title + due meta** → open editor modal (due / note / rename / delete)
+- **No** whole-row toggle; no long-press; no inline「編輯」confirm affordance
 
 ## UX (first viewport) — locked
 
 - Composition: app-bar「待辦」+ list only — **no** stats, goals strip, week strip, badges, cards
-- **未完成:** open rows
-- **已完成:** **collapsed by default**; muted toggle「已完成 (N)」expands muted strikethrough list (pick collapse — no “or”)
+- **Section chrome:** if only open tasks (`completedCount === 0`), omit「未完成」heading — list alone. If `completedCount > 0`, show open list (optional「未完成」only when mixed clarity needs it; default **omit**「未完成」label when open rows are the sole primary list) + 已完成 control below
+- **已完成 control:** if `completedCount === 0`, render **no** 已完成 chrome. If `completedCount > 0`, collapsed by default; label always「已完成 (N)」with `aria-expanded`; expands muted strikethrough list in place
 - Row: checkbox + title + optional due **meta text** only — **no** streak / time-group / goal badge / chips / pills
-- Checkbox → toggle done; **title** → editor modal (due / note / delete)
+- Interaction: see **Row interaction** above
 - Distinction empty line:「一次性事項，打勾即完成——不計連續、不佔目標。」
 
 ### Empty matrix
 
 | State | UI |
 |-------|-----|
-| No tasks |「還沒有待辦」+ distinction line +「+ 新增待辦」 |
-| All done |「未完成都清空了」+ collapsed「已完成 (N)」 |
-| Mixed | 未完成 list + collapsed 已完成 |
+| No tasks |「還沒有待辦」+ distinction line +「+ 新增待辦」；no 已完成 chrome |
+| All done |「未完成都清空了」+ collapsed「已完成 (N)」(`N > 0`) |
+| Mixed | open list (no dead 已完成 (0)) + collapsed「已完成 (N)」 |
+| Open only | open list only；**no**「已完成 (0)」 |
 
 Organic compact empty — no illustration stack.
 
@@ -144,8 +145,9 @@ Organic compact empty — no illustration stack.
 
 ### Copy deck (zh-HK)
 
-- 待辦 / 新增待辦 / 還沒有待辦 / 未完成 / 已完成 (N) / 顯示已完成 / 標題 / 到期日 / 備註 / 刪除待辦 / 確定刪除此待辦？ / 今天 / 已過期 / 一次性清單 / 一次性事項，打勾即完成——不計連續、不佔目標。 / 未完成都清空了 / 已從另一部裝置更新待辦
-- aria:「新增待辦」「標記完成」「標記未完成」「編輯待辦」
+- 待辦 / 新增待辦 / 還沒有待辦 / 未完成 / 已完成 (N) / 標題 / 到期日 / 備註 / 刪除待辦 / 確定刪除此待辦？ / 今天 / 已過期 / 一次性清單 / 一次性事項，打勾即完成——不計連續、不佔目標。 / 未完成都清空了 / 已從另一部裝置更新待辦
+- **Delete**「顯示已完成」from deck — collapsed/expanded control uses「已完成 (N)」only (`aria-expanded` for state)
+- aria:「新增待辦」「標記完成」「標記未完成」「編輯待辦」「已完成，已收合／已展開」
 
 ### List order (deterministic)
 
