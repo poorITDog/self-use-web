@@ -1,8 +1,8 @@
 # Plan: Solara 待辦（Tasks）— v1
 
-**Status:** planning only — no implementation until Features / Bug / UX / UI all score this plan **> 95** (strict, no allowance).
+**Status:** implemented (R2.5).
 
-**Plan revision:** R2.4 — UX: never show「未完成」heading; Empty matrix is sole chrome source of truth (+ R2.3 Bug gates).
+**Plan revision:** R2.5 — Bug: normalizeTask→null + filter(id&&title); extend (don’t replace) check-in toast; both-sig → both toasts (+ R2.4 UX).
 
 ## Problem
 

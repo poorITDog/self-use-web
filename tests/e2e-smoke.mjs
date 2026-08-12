@@ -1009,5 +1009,78 @@ await page.evaluate(() => {
   if (close) close.click();
 });
 
+// ── Tasks (待辦) smoke ──
+await page.click('[data-nav="tasks"]');
+await page.waitForSelector("#view-tasks.active");
+await assert(
+  await page.$eval("#globalFab", (el) => !!el.hidden),
+  "FAB hidden on tasks view"
+);
+await page.waitForSelector('[data-action="add-task"]');
+await page.evaluate(() => document.querySelector('[data-action="add-task"]').click());
+await page.waitForSelector("#modalBackdrop.open #tTitle");
+await page.type("#tTitle", "買牛奶");
+await page.evaluate(() => {
+  document.getElementById("tDue").value = "2099-01-15";
+  document.getElementById("tSave").click();
+});
+await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
+await page.waitForFunction(() =>
+  (document.querySelector("#view-tasks .task-title") || {}).textContent === "買牛奶"
+);
+const dueText = await page.$eval("#view-tasks .task-due", (el) => el.textContent);
+await assert(!!dueText, "task shows due meta text");
+
+await page.evaluate(() => document.querySelector("[data-edit-task]").click());
+await page.waitForSelector("#modalBackdrop.open #tTitle");
+await page.evaluate(() => {
+  document.getElementById("tTitle").value = "買燕麥奶";
+  document.getElementById("tDue").value = "";
+  document.getElementById("tNote").value = "無糖";
+  document.getElementById("tSave").click();
+});
+await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
+await page.waitForFunction(() =>
+  (document.querySelector("#view-tasks .task-title") || {}).textContent === "買燕麥奶"
+);
+
+await page.evaluate(() => document.querySelector("[data-toggle-task]").click());
+await page.waitForFunction(() => {
+  const s = JSON.parse(localStorage.getItem("solara-v1") || "{}");
+  return (s.tasks || []).some((t) => t.title === "買燕麥奶" && t.done);
+});
+await page.waitForSelector("[data-tasks-done-toggle]");
+await page.evaluate(() => document.querySelector("[data-tasks-done-toggle]").click());
+await page.waitForSelector(".tasks-done-list:not(.is-collapsed) [data-toggle-task]");
+await page.evaluate(() =>
+  document.querySelector(".tasks-done-list [data-toggle-task]").click()
+);
+await page.waitForFunction(() => {
+  const s = JSON.parse(localStorage.getItem("solara-v1") || "{}");
+  return (s.tasks || []).some((t) => t.title === "買燕麥奶" && !t.done);
+});
+
+await page.evaluate(() => document.querySelector("[data-edit-task]").click());
+await page.waitForSelector("#modalBackdrop.open #tDel");
+await page.evaluate(() => {
+  const real = window.confirm;
+  window.confirm = () => true;
+  document.getElementById("tDel").click();
+  window.confirm = real;
+});
+await page.waitForFunction(() => !document.getElementById("modalBackdrop").classList.contains("open"));
+await page.waitForFunction(() => {
+  const s = JSON.parse(localStorage.getItem("solara-v1") || "{}");
+  return !(s.tasks || []).some((t) => t.title === "買燕麥奶");
+});
+
+await page.click('[data-nav="habits"]');
+await page.waitForSelector("#view-habits.active");
+const noTaskUiOnHabits = await page.evaluate(() => {
+  const root = document.getElementById("view-habits");
+  return !root.querySelector(".task-row, .tasks-page, [data-toggle-task], [data-edit-task]");
+});
+await assert(noTaskUiOnHabits, "habits view has no task UI");
+
 await browser.close();
 console.log("\nAll e2e smoke tests passed.");

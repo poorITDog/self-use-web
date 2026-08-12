@@ -58,6 +58,7 @@ export function defaultState() {
     goals: [],
     events: [],
     dayEntries: [],
+    tasks: [],
     transactions: [],
     // id → deletedAt — keeps hard deletes from resurrecting on union merge
     tombstones: {},
@@ -80,6 +81,7 @@ export function normalizeState(data) {
     "goals",
     "events",
     "dayEntries",
+    "tasks",
     "transactions",
   ]) {
     if (!Array.isArray(out[k])) out[k] = [];
@@ -92,6 +94,7 @@ export function normalizeState(data) {
     })
   );
   out.goals = out.goals.map((g) => normalizeGoal(g));
+  out.tasks = (out.tasks || []).map(normalizeTask).filter((t) => t && t.id && t.title);
   out.syncUpdatedAt = Number(out.syncUpdatedAt) || 0;
   out.syncBaseAt = Number(out.syncBaseAt) || 0;
   out.tombstones = data.tombstones && typeof data.tombstones === "object" ? data.tombstones : {};
@@ -210,13 +213,47 @@ export function maybeFinishGoal(g, nowMs) {
   return true;
 }
 
+export function normalizeTask(raw) {
+  const d = raw || {};
+  const id = String(d.id || "").trim();
+  const title = String(d.title || "").trim();
+  if (!id || !title) return null;
+  const done = !!d.done;
+  let due = String(d.due || "");
+  if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) due = "";
+  const createdAt = Number(d.createdAt) || Number(d.updatedAt) || 0;
+  const updatedAt = Number(d.updatedAt) || createdAt;
+  let finishedAt = d.finishedAt == null || d.finishedAt === "" ? null : Number(d.finishedAt);
+  if (done && !finishedAt) finishedAt = updatedAt || createdAt || Date.now();
+  if (!done) finishedAt = null;
+  return {
+    id,
+    title,
+    done,
+    due,
+    note: String(d.note || ""),
+    createdAt,
+    updatedAt,
+    finishedAt,
+  };
+}
+
+export function openTasksSig(s) {
+  return ((s && s.tasks) || [])
+    .filter((t) => t && !t.done)
+    .map((t) => t.id)
+    .sort()
+    .join("|");
+}
+
 export function syncContentWeight(s) {
   const n = s && s.habits ? s : normalizeState(s);
   return (n.habits.length || 0) + (n.checkins.length || 0) +
     (n.events.length || 0) + (n.countdowns.length || 0) +
     (n.goals.length || 0) + (n.blocks.length || 0) +
     (n.focusSessions.length || 0) + ((n.dayEntries && n.dayEntries.length) || 0) +
-    ((n.transactions && n.transactions.length) || 0);
+    ((n.transactions && n.transactions.length) || 0) +
+    ((n.tasks && n.tasks.length) || 0);
 }
 
 export function mergeTombstones(a, b) {
@@ -332,6 +369,10 @@ export function mergeSyncState(local, remote, remoteUpdatedAt) {
   );
   merged.dayEntries = applyTombstones(
     mergeEntityLists(localNorm.dayEntries || [], remoteNorm.dayEntries || [], (x) => x.date || x.id),
+    merged.tombstones
+  );
+  merged.tasks = applyTombstones(
+    mergeEntityLists(localNorm.tasks || [], remoteNorm.tasks || [], (x) => x.id),
     merged.tombstones
   );
   merged.transactions = applyTombstones(
