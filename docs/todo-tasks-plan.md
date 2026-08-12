@@ -2,7 +2,7 @@
 
 **Status:** planning only — no implementation until Features / Bug / UX / UI all score this plan **> 95** (strict, no allowance).
 
-**Plan revision:** R2.3 — Bug blockers (drop empty id, dual-path tests / shared core, exact toast predicate, openTasksSig test) + R2.2 UX.
+**Plan revision:** R2.4 — UX: never show「未完成」heading; Empty matrix is sole chrome source of truth (+ R2.3 Bug gates).
 
 ## Problem
 
@@ -56,9 +56,16 @@ task: {
 ### State / sync wire-up (both `solara.js` + `solara-core.mjs`)
 
 - `defaultState().tasks = []`
-- `normalizeState`: `out.tasks = (data.tasks||[]).map(normalizeTask).filter(t => t.title)`
+- `normalizeTask` returns a task object or **`null`** (when `!id` or empty title)
+- `normalizeState`:
+  ```js
+  out.tasks = (data.tasks || []).map(normalizeTask).filter(function (t) {
+    return t && t.id && t.title;
+  });
+  ```
 - `syncContentWeight`: `+= tasks.length`
 - Snapshot save/load already whole-state JSON — `tasks` rides `solara-v1` / Drive payload with no special channel
+- Prefer shared `solara-core.mjs` exports for `normalizeTask` / merge helpers; `solara.js` must call the same logic (no divergent copy)
 - `mergeSyncState`:
   ```js
   merged.tasks = applyTombstones(
@@ -66,7 +73,7 @@ task: {
     merged.tombstones
   );
   ```
-- Same merge in **both** implementations
+- Same merge in **both** implementations (or one shared function)
 
 ### Conflict matrix (binding)
 
@@ -134,8 +141,8 @@ Whole-entity LWW: concurrent title edit + toggle → newer `updatedAt` wins **en
 |-------|-----|
 | No tasks |「還沒有待辦」+ distinction line +「+ 新增待辦」；no 已完成 chrome |
 | All done |「未完成都清空了」+ collapsed「已完成 (N)」(`N > 0`) |
-| Mixed | open list (no dead 已完成 (0)) + collapsed「已完成 (N)」 |
-| Open only | open list only；**no**「已完成 (0)」 |
+| Mixed | unlabeled open list + collapsed「已完成 (N)」 |
+| Open only | unlabeled open list only；**no**「已完成 (0)」；**no**「未完成」heading |
 
 Organic compact empty — no illustration stack.
 
@@ -177,15 +184,21 @@ Organic compact empty — no illustration stack.
 ## Sync toast
 
 - `openTasksSig(s)` = sorted ids of `!done` tasks joined by `|`
-- Exact mirror of check-in toast predicate:
+- **Extend** the existing post-merge toast branch in `driveSync` — do **not** replace the check-in toast:
   ```js
   if (fromEmpty && (result.winner === "remote" || result.winner === "merged")) {
     toast("已從雲端還原資料");
-  } else if (result.action === "merge" && openTasksSig(prev) !== openTasksSig(state)) {
-    toast("已從另一部裝置更新待辦");
+  } else if (result.action === "merge") {
+    if (todayCheckinSig(prev) !== todayCheckinSig(state)) {
+      toast("已從另一部裝置更新今日打卡");
+    }
+    if (openTasksSig(prev) !== openTasksSig(state)) {
+      toast("已從另一部裝置更新待辦");
+    }
   }
   ```
-- Keep fromEmpty「雲端還原」separate; do not fire both for the same restore
+- If **both** sigs change in one merge: fire **both** toasts (sequential is fine; check-in first, then tasks)
+- Keep fromEmpty「雲端還原」exclusive (no check-in/tasks toasts on that restore path)
 
 ## Tests (required)
 
