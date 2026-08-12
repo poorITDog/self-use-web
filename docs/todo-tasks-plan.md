@@ -2,7 +2,7 @@
 
 **Status:** planning only — no implementation until Features / Bug / UX / UI all score this plan **> 95** (strict, no allowance).
 
-**Plan revision:** R1 — incorporated [UI plan](bc-dc2dd16f-ad75-50ea-a9a5-592908f2afc4) required edits (was 78).
+**Plan revision:** R2 — merged required edits from Features (90), Bug (72), UX (81), UI (78→R1).
 
 ## Problem
 
@@ -12,9 +12,10 @@ Solara has **habits** (recurring) and **goals** (progress). Users still need **o
 
 - No projects / folders / tags / subtasks / priority ranks / recurring tasks
 - No habit↔task auto-link, no calendar event auto-create from tasks
-- No drag-reorder persistence beyond simple list order (optional `sort` later)
-- No separate cloud API — must use existing Drive snapshot sync
-- No stats strip / filters / priority UI on the first viewport
+- No drag-reorder UI / persisted manual `sort` (order is deterministic — see below)
+- No separate cloud API — existing Drive snapshot only
+- No stats / filters / priority UI on the first viewport
+- **Habits today / board / goals UI unchanged** — zero task rows, counts, or CTAs on 習慣
 
 ## Product rules
 
@@ -26,122 +27,179 @@ Solara has **habits** (recurring) and **goals** (progress). Users still need **o
 
 Copy must never call tasks「習慣」or「目標」.
 
+**Invariant (binding):** Task add / edit / toggle / delete **must not** write `habits`, `goals`, `checkins`, or streak fields. Enforced in acceptance + tests.
+
 ## Data model
 
 ```js
 task: {
-  id, title,          // required title (trim, non-empty)
-  done: boolean,      // default false
-  due: "" | "YYYY-MM-DD",  // optional; calendar date only (local dateKey)
-  note: "",           // optional; shown in editor, not on list row in v1
-  createdAt, updatedAt,
-  finishedAt: 0       // set when done becomes true; clear when undone
+  id, title,              // trim; blank title rejected on save; sync drops empty title
+  done: boolean,          // !!done
+  due: "" | "YYYY-MM-DD", // else coerced to ""
+  note: "",               // optional; editor only in v1 list
+  createdAt, updatedAt,   // numbers; every mutate bumps updatedAt via touch()
+  finishedAt: null | number  // null when !done; set Date.now() on done→true
 }
 ```
 
-- State: `state.tasks = []`
-- `normalizeState` fills `tasks: []`, clamps `done` boolean, trims title, validates `due` as `""` or `YYYY-MM-DD`
-- `syncContentWeight` includes `tasks.length`
-- `mergeSyncState`: `mergeEntityLists` by `id` + `applyTombstones`
-- **Delete** → `markTombstone(id)` then remove (same lesson as check-in undo)
-- **Toggle done** → keep the entity, bump `updatedAt` / `finishedAt` (LWW update, not delete)
+### `normalizeTask` (binding)
+
+1. `title = trim(title)`; if empty after trim → drop row in `normalizeState` map filter (or refuse save in UI)
+2. `done = !!done`
+3. `due` only `""` or `/^\d{4}-\d{2}-\d{2}$/`, else `""`
+4. `note = String(note || "")`
+5. `finishedAt`: prefer `null` (align goals). If `done && !finishedAt` → `finishedAt = updatedAt || createdAt || Date.now()`. If `!done` → `finishedAt = null`
+6. Coerce `createdAt` / `updatedAt` to numbers
+
+### State / sync wire-up (both `solara.js` + `solara-core.mjs`)
+
+- `defaultState().tasks = []`
+- `normalizeState`: `out.tasks = (data.tasks||[]).map(normalizeTask).filter(t => t.title)`
+- `syncContentWeight`: `+= tasks.length`
+- Snapshot save/load already whole-state JSON — `tasks` rides `solara-v1` / Drive payload with no special channel
+- `mergeSyncState`:
+  ```js
+  merged.tasks = applyTombstones(
+    mergeEntityLists(local.tasks, remote.tasks, (x) => x.id),
+    merged.tombstones
+  );
+  ```
+- Same merge in **both** implementations
+
+### Conflict matrix (binding)
+
+| Action | Behavior |
+|--------|----------|
+| **Toggle / edit** | Keep same `id`; always `touch()` (`updatedAt`). Done→true: `finishedAt = Date.now()`. Undo: `done=false`, `finishedAt=null`. **Never** tombstone on toggle/edit |
+| **Delete** | `markTombstone(id)` then remove from `tasks` |
+| **Resurrect rule** | Same as check-ins: entity returns only if `updatedAt > tombstoneAt` (`applyTombstones`). Acceptance wording: deleted ids stay absent after merge when remote copy is **older than** tombstone — not “absolute never-return if user recreates” |
+
+Whole-entity LWW: concurrent title edit + toggle → newer `updatedAt` wins **entire** row (document in sync README one-liner).
+
+### Empty-overwrite / weight (binding + tests)
+
+- Tasks-only local (`tasks.length > 0`, other weights 0) → still `syncContentWeight > 0` → push when remote empty
+- Empty local + remote tasks → fast-forward
+- Never push empty over non-empty remote without tombs
+- Delete-last-task: weight 0 + tombstone → `shouldPushAfterMerge` still true (existing helper)
+
+### Due / timezone
+
+- Overdue / today = **string compare** `due` vs `todayKey()` (local calendar)
+- Never `toISOString().slice(0,10)` for due comparisons
 
 ## Information architecture
 
-- New view: `#view-tasks` + bottom nav **待辦** inserted between 習慣 and 日曆
-- **Exact 6-tab order & labels:** `習慣 | 待辦 | 日曆 | 倒數 | 專注 | 設定`
-- Nav treatment: keep existing icon size (~22–24px); labels `font-size` ~10–11px, single line, `overflow: hidden; text-overflow: clip` — no wrap on 360px
-- Do not remove existing tabs
-- Quick-add sheet: add **待辦** entry (opens task editor)
+### Nav @390 (binding)
 
-### App bar (hard rule)
+- Order: `習慣 · 待辦 · 日曆 · 倒數 · 專注 · 設定`
+- `#nav`: `grid-template-columns: repeat(6, 1fr)`
+- Labels stay short (待辦 = 2 chars); icon ~20–22px; label ≤9.5–11px; single line; min tap ≥44×44; no horizontal scroll-nav
+- New `#view-tasks`
 
-- Title「待辦」+ **one** soft `+` only (mirror countdown)
-- No sync chip / ring / extra action cluster on this view
-- When list empty: body empty CTA「+ 新增待辦」OK; when populated: **app-bar + only** (no competing FAB)
+### Add path (ONE primary on tasks view)
 
-### FAB (hard rule)
+- App-bar: title「待辦」+ **one** soft `+` only
+- FAB **`hidden`** on `#view-tasks` (and stays hidden on habits)
+- Empty body CTA「+ 新增待辦」only when zero tasks
+- Quick-add sheet: **待辦** with small「一次性清單」; creates title-focused editor (same modal)
 
-- On `#view-tasks`, FAB is **`hidden`** (same CSS `[hidden]` fix as habits)
-- Sole add CTAs: app-bar soft `+` (always on tasks view) + empty-state body button when `tasks.length === 0`
-- Quick-add may still create 待辦 from other views; that does not unhide FAB on tasks
+### App bar
 
-## UX (first viewport)
+- No sync chip / ring on tasks view
+- Populated list → app-bar `+` only; empty → body CTA + app-bar `+` OK (same action)
 
-- One composition: **open (未完成) list only** as the hero stack — no stats, filters, or promos
-- **已完成:** shown **muted below**, expanded by default but visually demoted (opacity / strikethrough); not a second competing module
-- Row: checkbox + title + optional due **meta text** (not a chip/pill/badge)
-- Tap checkbox **or** row body toggles done; long-press not required
-- Tap a small edit affordance OR open editor via title long-press — **v1: row tap = toggle; app-bar / empty `+` / quick-add opens editor; edit existing via a quiet「編輯」in a confirm…**  
-  **Lock for v1:** checkbox toggles; tapping **title** opens editor modal (so due/note/delete reachable without cluttering the row)
-- Empty:「還沒有待辦」+ supporting「一次性任務，唔影響習慣連續」+ CTA「+ 新增待辦」
-- Due today / overdue: quiet Figtree meta, terracotta tint only when overdue or due today — **ban chips/pills/badges**
-- Editor modal: title (required), due (optional date), note (optional), delete (tombstone + confirm)
+## UX (first viewport) — locked
 
-### Motion (2–3, quiet)
+- Composition: app-bar「待辦」+ list only — **no** stats, goals strip, week strip, badges, cards
+- **未完成:** open rows
+- **已完成:** **collapsed by default**; muted toggle「已完成 (N)」expands muted strikethrough list (pick collapse — no “or”)
+- Row: checkbox + title + optional due **meta text** only — **no** streak / time-group / goal badge / chips / pills
+- Checkbox → toggle done; **title** → editor modal (due / note / delete)
+- Distinction empty line:「一次性事項，打勾即完成——不計連續、不佔目標。」
 
-1. Checkbox settle (scale/opacity ~150ms)
-2. Done row fades/moves into 已完成 section
-3. 已完成 section no accordion animation required in v1 (always visible muted)
+### Empty matrix
+
+| State | UI |
+|-------|-----|
+| No tasks |「還沒有待辦」+ distinction line +「+ 新增待辦」 |
+| All done |「未完成都清空了」+ collapsed「已完成 (N)」 |
+| Mixed | 未完成 list + collapsed 已完成 |
+
+Organic compact empty — no illustration stack.
+
+### Motion (exactly 3)
+
+1. View-in on open tasks
+2. `checkPulse` on toggle
+3. Completed row fade into collapsed 已完成 count
+
+### Copy deck (zh-HK)
+
+- 待辦 / 新增待辦 / 還沒有待辦 / 未完成 / 已完成 (N) / 顯示已完成 / 標題 / 到期日 / 備註 / 刪除待辦 / 確定刪除此待辦？ / 今天 / 已過期 / 一次性清單 / 一次性事項，打勾即完成——不計連續、不佔目標。 / 未完成都清空了 / 已從另一部裝置更新待辦
+- aria:「新增待辦」「標記完成」「標記未完成」「編輯待辦」
+
+### List order (deterministic)
+
+- **未完成:** `due` ascending (`""` last), then `createdAt` ascending
+- **已完成:** `finishedAt` descending (missing → `updatedAt`)
 
 ## Visual / Organic (row contract)
-
-Reuse **habit-checkin** tokens explicitly:
 
 | Token | Value |
 |-------|--------|
 | Surface | sand / `--color-neutral-100` |
 | Radius | 20px |
-| Check | terracotta accent filled when on |
+| Check | terracotta when on |
 | Padding / min-height | match `.habit-checkin-row` |
-| Done row | muted + light strikethrough on title |
-| Chrome | **no** card wrapper shadow pile, **no** glow, **no** purple |
+| Done | muted + light strikethrough |
+| Ban | card shadow piles, glow, purple, due chips |
 
-### Typography (locked)
+### Typography
 
 | Role | Font |
 |------|------|
-| App-bar「待辦」, section「未完成／已完成」 | Caprasimo |
-| Row title, due meta, empty body, modal fields | Figtree (+ Noto Sans TC as existing CJK fallback) |
-| No new font families | — |
+| App-bar「待辦」, section heads | Caprasimo |
+| Row title, due meta, empty, modal | Figtree (+ existing Noto Sans TC) |
 
-## Sync & multi-device
+## Sync toast
 
-- Toggle done stays via LWW `updatedAt` (no tombstone)
-- Delete uses tombstone (must not resurrect)
-- After remote merge, if open-task signature changes, toast「已從另一部裝置更新待辦」(mirror check-in toast)
+- `openTasksSig` = sorted ids of `!done` tasks joined (not “today”)
+- After merge (non-fast-forward-from-empty), if `openTasksSig(prev) !== openTasksSig(state)` → toast「已從另一部裝置更新待辦」
 
 ## Tests (required)
 
-1. `normalizeState` fills `tasks` + clamps fields
-2. merge union keeps tasks from both devices
-3. delete tombstone blocks resurrect
-4. toggle done LWW: newer `updatedAt` wins
-5. e2e: nav 待辦 → add → appears → toggle done → in 已完成 → edit due → delete gone; FAB hidden on tasks; no `.habits-seg` regression
+1. `normalizeTask` / `normalizeState`: empty title dropped; bad due → `""`; done↔finishedAt coercion
+2. Merge union both devices’ tasks (`solara-core`)
+3. Delete tombstone blocks **older** remote; newer post-tombstone recreate/toggle wins if `updatedAt > tomb`
+4. Toggle done LWW + uncomplete LWW + rename + clear due
+5. Tasks-only local pushes to empty remote; delete-last + tomb pushes; never empty-clobber
+6. Task CRUD does **not** mutate habits/goals/checkins
+7. e2e @390: nav 待辦 → add → rename → set/clear due → toggle done → uncomplete → delete; FAB hidden; habits today has no task UI
 
 ## Acceptance (definition of done)
 
-1. User can add / toggle / edit due / delete tasks on ~390px viewport
-2. Tasks sync via existing Drive path without empty overwrite
-3. Undone/deleted tasks do not resurrect after sync
-4. Nav + quick-add discoverable; habits/goals unchanged
-5. FAB hidden on tasks; single add CTA policy held
-6. All four post-implementation reviews **> 95**
+1. CRUD: **add / rename title / set·clear due / edit note / complete / uncomplete / delete**; empty title rejected
+2. Sync: tasks in snapshot; merge+tombstones wired both files; empty-overwrite guards hold
+3. Deleted older remote copies do not resurrect (`updatedAt ≤ tombstoneAt`)
+4. Toggle/edit never tombstones; uncomplete is LWW field update
+5. Nav + single add path + quick-add; habits/goals UI unchanged; invariant held
+6. Visual @390×844: 6 labels readable, no dual FAB, overdue = quiet terracotta text
+7. All four **post-implementation** reviews **> 95**
 
 ## Implementation order
 
-1. Data + merge + tombstone in `solara-core.mjs` / `solara.js`
-2. `#view-tasks` + nav + `renderTasks` + modal
-3. CSS Organic rows + typography + FAB hide
+1. `normalizeTask` + merge/weight/tombstone in core + solara.js
+2. `#view-tasks` + nav CSS + `renderTasks` + modal + copy
+3. Organic CSS + FAB hide + 3 motions
 4. Quick-add + tests + README one-liner
 
 ## Risks
 
 | Risk | Mitigation |
 |------|------------|
-| Nav crowding (6 items) | Fixed label set + compact single-line nav CSS |
-| Dual add CTAs | FAB hard-hidden on tasks |
-| Chip/badge drift | Due = meta text only |
-| Confusion with goals | Empty supporting sentence |
-| Sync resurrect on delete | Tombstone from day one |
-| Scope creep | Non-goals list binding for v1 |
+| Nav crowding | 6-col grid + short labels + tap targets |
+| Dual CTA | FAB hard-hidden on tasks |
+| Tombstone-on-undo mistake | Conflict matrix + tests |
+| Goals confusion | Distinction copy + habits lean clause |
+| Scope creep | Non-goals binding |
